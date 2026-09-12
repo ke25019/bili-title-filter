@@ -182,6 +182,16 @@ function check(name, cond, extra) {
   else { fail++; console.log('  \u2717 ' + name + (extra !== undefined ? '  -> ' + extra : '')); }
 }
 
+/** 轮询等待条件成立，避免机器负载导致的时序抖动 */
+async function waitFor(fn, timeout = 3000) {
+  const t0 = Date.now();
+  while (Date.now() - t0 < timeout) {
+    if (fn()) return true;
+    await sleep(50);
+  }
+  return fn();
+}
+
 async function main() {
   const store = { sync: {}, local: {} };
   const onChangedListeners = [];
@@ -384,8 +394,8 @@ async function main() {
   // 占位项被真实内容填充后要自动恢复
   $('ph1').innerHTML = '<a href="//www.bilibili.com/video/BVnew"><img src="new.jpg"></a>' +
     '<h3 class="bili-video-card__info--tit" title="新加载的真实卡片">新加载的真实卡片</h3>';
-  await sleep(900);
-  check('占位项被真实内容填充后自动恢复显示', !$('ph1').classList.contains('bf-ph-collapsed'), $('ph1').className);
+  check('占位项被真实内容填充后自动恢复显示',
+    await waitFor(() => !$('ph1').classList.contains('bf-ph-collapsed')), $('ph1').className);
 
   console.log('\n[10b] 空占位识别的边界（对照真实页面上踩过的坑）');
   await pushSettings({ mode: 'hide', hideKeepSlot: false, keywords: ['剧透'] });
@@ -413,8 +423,8 @@ async function main() {
   // （改 naturalWidth 不会触发 DOM 变更，因此要等一次定时复核：tick 为 1.2s）
   const imgInPh3 = $('ph3').querySelector('img');
   Object.defineProperty(imgInPh3, 'naturalWidth', { value: 320, configurable: true });
-  await sleep(2400);
-  check('占位项里的图片加载完成后不再被收敛', !collapsedWithin('ph3'), $('ph3').className);
+  check('占位项里的图片加载完成后不再被收敛',
+    await waitFor(() => !collapsedWithin('ph3'), 4500), $('ph3').className);
 
   await pushSettings({ mode: 'mask', keywords: [], hideKeepSlot: false });
   check('切回遮蔽模式后占位项标记被清除', doc.querySelectorAll('.bf-ph-collapsed, .bf-ph-muted').length === 0);
@@ -484,8 +494,8 @@ async function main() {
     '<a class="bili-video-card__image--link" href="//www.bilibili.com/video/BV9zz"><img src="x.jpg"></a>' +
     '<h3 class="bili-video-card__info--tit" title="营销号又来了">营销号又来了</h3></div></div>';
   doc.querySelector('main').appendChild(extra);
-  await sleep(500);
-  check('新卡片被 MutationObserver 自动扫描并屏蔽', $('c9').classList.contains('bf-blocked'), '未被屏蔽');
+  check('新卡片被 MutationObserver 自动扫描并屏蔽',
+    await waitFor(() => $('c9').classList.contains('bf-blocked')), '未被屏蔽');
 
   console.log('\n[14] 总开关');
   await pushSettings({ enabled: false });
