@@ -1,5 +1,5 @@
 /**
- * B站屏蔽助手 - 内容脚本  v1.1.11
+ * B站屏蔽助手 - 内容脚本  v1.1.10
  * ---------------------------------------------------------------
  * 功能：
  *  1. 按用户自定义的「标题屏蔽词」屏蔽视频卡片
@@ -406,10 +406,8 @@
     }
     var vw = window.innerWidth || 1280;
     var vh = window.innerHeight || 800;
-    // 上限放宽到"能挡住 B 站首页左上角那个 2 列大块（实测 580×485，约占视口 25%）"，
-    // 同时仍然拦得住真正的灾难：整页容器（实测 1401×808）和全宽容器。
-    if (r.width > 1200 || r.height > 800) return false;
-    if (r.width * r.height > vw * vh * 0.35) return false;
+    if (r.width > 1100 || r.height > 700) return false;
+    if (r.width * r.height > vw * vh * 0.15) return false;
     return true;
   }
 
@@ -785,7 +783,8 @@
     card.dataset.bfState = 'blocked';
     card.dataset.bfKey = action.key;
     card.dataset.bfKind = action.kind;
-
+    // 记住承载外观的外层容器，隐藏/恢复时一起处理（见 findCardFrame 说明）
+    card.__bfFrame = findCardFrame(card);
     if (action.kind === 'type') card.dataset.bfType = action.type;
     else delete card.dataset.bfType;
 
@@ -819,7 +818,7 @@
     var frame = card;
     var cur = card.parentElement;
     for (var i = 0; cur && cur !== document.body && cur !== document.documentElement && i < 5; i++) {
-      if (!containerFullyHidden(cur)) break;    // 这一层还有没被隐藏的卡片 → 不能越过
+      if (countTopCards(cur) > 1) break;        // 这一层还装着别的卡片 → 不能越过
       frame = cur;
       var parent = cur.parentElement;
       if (!parent) break;
@@ -829,38 +828,6 @@
       cur = parent;
     }
     return frame;
-  }
-
-  /**
-   * 这一层是不是"里面的卡片全部已经被我们隐藏了"。
-   *
-   * 用途：外层容器常常带自己的背景（例如 .recommended-swipe-body 铺满灰底、
-   * .floor-card 带边框和阴影）。只要容器里还留着一张没被隐藏的卡片，我们就不能动它；
-   * 但如果里面的卡片都被隐藏了，把这个空壳一起藏掉才不会留下灰底空框。
-   * 注意：完全没有任何卡片的容器也算"可以越过"，但它不能同时含有真实文字内容。
-   */
-  function containerFullyHidden(el) {
-    // 1) 容器里所有卡片都必须已经被我们隐藏
-    var cards = el.querySelectorAll(CARD_SELECTOR);
-    for (var i = 0; i < cards.length; i++) {
-      var c = cards[i];
-      var parent = c.parentElement;
-      if (parent && parent.closest(CARD_SELECTOR)) continue;   // 嵌套卡片只看最外层
-      if (c.dataset.bfState !== 'blocked') return false;
-    }
-    // 2) 除了这些卡片，容器里不能还有其它真实内容（文字或已加载的图片）
-    var kids = el.children;
-    for (var k = 0; k < kids.length; k++) {
-      var kid = kids[k];
-      if (kid.dataset && kid.dataset.bfState === 'blocked') continue;
-      if (kid.querySelector && kid.querySelector('[data-bf-state="blocked"]')) continue;
-      if ((kid.textContent || '').replace(/\s+/g, '').trim().length > 4) return false;
-      var imgs = kid.querySelectorAll ? kid.querySelectorAll('img') : [];
-      for (var m = 0; m < imgs.length; m++) {
-        if (imgs[m].naturalWidth > 0) return false;
-      }
-    }
-    return true;
   }
   /**
    * 按当前屏蔽方式给卡片打类：
@@ -876,18 +843,12 @@
     card.classList.toggle('bf-hide-slot', keepSlot);
     card.classList.toggle('bf-hoverable', !hide && !!settings.revealOnHover);
 
-    // 承载卡片外观的外层容器（带边框 / 背景 / 阴影的那种）必须一起处理，
-    // 否则会出现"内容没了、边框和阴影的空盒子还在"的残留。
-    // 每次重新计算：同一容器里的其它卡片后来也被隐藏时，容器本身也应该跟着藏起来。
-    var next = findCardFrame(card);
-    var prev = card.__bfFrame;
-    if (prev && prev !== card && prev !== next) {
-      prev.classList.remove('bf-hide', 'bf-hide-slot');
-    }
-    card.__bfFrame = next;
-    if (next && next !== card) {
-      next.classList.toggle('bf-hide', hide && !keepSlot);
-      next.classList.toggle('bf-hide-slot', keepSlot);
+    // 外层的"卡片外观容器"（带边框 / 背景 / 阴影的那种）必须一起处理，
+    // 否则会出现"内容没了、边框和阴影的空盒子还在"的残留
+    var frame = card.__bfFrame;
+    if (frame && frame !== card) {
+      frame.classList.toggle('bf-hide', hide && !keepSlot);
+      frame.classList.toggle('bf-hide-slot', keepSlot);
     }
   }
 

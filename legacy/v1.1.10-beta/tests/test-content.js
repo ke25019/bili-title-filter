@@ -146,18 +146,6 @@ const HTML = `<!DOCTYPE html><html><head></head><body>
         </div>
       </div>
 
-      <!-- 左上角那种"铺满灰底"的大块（真实 CSS：.recommended-swipe-body{background:var(--graph_bg_regular)}）。
-           卡片藏在里面，如果只隐藏卡片，这层灰底就露出来变成一块灰色区块。 -->
-      <div class="recommended-swipe" id="swipeHost" data-w="500" data-h="485">
-        <div class="recommended-swipe-body" id="swipeBody" data-w="500" data-h="485"
-             style="background-color:#f1f2f3">
-          <div class="bili-video-card" id="swipeCard" data-w="500" data-h="485">
-            <a href="//www.bilibili.com/video/BVswipe"><img src="swipe.jpg"></a>
-            <h3 class="bili-video-card__info--tit" title="轮播推荐位的视频">轮播推荐位的视频</h3>
-          </div>
-        </div>
-      </div>
-
       <!-- 又高又空的"占位容器"：只应隐身保留高度，不能真的隐藏（否则页面高度骤变） -->
       <div class="bili-video-card" id="tallPh" data-w="240" data-h="520"></div>
       <!-- 真实卡片：有标题 + 图片还没加载完，绝不能被当成占位项 -->
@@ -437,14 +425,6 @@ async function main() {
     $('frameHost').classList.contains('bf-hide') && !$('frameHost').classList.contains('bf-hide-slot'),
     $('frameHost').className);
   check('前移补位模式下：外层容器不会残留 bf-hide-slot', !$('frameBox').classList.contains('bf-hide-slot'));
-
-  // 带灰底的大块：只隐藏里面的卡片的话，灰底会露出来
-  await pushSettings({ mode: 'hide', hideKeepSlot: true, keywords: ['轮播推荐位的视频'] });
-  check('带灰底的大块里卡片被隐藏', $('swipeCard').classList.contains('bf-blocked'), $('swipeCard').className);
-  check('【关键】灰底容器本身也被一起隐藏（否则露出一块灰色区块）',
-    $('swipeHost').classList.contains('bf-hide-slot'), $('swipeHost').className);
-  await pushSettings({ hideKeepSlot: false });
-  check('前移补位模式下灰底容器同样被移除', $('swipeHost').classList.contains('bf-hide'), $('swipeHost').className);
 
   await pushSettings({ mode: 'mask', hideKeepSlot: true, keywords: [] });
   check('解除屏蔽后外层容器上的类被清除',

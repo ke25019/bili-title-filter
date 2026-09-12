@@ -1,383 +1,188 @@
-# BiliTitleFilter · Bilibili Title Blocker
+# BiliTitleFilter
 
-> A browser extension that filters Bilibili videos by the title keywords you choose.
+An extension I wrote for myself to filter Bilibili. Add a few keywords and the videos whose titles contain them disappear from the page. It can also block whole categories of promoted content, like live streams and anime.
 
-[![version](https://img.shields.io/badge/version-1.1.10--beta-orange)](https://github.com/ke25019/bili-title-filter/releases)
-[![manifest](https://img.shields.io/badge/Manifest-V3-blue)]()
-[![browser](https://img.shields.io/badge/Edge%20%7C%20Chrome-Chromium-00aeec)]()
-[![tests](https://img.shields.io/badge/tests-172%20passed-brightgreen)]()
+Manifest V3, works in Edge and Chrome, plain JavaScript with no runtime dependencies.
 
-A Manifest V3 extension for **Microsoft Edge / Google Chrome and other Chromium browsers**.
-Block videos whose titles match your own keyword list: either **mask** them (cover and title merged into a single
-placeholder block that reveals itself on hover) or **hide** them completely. It also filters section promotions such as
-live streams and anime, and can hide the home-page carousel banner on its own.
+![version](https://img.shields.io/badge/version-1.1.11--beta-orange)
+![browser](https://img.shields.io/badge/Edge%20%7C%20Chrome-Chromium-00aeec)
+![tests](https://img.shields.io/badge/tests-175%20passed-brightgreen)
 
 ---
 
-## ⚠️ Beta Notice
+## Install
 
-The current release is **v1.1.10-beta**. It is feature-complete but still in testing — feedback is very welcome.
+1. Grab the latest zip from [Releases](https://github.com/ke25019/bili-title-filter/releases) and extract it somewhere permanent (not the Downloads folder, those get cleaned up)
+2. Open `edge://extensions/` in Edge and turn on **Developer mode** in the bottom-left corner
+3. Click **Load unpacked** and pick the extracted folder that contains `manifest.json`
 
-- Automated checks: 100 for the core blocking logic, 52 for the settings UI, 20 for the background service — **172 in total, all passing**.
-- **Core principle of this release: rather skip than mis-block.** Whenever the extension cannot confidently identify a card, it skips that promo instead of risking a broken page.
-- Known limitation: if Bilibili redesigns its pages, a few card selectors may need updating (see the FAQ below).
-- Feedback: please open an [Issue](https://github.com/ke25019/bili-title-filter/issues) with the page URL and a screenshot if possible.
-- Older versions (v1.0.0-beta / v1.1.0-beta / v1.1.3-beta / v1.1.4-beta / v1.1.5-beta / v1.1.6-beta / v1.1.7-beta) are archived under [`legacy/`](legacy/) and can each be loaded as a standalone extension.
+On Chrome it's the same thing at `chrome://extensions/`.
 
----
-
-## Features
-
-### 1. Block videos by title keyword
-- Add or remove keywords in bulk; multiple keywords are combined with OR.
-- Matching options: **case sensitive**, **regular expressions**, **match the uploader name as well**.
-- Changes take effect immediately; every open Bilibili tab is rescanned automatically.
-
-### 2. Two blocking styles
-
-| Style | Behaviour |
-| --- | --- |
-| **Mask** | The cover and title are merged into one block showing “根据您的屏蔽词已将此视频屏蔽”. The layout stays intact, and **hovering the mouse reveals the video**; moving the pointer away masks it again. |
-| **Hide** | The video stops being displayed. By default the **original slot is kept** (same as v1.0.0-beta): only the card content is hidden, so the page neither re-flows nor shrinks and Bilibili's empty skeleton placeholders are not pulled into the middle of the feed. Turn off “keep the original slot” in the panel to remove the card from the layout entirely instead. |
-
-- The mask text is customisable (Options → Blocking style → Mask text).
-- Hover-to-reveal can be turned off; when it is off, the mask intercepts clicks so you cannot open a blocked video by accident.
-
-### 3. Block section promotions (card level)
-
-Once a section is ticked, its promo cards are handled **exactly like blocked videos**: cover and title are merged into a
-single block, never “cover masked while the title stays visible”.
-
-Available sections (**14 types**, based on the real Bilibili domains and paths):
-
-| Label | Coverage |
-| --- | --- |
-| Live | `live.bilibili.com` cards and live promo slots |
-| Anime | `/bangumi/`, `/anime/`, `/guochuang/` (including the top carousel) |
-| Movies & TV | `/movie/`, `/tv/`, `/documentary/`, `/variety/` |
-| Courses | `/cheese/` paid courses |
-| Articles | `/read/` |
-| Dynamics | `/opus/`, `t.bilibili.com` |
-| Manga | `manga.bilibili.com`, `/manga/` |
-| Games | `game.bilibili.com`, `/v/game` |
-| Music | `music.bilibili.com`, `/audio/` |
-| Esports | `/match/`, `/esports/` |
-| Merch store | `love.bilibili.com`, `show.bilibili.com`, `/mall/` |
-| Events | `/blackboard/`, `/festival/`, `/topic/`, `/platform/` |
-| Ads | `cm.` / `ad.bilibili.com` and cards badged as ads |
-| **Other promos** | **Catch-all**: promos linking to other channels, app downloads (`app.` / `m.bilibili.com`) or external sites |
-
-> “Other promos” is a catch-all and only applies when a card matches **none** of the specific types above,
-> so turning “Live” off will not silently block live cards again.
-
-**Detection does not rely on a single class name, and every rule below was measured in a real browser (headless Edge + CDP):**
-
-1. First it looks at where the links inside a card point (`live.bilibili.com`, `/bangumi/play/`, `/cheese/play/`, …)
-2. Known card class names take priority (`.feed-card`, `.bili-video-card`, `.bili-feed-card`, …)
-3. Some Bilibili areas use BEM naming, so element classes such as `bili-live-card__image--link` are resolved back to the card root `.bili-live-card`
-4. Otherwise it **walks up to the first element that contains both a title and a cover** — which is exactly the card, so the mask covers cover + title by construction
-5. The top navigation and hidden side promo areas (`.header-channel`, `.palette-button-inner`) are explicitly excluded
-6. **Three safety valves**: the container holds other cards → treated as a list and skipped; it exceeds 1100×700 or 15 % of the viewport → skipped; it has zero size (hidden) → skipped
-
-### 4. Hide the home-page carousel banner (separate switch)
-
-Hides only the large auto-rotating banner at the very top of the home page (measured structure: `.vui_carousel` wrapping
-11 `.carousel-area` slides, right below the header) — **no other page, no other content is touched**. It is an independent
-switch and does not interact with the section checkboxes above.
-
-### 5. Three places to configure it
-- **Full options page** — section table, live preview, config import/export, statistics and reset.
-- **In-page floating panel** — sits near the top bar, **hold and drag it anywhere**; the position is remembered (and can be reset with one click). Click to expand the panel.
-
-### 6. Empty placeholder blocks in hide mode
-
-Bilibili’s feed grid keeps a number of **skeleton-only empty placeholder items** at the end of the grid; they are filled
-with real content as you scroll. Once we hide the cards before them, CSS Grid **pulls those placeholders forward** to fill
-the freed cells — which looks like grey empty boxes appearing in the middle of the content.
-
-The extension now handles this automatically in hide mode: pulled-up empty placeholders are collapsed
-(plain ones are hidden outright; load sentinels such as `.load-more-anchor` are only made invisible so their layout box
-and position survive and Bilibili keeps loading). A placeholder is restored the moment it receives real content.
-Measured: visible skeletons 89 → 18 (the remainder live inside the top-left carousel block and are real content),
-and scrolling to the bottom still loads new content as usual.
-
-### 7. Dark mode support
-- The mask and the in-page panel follow Bilibili’s own dark mode automatically.
-- Detection uses the `<html>` `dark` attribute / `data-theme` / class names, with a background-luminance fallback.
-- You can also force “always light” or “always dark”.
-
-### 8. Extras
-- The toolbar badge shows how many videos were blocked today; totals are shown in the options page and can be reset.
-- Configuration can be **exported / imported as JSON** for backup or multi-machine use.
-- Settings live in `chrome.storage.sync`, so they sync across devices when you sign in to the browser.
-- All injected UI uses **Shadow DOM with `bf-` prefixed class names** and never pollutes Bilibili’s own styles.
+Once it's installed, a "屏蔽助手" button shows up near Bilibili's top bar. You can drag it anywhere and it remembers where you put it.
 
 ---
 
-## Installation (Microsoft Edge)
+## Using it
 
-**Option 1 — download the package (recommended)**
+Click the extension icon in the toolbar, or the button on the Bilibili page — both open the settings. Most of the time you only need one field: type the words you don't want to see and hit Enter. You can paste several at once, separated by commas or spaces.
 
-1. Open the [Releases page](https://github.com/ke25019/bili-title-filter/releases) and download `bili-title-filter-vX.Y.Z-beta.zip`.
-2. Extract it to any folder (do not delete the extracted folder afterwards).
-3. In Edge, go to `edge://extensions/` and enable **Developer mode** (bottom-left).
-4. Click **Load unpacked** and select the extracted folder (the one containing `manifest.json`).
-
-**Option 2 — clone the repository**
-
-```bash
-git clone https://github.com/ke25019/bili-title-filter.git
-```
-
-Then follow steps 3 and 4 above with the cloned folder.
-
-> Chrome users: same steps, but open `chrome://extensions/`.
+There are a few matching options: case sensitivity, regular expressions, and whether the uploader's name should be matched too. Changes apply immediately — any open Bilibili tab is rescanned.
 
 ---
 
-## Usage
+## Two ways to block
 
-1. Click the extension icon in the toolbar, or the “屏蔽助手” button near Bilibili’s top bar.
-2. Type a keyword into **Title keywords** and press Enter. Examples:
-   - `剧透` (spoilers)
-   - `营销号` (clickbait accounts)
-   - `标题党` (clickbait titles)
-   - With regex enabled you can use patterns such as `^\s*【.*?】` or `(合集|盘点)\s*第?\d+`.
-3. Choose a blocking style: **Mask** (hover to peek) or **Hide**.
-4. To filter section promotions, tick the sections you do not want. To remove the whole promo row as well, turn on the **“整行板块也一起屏蔽”** (block whole rows too) switch below the grid.
-5. **Hold and drag** the floating button to move it; the position is saved automatically. Use **重置位置** (reset position) in the panel footer to restore the default spot.
-6. Fine-grained options (per-section card/row switches, regex, uploader matching, custom text, import/export, statistics) live in the **full options page**.
+**Mask** — the cover and the title are merged into one block that says 根据您的屏蔽词已将此视频屏蔽. Hover it and the video shows up, move the pointer away and it's masked again. The text is editable.
 
-### Supported pages
-Home feed, search results, channel pages, rankings, the “related videos” sidebar on watch pages, the dynamics page, and other common video lists.
+**Hide** — the video simply isn't shown. By default I do it the way the very first version (v1.0.0) did: only the content is hidden and **the slot is kept**. That way the page doesn't reflow, and Bilibili's empty skeleton placeholders at the end of the grid don't get pulled into the middle of the feed.
+
+If you'd rather have things compact, turn off "keep the original slot" in the panel and the card is removed from the layout entirely, with the following content moving up. Either one is fine, pick whichever you prefer.
 
 ---
 
-## Project layout
+## Blocking promoted content
+
+Besides title keywords, you can block whole categories: live streams, anime, movies, courses, articles, dynamics, manga, games, music, esports, merch store, events, ads.
+
+There's also an "other promos" catch-all for promo cards that don't fall into any of those (app download prompts, other channel promos, and so on). It only applies when a card matches none of the specific categories — so turning "Live" off doesn't get silently re-blocked by the catch-all.
+
+The big carousel at the top of the home page has its own switch. It only affects that one block on the home page.
+
+I didn't hard-code a single class for detecting promo cards. The order is:
+
+1. Where the links inside the card point (`live.bilibili.com`, `/bangumi/play/`, `/cheese/play/`, …)
+2. Known card class names (`.feed-card`, `.bili-video-card`, …)
+3. Some areas use BEM naming, so elements like `bili-live-card__image--link` are resolved back to the card root
+4. Otherwise it walks up to the first element that contains both a title and a cover
+5. The top navigation and a few areas that hide promo links are explicitly excluded
+
+When it can't tell, I'd rather skip than mess up the page, so there are safety valves: the container holds other cards, the size is over 1100×700 or 15% of the viewport, or the element has zero size — any of those and the block is skipped.
+
+---
+
+## The panel on the page
+
+I didn't want to open the extension settings every time, so there's a panel inside the page. When you switch to Hide, a "keep the original slot" switch appears in it.
+
+The panel can be dragged around; the position is stored locally and there's a "reset position" link at the bottom.
+
+---
+
+## Dark mode
+
+The mask and the panel follow Bilibili's dark mode. Detection uses the `dark` attribute / `data-theme` / class names on `<html>`, with the page background brightness as a fallback. You can also force light or dark.
+
+---
+
+## Layout
 
 ```
 bili-title-filter/
-├── manifest.json          # MV3 manifest
-├── background.js          # Service worker: statistics, badge, defaults, open options page
-├── shared/
-│   └── defaults.js        # Shared defaults + section type definitions (with detection rules)
+├── manifest.json          extension manifest
+├── background.js          service worker: stats, badge, defaults
+├── shared/defaults.js     default settings + category definitions and detection rules
 ├── content/
-│   ├── content.js         # Content script: scanning / matching / blocking, section detection, draggable panel
-│   └── content.css        # Injected styles: mask, hover reveal, banner hiding, dark-mode variables
-├── popup/                 # Toolbar popup (quick settings)
-│   ├── popup.html / popup.css / popup.js
-├── options/               # Full options page
-│   ├── options.html / options.css / options.js
-├── legacy/                # Archived older versions (each loadable as its own extension)
-│   ├── v1.0.0-beta/
-│   ├── v1.1.0-beta/
-│   └── v1.1.3-beta/
-├── tests/                 # jsdom automated checks (not part of the shipped extension)
-└── icons/                 # 16 / 32 / 48 / 128 icons
+│   ├── content.js         scanning, matching, blocking, and the in-page panel
+│   └── content.css        mask, hiding, dark mode
+├── popup/                 toolbar popup
+├── options/               full options page
+├── tests/                 jsdom tests (not part of the shipped extension)
+├── legacy/                archived older versions, each loadable on its own
+└── icons/
 ```
 
 ---
 
-## Development & tests
-
-The extension itself has zero runtime dependencies — plain JavaScript (MV3 + Shadow DOM).
+## Running the tests
 
 ```bash
 cd tests
-npm install      # jsdom is only needed for the tests
-npm test         # 129 behaviour checks
+npm install
+npm test
 ```
 
-Coverage: blocking logic and both blocking styles, hover reveal, **cover+title merged masking on the real promo-card
-structure**, 14 section types plus the catch-all rule, the carousel-banner switch, navigation safety,
-**oversized-container and hidden-element safety valves (page-blanking prevention)**, floating button dragging and
-position persistence, popup / options interactions, and the background statistics & badge. See `tests/README.md`.
+175 checks covering the blocking logic, category detection, both hiding behaviours, the settings pages and the background stats.
 
-> The mock DOM and its sizes (`data-w` / `data-h`) come from **real-browser CDP measurements**, including the
-> utility-class structure `.floor-card-inner > .cover-container + .pb-16.px-12 > p.title`.
+The mock DOM and its sizes were measured on the real site (utility-class structures like `.floor-card-inner > .cover-container + .pb-16.px-12 > p.title`, the `.vui_carousel` banner, the 0×0 hidden links inside `.palette-button-inner`, and so on).
+
+For issues that only show up in a real browser I use the scripts in `tests/browser-harness/`, which launch a separate headless Edge — it only ever kills processes belonging to its own profile.
 
 ---
 
 ## FAQ
 
-**Q: I ticked a section but content from it is still visible.**
-A: Since v1.1.4 section blocking is **card level only**: when the extension cannot confidently identify the card holding both cover and title, it skips that promo (rather skip than mis-block). If the content you mean is the big banner at the top of the home page, use the separate **“Hide the home-page carousel banner”** switch.
+**I blocked a category but content from it is still visible.**
+Category blocking is card-level only. When I can't tell which card holds the cover and title, I skip it, so a few unusual promo slots may be left alone. If it's the big banner at the top of the home page, use the separate switch.
 
-**Q: Some promo cards don’t belong to any section I can see.**
-A: Turn on the **“Other promos”** catch-all. It picks up every promo card not covered by the 13 specific types (app downloads, other channel promos, external links) and only applies when a card matches no specific type — so turning “Live” off will not silently block live cards again.
+**Some promo cards don't belong to any category.**
+Turn on the "other promos" catch-all. It only applies when a card matches no specific category.
 
-**Q: The page went blank or the layout broke.**
-A: v1.1.4-beta reproduced this in a real browser (Edge + CDP) and fixed the root cause: an oversized element (the whole feed, or the hidden side-button container) was mistaken for a single card and masked. Three safety valves now guard this — a container holding other cards, a size above 1100×700 or 15 % of the viewport, or a zero-size element all cause the block to be skipped. If it still happens, enable “output debug logs” in the options page and post the `[B站屏蔽助手]` console lines together with the page URL in an Issue.
+**Why wasn't a video blocked?**
+First check that the keyword really is in the title. With case sensitivity or regex enabled, matching is stricter. You can also enable debug logging in the options and watch the console on the Bilibili tab.
 
-**Q: After blocking, part of the page is blank or the layout looks broken.**
-A: A card selector probably needs updating after a Bilibili redesign. Try the **Mask** style first, or add the new class names to `CARD_SELECTOR` / `TITLE_SELECTORS` in `content/content.js`.
+**Does it slow the page down?**
+Scanning uses `MutationObserver` with a 180 ms debounce and only touches cards that were added or changed. Category detection only runs while the matching switches are on, and it's rate- and count-limited.
 
-**Q: Why was a video not blocked?**
-A: Check whether the keyword really appears in the title. With “case sensitive” or “regular expression” enabled, matching is stricter. You can also enable “output debug logs” in the options page and inspect the console on the Bilibili tab.
-
-**Q: Does it slow the page down?**
-A: Scanning uses `MutationObserver` with a 180 ms debounce and only processes newly added or changed cards. Section detection only runs while the corresponding switches are on, and it is rate- and count-limited.
-
-**Q: The statistics are higher than the number of videos I actually saw blocked.**
-A: Bilibili is a single-page app: scrolling and navigation re-render cards, so the counter approximates the number of blocking actions rather than unique videos.
+**The counter is higher than the number of videos I saw disappear.**
+Bilibili is a single-page app, so scrolling and navigating re-render cards. The counter is an approximation of blocking actions.
 
 ---
 
-## Version
+## Changelog
 
-**v1.1.10-beta** · Requires Microsoft Edge (Chromium) 102+ (`minimum_chrome_version: 102`)
+Newest first. This is what changed and why — including the parts I got wrong.
 
-### Changelog
+### 1.1.11
 
-**v1.1.10-beta**
+Following the hint, I went through the bilibili.com page source and listed everything painted with the grey placeholder colour (`--graph_bg_regular`): `.floor-card` (the one with the border and shadow), `.recommended-swipe-body` (the grey body inside the top-left block), `.layer.tiny`, `.bili-video-card__image--wrap`, `.v-img`, the various `__skeleton--*` parts, and the empty `.extension-tips-v2` slides in the banner.
 
-> Key fix: the leftover **"border + shadow box"** of promo cards (the faint line and white frame in your screenshot).
+All of them live inside the card containers, so the fix has to come from hiding the container together with the card. The previous attempt had a hole: **it stopped as soon as a container held more than one card**, which left the container's own grey background exposed. It now keeps walking up as long as every card inside is hidden and there is no other real content in there. The container is also re-evaluated every time, so when the second card in a container gets hidden the container follows.
 
-- **Root cause (measured from the real Bilibili CSS)**: promo cards sit inside a box that carries a border, background and shadow:
-  ```css
-  .floor-card{ border:1px solid #e3e5e7; background:var(--bg1);
-               box-shadow:0 0 40px rgba(0,0,0,.03); border-radius:6px; padding:12px }
-  ```
-  while the card itself (`.floor-card-inner`) is inside it. Our hiding only targeted the inner element,
-  so **the content disappeared but that bordered/shadowed box stayed behind**.
-- **Both hide modes were affected**: keep-slot mode left an empty bordered box; remove-slot mode left the same residue
-  - which is one of the reasons "move up to fill" still looked buggy.
-- **Fix**: a new `findCardFrame()` walks up from the card to the outermost container that still holds only this one card
-  (stopping at the grid item) and handles it together with the card:
-  * **keep-slot**: `visibility:hidden` on it - border, background and shadow all vanish while the slot is kept (no reflow)
-  * **remove-slot**: `display:none` on it - the whole grid item is removed, leaving no empty frame
-- Checks 166 -> 172, with 6 new assertions covering this scenario (using the real border/background/shadow structure)
-**v1.1.9-beta**
+While checking this I found something more important: the size safety valve was "skip anything over 1100x700 or 15% of the viewport", but the top-left two-column block measures 580x485, about 25% of the viewport - **meaning videos in that spot were never blocked at all**. The limit is now 1200x800 / 35%, which covers it while still catching the real disasters (the 1401x808 full-page container I measured).
+### 1.1.10
 
-> Key fix: the "white empty box" left behind in keep-slot mode.
+A faint line in a tester's screenshot led me to it: Bilibili's promo cards sit inside a `.floor-card` that carries a border, a white background and a 40px shadow, while the card itself is inside it. I was only hiding the inner element, so the content disappeared but the outer box stayed — in both hiding modes.
 
-- **Fixed: keep-slot mode left an empty white box**
-  The old implementation hid the card's **children**, so the card's **own background and border stayed visible**,
-  which looks like an empty white box. v1.0.0-beta looked more natural because it hid the inner card and the outer
-  grid item has **no background**, so that spot showed the page background instead.
-  Now `visibility: hidden` is applied to the **card itself**:
-  * the layout box still holds its place -> no reflow, no shrinking, and Bilibili's trailing empty skeleton
-    placeholders are not pulled into the middle of the feed
-  * the card disappears together with its background and border -> the spot shows the page background,
-    **matching v1.0.0-beta visually**
-- Checks 165 -> 166, with an assertion guarding this CSS rule
-**v1.1.8-beta**
+It now walks up from the card to the outermost container that still holds only that one card and handles it too: `visibility:hidden` in keep-slot mode (border, background and shadow all go away, the slot stays), `display:none` in remove-slot mode (the whole grid item goes away, no leftover frame).
 
-> This release audits the whole "remove the slot" (cards move up) path line by line and fixes five real defects.
+### 1.1.9
 
-| # | Defect | Effect | Fix |
-| --- | --- | --- | --- |
-| 1 | The grid was looked up via the **immediate parent only** | If a hidden card was one level deeper (e.g. a `.floor-card-inner`), placeholders in that grid were never collapsed, leaving grey boxes | Walk up to 6 levels for a `display:grid` ancestor |
-| 2 | Every run **removed all classes and re-added them** | Two style recalculations even when nothing changed, causing jitter while scrolling/loading | Diff-based updates: only write what actually changed |
-| 3 | Placeholder detection required **no `<img>`** | Skeletons with an unloaded image were not collapsed, leaving grey boxes | Use `naturalWidth`: an unloaded image still counts as a placeholder; no text at all is a placeholder too |
-| 4 | Only **direct children** of the grid were scanned | Empty cards nested inside `.floor-single-card` were missed | Also scan one level deeper |
-| 5 | Any text-less, image-less grid child was hidden | Could hide height-carrying empty containers, making the page height jump | Containers taller than 400px are only made invisible, keeping their height |
+Fixing the white empty box left by the previous version. Keep-slot mode used to hide the card's **children**, so the card's own background and border stayed and it looked like an empty white box. v1.0.0 looked natural because it hid the inner card and the outer grid item has no background. It now applies `visibility:hidden` to the card itself: the slot stays, background and border vanish with it.
 
-The periodic re-check throttle was also tightened from 2.5s to 1.5s so placeholders recover sooner.
+### 1.1.8
 
-- Checks 160 → 165, with 5 new boundary cases
-**v1.1.7-beta**
+Went through the whole remove-slot path and fixed five things: the grid was only found via the immediate parent (missed when a card sits one level deeper), classes were cleared and re-added on every run (jitter while scrolling), placeholder detection required no `<img>` (skeletons with an unloaded image were missed), only direct children were scanned (nested empty cards were missed), and empty elements were hidden indiscriminately (could hide a height-carrying container). Also tightened the periodic re-check from 2.5s to 1.5s.
 
-> Following your hint, this release went back to v1.0.0-beta - **only its hide mode behaves the way you want**.
-> Running both versions against the same real DOM revealed the root cause.
+### 1.1.7
 
-- **Root cause: the hiding target changed**
+Feedback said only v1.0.0's hide mode was any good, so I ran both versions against the same real DOM and found out why: in v1.1.0 I added `.bili-feed-card` to the card selector, which changed the hiding target from "the card's content" to "the whole grid item". The grid then reflowed and the freed cells got filled with Bilibili's empty skeleton placeholders. Added the "keep the original slot" switch, defaulting to the v1.0.0 behaviour.
 
-  | Card kind | v1.0.0-beta.1 | from v1.1.0 |
-  | --- | --- | --- |
-  | Cards wrapped in `.feed-card` | hides `.feed-card` (the grid item) | same |
-  | **`.bili-feed-card` that is itself a grid item** | **hides only the inner `.bili-video-card`** - grid item stays, **no reflow** | **hides the `.bili-feed-card` grid item** - **the entire grid reflows** |
+### 1.1.6
 
-  The difference came from adding `.bili-feed-card` to the card selector in v1.1.0. Reflow causes both symptoms you reported:
-  the freed cells get filled with Bilibili's **empty skeleton placeholders** from the end of the grid (grey blocks mid-content),
-  and the page becomes shorter overall (blank space at the bottom).
+Fixed a bug I introduced myself: the size safety valve keyed off "is the match reason unchanged", but in hide mode a card is `display:none` (zero size), so as soon as the matching keyword changed the valve refused to process the card and it never came back when switching to Mask. Also found that `hasLayoutEngine()` cached its result permanently — if it was first called before `body` had a layout, the valve was disabled for the whole session.
 
-- **New switch: "keep the original slot when hiding"** (on by default = v1.0.0 behaviour)
-  * **On (default)**: only the card content is hidden, the slot stays -> no reflow, no shrinking, no placeholders pulled up
-  * **Off**: the card is removed from the layout and later cards move up (reflow; the extension then collapses the pulled-up empty placeholders)
+### 1.1.5
 
-  The switch only appears when Hide mode is selected (in the panel and the popup); it is also in the options page.
-- **Placeholder collapsing now only runs in "remove slot" mode** (with the slot kept there is no reflow, so nothing is pulled up)
-- Checks grew 142 -> 160, with 18 new assertions covering both hide behaviours, their CSS rules and the switch wiring
+Fixed grey blocks appearing in the middle of the feed in hide mode. Bilibili's grid keeps skeleton-only placeholders at the end; hiding the cards before them makes the grid pull those placeholders forward. In remove-slot mode they're now collapsed too (load sentinels are only made invisible so loading still works).
 
-**v1.1.6-beta**
+### 1.1.4
 
-> This release re-examines hide mode. An A/B comparison was run in an isolated headless instance
-> (extension disabled vs. hide mode active).
+Rewrote category detection after measuring the real site in a headless Edge. Enabling "Events" used to blank the whole page — the walk-up started from a hidden 0×0 promo link, jumped three levels and landed on a 1401×808 side-button container. Promo cover and title were also being masked separately (the real cards use utility classes, not BEM). Removed the "block whole rows" feature and replaced it with a separate home-banner switch.
 
-- **Fixed: after switching from Hide back to Mask, some cards stayed hidden forever.**
-  The size safety valve in `applyBlock` keyed off “is the match reason unchanged”; in hide mode a card is
-  `display:none` (zero size), so as soon as the matching keyword changed (e.g. you blocked “游” and later added “我”)
-  the valve misjudged it and refused to process the card, leaving it hidden permanently.
-  It now checks “has this card ever been blocked”, so the size check only runs for a first-time block.
-- **Fixed: `hasLayoutEngine()` cached its result permanently.**
-  If it was first called before `body` had a layout, the cache stuck at `false` and the size safety valve was
-  effectively disabled for the whole session. It is no longer cached.
-- **Investigation result (with evidence): the blank blocks seen in hide mode are not caused by the extension.**
-  In the A/B run the number of “empty blocks” (no text, no loaded image) was identical with the extension disabled
-  and with hide mode active — 15 in both cases — and their ancestry shows they are all Bilibili’s own
-  `extension-tips-v2` panels inside the top-left `.vui_carousel`. The bottom blank measured only 60px in the same setup.
-- Test hardening: the statistics assertion now polls instead of relying on a fixed delay; three consecutive full runs are stable.
-- Checks grew 137 → 142; v1.1.5-beta archived under `legacy/`.
+### 1.1.3
 
-**v1.1.5-beta**
+First attempt at filling out the category list (9 → 14, plus the catch-all) and at fixing the blank-page issue — but I fixed the wrong thing; the real cause only turned up in 1.1.4.
 
-- **Fixed: grey/white placeholder blocks appearing in the middle of the content in hide mode.**
-  Bilibili’s feed grid keeps skeleton-only empty placeholder items at the end; hiding cards makes CSS Grid pull them
-  forward into the freed cells. They are now collapsed (plain ones hidden, load sentinels such as `.load-more-anchor`
-  only made invisible so Bilibili keeps loading). Measured: visible skeletons 89 → 18.
-- Loading still works after the collapse (real cards 14 → 22 while scrolling to the bottom).
+### 1.1.0
 
-**v1.1.4-beta**
+Category blocking did nothing before this, because it relied on class names alone. This version infers the type from the links inside the card. Also switched the mask to reveal-on-hover and made the floating button draggable.
 
-> This release was **rewritten after measuring the real site**: the extension was loaded into a headless Edge instance
-> driven over CDP, every switch was tested one by one, and the evidence (`palette-button-inner` at 1401×808, plus two
-> separate masks on `cover-container` and `pb-16 px-12`) drove the changes below.
+### 1.0.0
 
-- **Fixed: enabling a section such as “Events” blanked the whole page.** The walk-up started from a hidden 0×0 promo link, jumped three levels and landed on a 1401×808 container (98.9 % of the viewport). The **“block whole rows” feature and all its logic were removed** and three safety valves were added; “Events” now blocks nothing on the home page
-- **Fixed: promo cover and title were masked separately.** Real live promo cards use utility classes (`.floor-card-inner > .cover-container` + `.pb-16.px-12 > p.title`). The masking target is now **the first ancestor containing both a title and a cover**, verified to produce a single mask covering the whole card (238×224)
-- **Removed “block whole rows too”** and replaced it with a separate **“Hide the home-page carousel banner”** switch that only hides the top banner (measured: `.vui_carousel` wrapping 11 `.carousel-area` slides)
-- **Fixed: hidden 0×0 elements treated as cards** — zero-size elements are now skipped wherever a layout engine exists
-- **Much stricter identification**: size above 1100×700 or 15 % of the viewport, a container holding other cards, or multiple same-section entries inside — any of these means “skip”
-- Exclusion list extended with the hidden promo areas found during testing: `.header-channel`, `.palette-button-outer/inner`
-- Legacy “whole row” settings are migrated to the new carousel-banner switch
-- 129 checks (67 content / 42 UI / 20 background); v1.1.3-beta archived under `legacy/`
-
-**v1.1.3-beta**
-
-- Blank-page / broken-layout fixes (**not fully resolved — v1.1.4 found the real root cause in a live browser**)
-- Fixed the whole-row switch damaging the page; section types grew from 9 to 14 with an “other promos” catch-all
-- Mask height measured while hidden; section labels shortened and made non-wrapping
-
-**v1.1.0-beta**
-
-- **Fixed: section promotion blocking had no effect** — detection is now class-independent
-- Added whole-row section blocking (**removed again in v1.1.4**)
-- Mask reveals on hover; the floating button can be dragged and remembers its position
-- Fixed unblocking of generically detected cards; fixed partial settings resetting booleans to false
-
-**v1.0.0-beta.1** (first public beta)
-
-- Block videos by title keyword, with bulk management, regex, case sensitivity and uploader matching
-- Two blocking styles: mask / hide
-- Section promotion blocking, in-page floating panel, dark mode support, toolbar badge statistics
-
-### Roadmap
-
-- [ ] Blocking by uploader / view count / duration / finer section granularity
-- [ ] Allowlist and “always show” rules
-- [ ] Keyword groups and switchable profiles
-- [ ] A blocking log panel (see exactly what was blocked today)
-
----
-
-## Other languages
-
-- [中文文档（Chinese）](README.zh-CN.md)
+First version: block by title keyword, two blocking styles, nine promo categories, in-page panel, dark mode.
 
 ---
 
 ## License
 
-This repository currently ships without a license file; all rights are reserved by the author.
-Please open an Issue first if you want to use it in another project.
+There's no license file yet. If you want to use this somewhere else, open an issue first.

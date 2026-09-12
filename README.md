@@ -1,61 +1,51 @@
-# BiliTitleFilter · B站屏蔽助手
+# B站屏蔽助手 · BiliTitleFilter
 
-> 按标题屏蔽词过滤 B 站视频的浏览器扩展 · A browser extension that filters Bilibili videos by title keywords.
+这是我自己在用的一个 B 站网页端扩展：给不想看的视频标题加几个关键词，它们就从页面上消失；也能按分区屏蔽直播、番剧这类推广内容。
 
-[![version](https://img.shields.io/badge/version-1.1.6--beta-orange)](https://github.com/ke25019/bili-title-filter/releases)
-[![manifest](https://img.shields.io/badge/Manifest-V3-blue)]()
-[![browser](https://img.shields.io/badge/Edge%20%7C%20Chrome-Chromium-00aeec)]()
-[![tests](https://img.shields.io/badge/tests-142%20passed-brightgreen)]()
+An extension I wrote for myself to filter Bilibili. Add a few keywords and the videos whose titles contain them disappear; it can also block whole categories of promoted content, like live streams and anime.
 
-**适用于 Microsoft Edge / Chrome 等 Chromium 浏览器的 B 站网页端扩展（Manifest V3）。**
+![version](https://img.shields.io/badge/version-1.1.11--beta-orange)
+![browser](https://img.shields.io/badge/Edge%20%7C%20Chrome-Chromium-00aeec)
+![tests](https://img.shields.io/badge/tests-175%20passed-brightgreen)
 
 ---
 
-## 📖 选择语言 / Choose your language
+## 文档 / Documentation
 
-| 语言 Language | 文档 Documentation |
+| | |
 | --- | --- |
-| 🇨🇳 简体中文 | **[README.zh-CN.md](README.zh-CN.md)** |
-| 🇬🇧 English | **[README.en.md](README.en.md)** |
+| 简体中文 | [README.zh-CN.md](README.zh-CN.md) |
+| English | [README.en.md](README.en.md) |
 
 ---
 
-## 它能做什么 / What it does
+## 装一下 / Install
 
-- **按标题屏蔽词屏蔽视频** —— 支持批量管理、正则、区分大小写、匹配 UP 主名称
-- **两种屏蔽方式** —— 整体遮蔽（封面与标题合并成一块提示区域，**鼠标悬停即可查看**）或完全隐藏（默认保留原位置、页面不重排，也可切换为整卡移除）
-- **屏蔽分区推广** —— **14 类**：直播、番剧、影视、课堂、专栏、动态、漫画、游戏、音乐、赛事、会员购、活动、广告 + **「其他推广」兜底**；另有**独立的「屏蔽首页顶部轮播横幅」开关**；识别不依赖单一 class，无法确认时宁可不屏蔽
-- **B 站页面内悬浮面板** —— 位于标题栏附近，**可自由拖动**并记住位置，随时调整所有属性
-- **深色模式适配** —— 自动跟随 B 站 web 端深色模式，也可手动锁定
+1. 到 [Releases](https://github.com/ke25019/bili-title-filter/releases) 下载最新的 zip，解压到一个固定目录
+2. Edge 打开 `edge://extensions/`，左下角打开「开发人员模式」，点「加载解压缩的扩展」，选到含 `manifest.json` 的那一层
 
-- **Block videos by title keywords** — bulk management, regex, case sensitivity, uploader matching
-- **Two blocking styles** — mask (cover + title merged into one block, **reveals on hover**) or hide entirely
-- **Block section promotions** — **14 types** plus an **“other promos” catch-all**, and a **separate switch for the home-page carousel banner**; detection is class-independent and skips rather than mis-blocks
-- **Draggable in-page panel** near the top bar, position remembered, all settings at hand
-- **Dark mode support** — follows Bilibili’s dark theme automatically, or force light/dark
+1. Download the latest zip from [Releases](https://github.com/ke25019/bili-title-filter/releases) and extract it somewhere permanent
+2. Open `edge://extensions/`, turn on **Developer mode**, click **Load unpacked**, pick the folder containing `manifest.json`
+
+详细说明和常见问题都在上面那两个文档里。
+Details and the FAQ live in the two documents linked above.
 
 ---
 
-## 快速开始 / Quick start
+## 简单说说 / In short
 
-1. 打开 [Releases 页面](https://github.com/ke25019/bili-title-filter/releases) 下载最新版压缩包并解压
-2. Edge 打开 `edge://extensions/` → 开启「开发人员模式」→「加载解压缩的扩展」→ 选择解压出的文件夹（含 `manifest.json`）
+- 按标题关键词屏蔽视频，支持正则、区分大小写、匹配 UP 主名字
+- 两种效果：整体遮蔽（封面标题合成一块，鼠标悬停能看）和完全隐藏（默认保留原位置，页面不重排）
+- 14 类分区推广可以整类屏蔽，另有「其他推广」兜底和单独的首页轮播横幅开关
+- B 站页面里有一个可以拖着走的悬浮面板
+- 跟随 B 站深色模式
 
-1. Download the latest zip from the [Releases page](https://github.com/ke25019/bili-title-filter/releases) and extract it
-2. In Edge, open `edge://extensions/`, enable **Developer mode**, click **Load unpacked** and pick the extracted folder
+- Block by title keyword, with regex, case sensitivity and uploader matching
+- Two styles: mask (cover and title merged into one block, reveals on hover) and hide (keeps the slot by default, so the page doesn't reflow)
+- Fourteen promo categories, an "other promos" catch-all, and a separate switch for the home-page banner
+- A draggable panel inside the page
+- Follows Bilibili's dark mode
 
-完整安装步骤与使用说明见上方对应语言的文档。
-Full instructions are available in the language-specific documents linked above.
+纯原生 JavaScript，没有运行时依赖。测试用 jsdom 跑，一共 175 项。
 
----
-
-## 自动化校验 / Automated checks
-
-```bash
-cd tests
-npm install
-npm test        # 172 项校验全部通过 / 172 checks, all passing
-```
-
-本扩展的代码是纯原生 JavaScript、零运行时依赖。
-The extension itself is plain JavaScript with zero runtime dependencies.
+Plain JavaScript, no runtime dependencies. The tests run on jsdom — 172 checks in total.
