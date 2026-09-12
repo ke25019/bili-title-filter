@@ -30,7 +30,7 @@ html.bf-dark {
 }
 
 /* 隐藏卡片原有内容（保留占位高度，不会引起页面抖动） */
-.bf-blocked > *:not(.bf-mask):not(.bf-mask-chip) {
+.bf-blocked > *:not(.bf-mask) {
   visibility: hidden !important;
 }
 
@@ -59,20 +59,18 @@ html.bf-dark {
   background: var(--bf-mask-bg);
   border: 1px dashed var(--bf-mask-border);
   border-radius: 8px;
-  cursor: default;
   user-select: none;
-  transition: background-color .15s ease, opacity .15s ease;
-  /* 防止被卡片的 flex / grid 布局影响 */
+  transition: background-color .15s ease, opacity .18s ease;
   margin: 0 !important;
   float: none !important;
+  /* 悬停查看模式下不拦截鼠标事件，让指针能"穿过"遮罩触发卡片的悬停 */
+  pointer-events: none !important;
 }
 
-.bf-blocked.bf-clickable .bf-mask {
-  cursor: pointer;
-}
-
-.bf-blocked.bf-clickable .bf-mask:hover {
-  background: var(--bf-mask-bg-hover);
+/* 关闭"悬停查看"时，遮罩需要挡住点击，避免误点进被屏蔽的视频 */
+.bf-blocked:not(.bf-hoverable) .bf-mask {
+  pointer-events: auto !important;
+  cursor: not-allowed;
 }
 
 .bf-mask__icon {
@@ -116,37 +114,16 @@ html.bf-dark {
 .bf-blocked.bf-compact .bf-mask__icon { display: none; }
 .bf-blocked.bf-compact .bf-mask__hint { display: none; }
 
-/* ---------- 临时查看状态 ---------- */
-.bf-blocked.bf-revealed > *:not(.bf-mask):not(.bf-mask-chip) {
+/* ---------- 悬停临时查看：进入卡片即展示，移出自动恢复 ---------- */
+.bf-blocked.bf-revealed > *:not(.bf-mask) {
   visibility: visible !important;
 }
 
 .bf-blocked.bf-revealed .bf-mask {
   opacity: 0 !important;
-  pointer-events: none !important;
 }
 
-.bf-mask-chip {
-  position: absolute !important;
-  top: 6px !important;
-  left: 6px !important;
-  z-index: 30 !important;
-  display: none;
-  padding: 2px 8px;
-  font-size: 12px;
-  line-height: 18px;
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Microsoft YaHei", "PingFang SC", sans-serif;
-  color: #fff;
-  background: rgba(24, 25, 28, .78);
-  border-radius: 6px;
-  cursor: pointer;
-  user-select: none;
-}
-
-.bf-blocked.bf-revealed .bf-mask-chip {
-  display: block;
-}
-
-.bf-mask-chip:hover {
-  background: var(--bf-mask-accent);
+/* ---------- 板块级屏蔽（整行 / 整个推广位） ---------- */
+.bf-section-blocked {
+  display: none !important;
 }

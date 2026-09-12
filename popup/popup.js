@@ -38,7 +38,7 @@
       b.classList.toggle('is-active', b.dataset.value === settings.mode);
     });
     $('mode-hint').textContent = settings.mode === 'mask'
-      ? '封面与标题合并为一整块提示区域'
+      ? (settings.revealOnHover ? '封面与标题合并为一整块，鼠标悬停可查看' : '封面与标题合并为一整块提示区域')
       : '直接从页面移除，如同从未出现';
 
     Array.prototype.forEach.call(document.querySelectorAll('#theme button'), function (b) {
@@ -96,6 +96,11 @@
     Array.prototype.forEach.call(typesBox.querySelectorAll('.type'), function (el) {
       el.classList.toggle('is-active', !!settings.blockTypes[el.dataset.key]);
     });
+
+    var secBtn = $('sections');
+    var allOn = TYPES.every(function (t) { return !!settings.blockSections[t.key]; });
+    secBtn.classList.toggle('is-on', allOn);
+    secBtn.setAttribute('aria-checked', allOn ? 'true' : 'false');
   }
 
   function addKeyword() {
@@ -142,6 +147,14 @@
     $('kw-add').addEventListener('click', addKeyword);
     $('kw-input').addEventListener('keydown', function (e) {
       if (e.key === 'Enter') { e.preventDefault(); addKeyword(); }
+    });
+
+    // 整行板块：一次性作用于所有已勾选的分区
+    $('sections').addEventListener('click', function () {
+      var allOn = TYPES.every(function (t) { return !!settings.blockSections[t.key]; });
+      var next = Object.assign({}, settings.blockSections);
+      TYPES.forEach(function (t) { next[t.key] = !allOn; });
+      save({ blockSections: next });
     });
 
     $('open-options').addEventListener('click', function () {

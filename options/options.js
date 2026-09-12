@@ -62,7 +62,7 @@
 
     $('mask-text').value = settings.maskText;
     $('type-mask-text').value = settings.typeMaskText;
-    $('click-reveal').checked = !!settings.clickToReveal;
+    $('hover-reveal').checked = !!settings.revealOnHover;
 
     $('case-sensitive').checked = !!settings.caseSensitive;
     $('use-regex').checked = !!settings.useRegex;
@@ -114,40 +114,91 @@
     });
   }
 
+  function makeTypeCell(t, scope) {
+    var label = document.createElement('label');
+    label.className = 'tcell';
+    var input = document.createElement('input');
+    input.type = 'checkbox';
+    input.dataset.key = t.key;
+    input.dataset.scope = scope;
+    var span = document.createElement('span');
+    span.textContent = scope === 'card' ? '卡片' : '整行';
+    label.appendChild(input);
+    label.appendChild(span);
+
+    input.addEventListener('change', function () {
+      if (scope === 'card') {
+        var next = Object.assign({}, settings.blockTypes);
+        next[t.key] = input.checked;
+        save({ blockTypes: next }, true);
+      } else {
+        var nextS = Object.assign({}, settings.blockSections);
+        nextS[t.key] = input.checked;
+        save({ blockSections: nextS }, true);
+      }
+      toast(input.checked ? '已屏蔽「' + t.label + '」' + (scope === 'card' ? '卡片' : '整行板块')
+                          : '已恢复显示「' + t.label + '」' + (scope === 'card' ? '卡片' : '整行板块'));
+    });
+    return label;
+  }
+
   function renderTypes() {
     var box = $('types');
     if (!box.dataset.built) {
+      var head = document.createElement('div');
+      head.className = 'typetable__head';
+      var h1 = document.createElement('span');
+      h1.textContent = '分区';
+      var h2 = document.createElement('span');
+      h2.textContent = '屏蔽卡片';
+      var h3 = document.createElement('span');
+      h3.textContent = '整行板块';
+      head.appendChild(h1);
+      head.appendChild(h2);
+      head.appendChild(h3);
+      box.appendChild(head);
+
       TYPES.forEach(function (t) {
-        var el = document.createElement('div');
-        el.className = 'type';
-        el.dataset.key = t.key;
+        var row = document.createElement('div');
+        row.className = 'trow';
+
+        var name = document.createElement('div');
         var label = document.createElement('span');
-        label.className = 'type__label';
+        label.className = 'trow__name';
         label.textContent = t.label;
         var desc = document.createElement('span');
-        desc.className = 'type__desc';
+        desc.className = 'trow__desc';
         desc.textContent = t.desc;
-        el.appendChild(label);
-        el.appendChild(desc);
-        el.addEventListener('click', function () {
-          var next = Object.assign({}, settings.blockTypes);
-          next[t.key] = !next[t.key];
-          save({ blockTypes: next }, true);
-          toast(next[t.key] ? '已屏蔽「' + t.label + '」' : '已恢复显示「' + t.label + '」');
-        });
-        box.appendChild(el);
+        name.appendChild(label);
+        name.appendChild(desc);
+
+        row.appendChild(name);
+        row.appendChild(makeTypeCell(t, 'card'));
+        row.appendChild(makeTypeCell(t, 'section'));
+        box.appendChild(row);
       });
       box.dataset.built = '1';
     }
-    Array.prototype.forEach.call(box.querySelectorAll('.type'), function (el) {
-      el.classList.toggle('is-active', !!settings.blockTypes[el.dataset.key]);
+    syncTypes();
+  }
+
+  function syncTypes() {
+    Array.prototype.forEach.call(document.querySelectorAll('#types input[data-scope]'), function (input) {
+      var k = input.dataset.key;
+      var on = input.dataset.scope === 'card' ? !!settings.blockTypes[k] : !!settings.blockSections[k];
+      input.checked = on;
+      var cell = input.closest('.tcell');
+      if (cell) cell.classList.toggle('is-on', on);
     });
   }
 
   function renderPreview() {
     var card = $('preview-card');
     card.classList.toggle('bf-hide', settings.mode === 'hide');
+    card.classList.toggle('bf-hoverable', !!settings.revealOnHover);
     $('preview-text').textContent = settings.maskText || window.BF_DEFAULTS.maskText;
+    var hint = card.querySelector('.bf-mask__hint');
+    if (hint) hint.style.display = settings.revealOnHover ? 'block' : 'none';
   }
 
   /* ---------------- 统计 ---------------- */
@@ -191,7 +242,7 @@
 
     $('mask-text').addEventListener('change', function () { save({ maskText: $('mask-text').value }); });
     $('type-mask-text').addEventListener('change', function () { save({ typeMaskText: $('type-mask-text').value }); });
-    $('click-reveal').addEventListener('change', function () { save({ clickToReveal: $('click-reveal').checked }, true); });
+    $('hover-reveal').addEventListener('change', function () { save({ revealOnHover: $('hover-reveal').checked }, true); });
     $('case-sensitive').addEventListener('change', function () { save({ caseSensitive: $('case-sensitive').checked }, true); });
     $('use-regex').addEventListener('change', function () { save({ useRegex: $('use-regex').checked }, true); });
     $('match-up').addEventListener('change', function () { save({ matchUpName: $('match-up').checked }, true); });
@@ -222,12 +273,27 @@
       var next = {};
       TYPES.forEach(function (t) { next[t.key] = true; });
       save({ blockTypes: next }, true);
-      toast('已屏蔽全部分区推广');
+      toast('已屏蔽全部分区的卡片');
+    });
+
+    $('sections-all').addEventListener('click', function () {
+      var nextS = {};
+      TYPES.forEach(function (t) { nextS[t.key] = true; });
+      save({ blockSections: nextS }, true);
+      toast('已屏蔽全部分区的整行板块');
     });
 
     $('types-none').addEventListener('click', function () {
-      save({ blockTypes: {} }, true);
+      save({ blockTypes: {}, blockSections: {} }, true);
       toast('已恢复显示全部分区');
+    });
+
+    $('reset-pos').addEventListener('click', function () {
+      chrome.storage.local.set({ bfButtonPos: null }, function () {
+        void chrome.runtime.lastError;
+        save({ buttonPos: null }, true);
+        toast('悬浮按钮位置已重置，回到标题栏右侧');
+      });
     });
 
     $('theme').addEventListener('click', function (e) {

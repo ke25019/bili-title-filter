@@ -40,7 +40,7 @@
               <input type="radio" name="mode" value="mask" />
               <span class="mode__body">
                 <span class="mode__title">整体遮蔽</span>
-                <span class="mode__desc">把封面和标题合成一整块区域，显示提示文字，页面布局保持不变。</span>
+                <span class="mode__desc">把封面和标题合成一整块区域并显示提示文字，页面布局保持不变；鼠标悬停时自动展示该视频。</span>
               </span>
             </label>
             <label class="mode">
@@ -61,8 +61,8 @@
             <input type="text" id="type-mask-text" placeholder="已按分区设置屏蔽此推广：{type}" />
           </div>
           <label class="check">
-            <input type="checkbox" id="click-reveal" />
-            <span>点击遮蔽区域可临时查看该视频（点击左上角角标可恢复屏蔽）</span>
+            <input type="checkbox" id="hover-reveal" />
+            <span>鼠标悬停在遮蔽区域时自动展示该视频，移开鼠标后自动恢复屏蔽</span>
           </label>
         </section>
 
@@ -98,9 +98,9 @@
         <!-- 预览 -->
         <section class="card">
           <h2>效果预览</h2>
-          <p class="desc">模拟 B 站视频卡片在两种屏蔽方式下的样子。</p>
+          <p class="desc">模拟 B 站视频卡片在两种屏蔽方式下的样子；下方遮蔽卡片可以直接把鼠标移上去体验「悬停查看」。</p>
           <div class="preview" id="preview">
-            <div class="preview__card bf-blocked" id="preview-card">
+            <div class="preview__card bf-blocked bf-hoverable" id="preview-card">
               <div class="preview__cover"></div>
               <div class="preview__info">
                 <div class="preview__title">这是一个会被屏蔽的视频标题</div>
@@ -116,7 +116,7 @@
                   </svg>
                 </span>
                 <span class="bf-mask__text" id="preview-text">根据您的屏蔽词已将此视频屏蔽</span>
-                <span class="bf-mask__hint">点击可临时查看</span>
+                <span class="bf-mask__hint">鼠标悬停可查看</span>
               </div>
             </div>
             <div class="preview__card preview__card--plain">
@@ -132,11 +132,15 @@
         <!-- 分区推广 -->
         <section class="card">
           <h2>屏蔽分区推广</h2>
-          <p class="desc">不想在首页 / 分区看到某些类型的推广内容时勾选它们。</p>
-          <div class="types" id="types"></div>
+          <p class="desc">
+            两个粒度互相独立：<b>卡片</b> 只处理该分区的每一张卡片；
+            <b>整行板块</b> 会把该分区所在的整行推广位（含首页顶部轮播横幅）一起隐藏。
+          </p>
+          <div class="typetable" id="types"></div>
           <div class="row-actions">
-            <button class="btn" id="types-all" type="button">全选</button>
-            <button class="btn" id="types-none" type="button">全不选</button>
+            <button class="btn" id="types-all" type="button">卡片全选</button>
+            <button class="btn" id="sections-all" type="button">整行全选</button>
+            <button class="btn" id="types-none" type="button">全部取消</button>
           </div>
         </section>
 
@@ -151,8 +155,11 @@
               <button type="button" data-value="dark">始终深色</button>
             </div>
           </div>
-          <label class="check"><input type="checkbox" id="show-btn" /><span>在 B 站标题栏附近显示快捷面板入口</span></label>
+          <label class="check"><input type="checkbox" id="show-btn" /><span>在 B 站标题栏附近显示快捷面板入口（按住按钮可拖动，位置会自动记住）</span></label>
           <label class="check"><input type="checkbox" id="debug" /><span>输出调试日志到控制台</span></label>
+          <div class="row-actions">
+            <button class="btn" id="reset-pos" type="button">重置悬浮按钮位置</button>
+          </div>
         </section>
 
         <!-- 数据 -->

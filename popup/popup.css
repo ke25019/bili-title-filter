@@ -98,6 +98,13 @@ input[type="text"]:focus { border-color: var(--accent); }
 .type:hover { background: var(--soft-hover); }
 .type.is-active { background: rgba(0, 174, 236, .12); border-color: var(--accent); color: var(--accent); font-weight: 600; }
 
+.subrow {
+  display: flex; align-items: center; justify-content: space-between; gap: 8px;
+  margin-top: 10px; padding-top: 10px;
+  border-top: 1px dashed var(--line);
+  font-size: 12px; color: var(--fg-weak);
+}
+
 .foot {
   display: flex; align-items: center; justify-content: space-between; gap: 8px;
   padding: 10px 14px; border-top: 1px solid var(--line);
@@ -116,3 +123,6 @@ input[type="text"]:focus { border-color: var(--accent); }
 }
 .switch.is-on { background: var(--accent); }
 .switch.is-on::after { transform: translateX(18px); }
+.switch--sm { width: 34px; height: 19px; }
+.switch--sm::after { width: 15px; height: 15px; }
+.switch--sm.is-on::after { transform: translateX(15px); }

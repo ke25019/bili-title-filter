@@ -123,17 +123,18 @@ textarea { resize: vertical; line-height: 1.7; }
 .sub__title { font-size: 12.5px; color: var(--fg-weak); margin-bottom: 8px; }
 .row-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
 
-.types { display: grid; grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: 8px; }
-.type {
-  display: flex; flex-direction: column; gap: 2px; padding: 10px 12px; cursor: pointer;
-  border: 1px solid var(--line); border-radius: 10px; user-select: none;
-  transition: all .15s ease;
-}
-.type:hover { background: var(--soft); }
-.type.is-active { border-color: var(--accent); background: rgba(0, 174, 236, .1); }
-.type__label { font-size: 13px; font-weight: 600; }
-.type.is-active .type__label { color: var(--accent); }
-.type__desc { font-size: 11.5px; color: var(--fg-weak); line-height: 1.4; }
+/* 分区屏蔽表格：行 = 分区，列 = 卡片 / 整行板块 */
+.typetable { display: flex; flex-direction: column; border: 1px solid var(--line); border-radius: 10px; overflow: hidden; }
+.typetable__head, .trow { display: grid; grid-template-columns: 1fr 74px 86px; align-items: center; gap: 8px; padding: 9px 12px; }
+.typetable__head { background: var(--soft); font-size: 12px; color: var(--fg-weak); }
+.typetable__head span:not(:first-child) { text-align: center; }
+.trow { border-top: 1px solid var(--line); transition: background-color .15s ease; }
+.trow:hover { background: var(--soft); }
+.trow__name { font-size: 13px; font-weight: 600; }
+.trow__desc { display: block; font-size: 11.5px; color: var(--fg-weak); font-weight: 400; line-height: 1.4; margin-top: 2px; }
+.tcell { display: flex; align-items: center; justify-content: center; gap: 6px; cursor: pointer; font-size: 12px; color: var(--fg-weak); }
+.tcell input { accent-color: var(--accent); flex: none; }
+.tcell.is-on { color: var(--accent); font-weight: 600; }
 
 .seg { display: flex; gap: 4px; padding: 3px; background: var(--soft); border-radius: 10px; }
 .seg button {
@@ -172,6 +173,10 @@ textarea { resize: vertical; line-height: 1.7; }
 
 .preview__card.bf-blocked > *:not(.bf-mask) { visibility: hidden !important; }
 .preview__card.bf-blocked.bf-hide { display: none !important; }
+
+/* 预览里直接体验「鼠标悬停自动展示」 */
+.preview__card.bf-blocked.bf-hoverable:hover > *:not(.bf-mask) { visibility: visible !important; }
+.preview__card.bf-blocked.bf-hoverable:hover .bf-mask { opacity: 0; }
 .bf-mask {
   position: absolute; inset: 0; display: flex; flex-direction: column;
   align-items: center; justify-content: center; gap: 6px; padding: 10px; text-align: center;
