@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>B站屏蔽助手</title>
+  <link rel="stylesheet" href="popup.css" />
+</head>
+<body>
+  <header class="head">
+    <div class="brand">
+      <span class="brand__logo">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94"/>
+          <path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19"/>
+          <path d="M14.12 14.12a3 3 0 1 1-4.24-4.24"/>
+          <line x1="1" y1="1" x2="23" y2="23"/>
+        </svg>
+      </span>
+      <span class="brand__name">B站屏蔽助手</span>
+    </div>
+    <button class="switch" id="enabled" type="button" role="switch" aria-checked="true" title="启用 / 停用"></button>
+  </header>
+
+  <main class="body">
+    <section class="row">
+      <div class="label">屏蔽方式</div>
+      <div class="seg" id="mode">
+        <button type="button" data-value="mask">整体遮蔽</button>
+        <button type="button" data-value="hide">完全隐藏</button>
+      </div>
+      <p class="hint" id="mode-hint"></p>
+    </section>
+
+    <section class="row">
+      <div class="label">标题屏蔽词</div>
+      <div class="input-row">
+        <input id="kw-input" type="text" placeholder="输入屏蔽词，回车添加" />
+        <button class="btn-primary" id="kw-add" type="button">添加</button>
+      </div>
+      <div class="chips" id="chips"></div>
+    </section>
+
+    <section class="row">
+      <div class="label">屏蔽分区推广</div>
+      <div class="types" id="types"></div>
+    </section>
+
+    <section class="row">
+      <div class="label">界面外观</div>
+      <div class="seg" id="theme">
+        <button type="button" data-value="auto">跟随B站</button>
+        <button type="button" data-value="light">浅色</button>
+        <button type="button" data-value="dark">深色</button>
+      </div>
+    </section>
+  </main>
+
+  <footer class="foot">
+    <span id="stats">今日屏蔽 0 个</span>
+    <button class="link" id="open-options" type="button">完整设置 →</button>
+  </footer>
+
+  <script src="../shared/defaults.js"></script>
+  <script src="popup.js"></script>
+</body>
+</html>

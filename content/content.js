@@ -1,0 +1,1089 @@
+/**
+ * B站屏蔽助手 - 内容脚本
+ * ---------------------------------------------------------------
+ * 功能：
+ *  1. 按用户自定义的「标题屏蔽词」屏蔽视频卡片
+ *  2. 两种屏蔽方式：
+ *     - mask：把封面 + 标题合成一整块「根据您的屏蔽词已将此视频屏蔽」区域
+ *     - hide：直接从页面上移除，就像这个视频没出现过
+ *  3. 屏蔽指定分区推广（直播 / 番剧 / 影视 / 课程 / 广告 ...）
+ *  4. 在 B 站标题栏附近提供悬浮快捷面板，可随时调整属性
+ *  5. 自动适配 B 站 web 端深色模式
+ */
+(function () {
+  'use strict';
+
+  if (window.__BF_CONTENT_LOADED__) return;
+  window.__BF_CONTENT_LOADED__ = true;
+
+  var DEFAULTS = window.BF_DEFAULTS;
+  var TYPES = window.BF_TYPES;
+  var normalize = window.bfNormalize;
+
+  /* ------------------------------------------------------------------
+   * 页面选择器
+   * ------------------------------------------------------------------ */
+
+  /** 视频 / 推广卡片容器 */
+  var CARD_SELECTOR = [
+    '.bili-video-card',
+    '.feed-card',
+    '.video-card',
+    '.video-page-card-small',
+    '.video-page-special-card-small',
+    '.bili-dyn-card-video',
+    '.bili-dyn-card-article',
+    '.rank-item',
+    '.spread-module',
+    '.small-item',
+    '.live-card',
+    '.bili-live-card',
+    '.bili-bangumi-card',
+    '.bili-movie-card',
+    '.bili-cheese-card',
+    '.bili-manga-card',
+    '.bili-note-card',
+    '.bili-article-card',
+    '.bili-opus-card',
+    '.bili-activity-card'
+  ].join(',');
+
+  /** 标题所在元素（按优先级排列） */
+  var TITLE_SELECTORS = [
+    '.bili-video-card__info--tit',
+    '.video-page-card-small__info__title',
+    '.video-page-special-card-small__title',
+    '.bili-live-card__info--tit',
+    '.bili-bangumi-card__info--title',
+    '.bili-movie-card__info--title',
+    '.bili-cheese-card__info--title',
+    '.bili-manga-card__info--title',
+    '.bili-article-card__info--title',
+    '.video-name',
+    '.title',
+    '.r-info .title',
+    '.info .title',
+    '.content .title',
+    'h3[title]',
+    'a[title]'
+  ];
+
+  /** UP 主名称所在元素 */
+  var UP_SELECTORS = [
+    '.bili-video-card__info--author',
+    '.bili-video-card__info--owner',
+    '.up-name',
+    '.name',
+    '.bili-video-card__info--bottom .name'
+  ];
+
+  var MASK_ICON_SVG =
+    '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" ' +
+    'stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' +
+    '<path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94"/>' +
+    '<path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19"/>' +
+    '<path d="M14.12 14.12a3 3 0 1 1-4.24-4.24"/>' +
+    '<line x1="1" y1="1" x2="23" y2="23"/></svg>';
+
+  /* ------------------------------------------------------------------
+   * 运行时状态
+   * ------------------------------------------------------------------ */
+
+  var settings = normalize(null);
+  var matcher = null;
+  var isDark = false;
+  var revision = 0;
+  var sessionBlocked = 0;
+  var totalBlocked = 0;
+
+  var dirtyCards = new Set();
+  var flushTimer = null;
+  var hostEl = null;
+  var shadow = null;
+  var panelOpen = false;
+  var lastScanAt = 0;
+
+  /* ------------------------------------------------------------------
+   * 工具函数
+   * ------------------------------------------------------------------ */
+
+  function log() {
+    if (!settings.debug) return;
+    var args = Array.prototype.slice.call(arguments);
+    args.unshift('[B站屏蔽助手]');
+    console.log.apply(console, args);
+  }
+
+  function storageGet(area, keys) {
+    return new Promise(function (resolve) {
+      try {
+        var maybe = chrome.storage[area].get(keys);
+        if (maybe && typeof maybe.then === 'function') {
+          maybe.then(function (v) { resolve(v || {}); }, function () { resolve({}); });
+        } else {
+          chrome.storage[area].get(keys, function (v) { resolve(v || {}); });
+        }
+      } catch (e) {
+        resolve({});
+      }
+    });
+  }
+
+  function storageSet(area, obj) {
+    return new Promise(function (resolve) {
+      try {
+        var maybe = chrome.storage[area].set(obj);
+        if (maybe && typeof maybe.then === 'function') {
+          maybe.then(function () { resolve(true); }, function () { resolve(false); });
+        } else {
+          chrome.storage[area].set(obj, function () { resolve(true); });
+        }
+      } catch (e) {
+        resolve(false);
+      }
+    });
+  }
+
+  function escapeRegExp(str) {
+    return String(str).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  }
+
+  /** 计算背景色亮度，用于兜底判断深色 / 浅色 */
+  function bgLuminance(color) {
+    if (!color) return null;
+    var m = /rgba?\(\s*([\d.]+)[,\s]+([\d.]+)[,\s]+([\d.]+)(?:[,\s/]+([\d.]+))?\s*\)/i.exec(color);
+    if (!m) return null;
+    var a = m[4] === undefined ? 1 : parseFloat(m[4]);
+    if (a < 0.15) return null;
+    var r = parseFloat(m[1]) / 255;
+    var g = parseFloat(m[2]) / 255;
+    var b = parseFloat(m[3]) / 255;
+    return 0.2126 * r + 0.7152 * g + 0.0722 * b;
+  }
+
+  /* ------------------------------------------------------------------
+   * 屏蔽词匹配
+   * ------------------------------------------------------------------ */
+
+  function rebuildMatcher() {
+    var keywords = (settings.keywords || []).filter(function (k) {
+      return k && k.trim();
+    });
+
+    var compiled = keywords.map(function (raw) {
+      var kw = raw.trim();
+      if (settings.useRegex) {
+        try {
+          return { raw: kw, re: new RegExp(kw, settings.caseSensitive ? '' : 'i') };
+        } catch (e) {
+          log('正则表达式无效，已按普通文本处理：', kw);
+          return { raw: kw, plain: kw };
+        }
+      }
+      return { raw: kw, plain: settings.caseSensitive ? kw : kw.toLowerCase() };
+    });
+
+    matcher = function match(text) {
+      if (!text) return null;
+      var hay = String(text);
+      var hayLower = settings.caseSensitive ? hay : hay.toLowerCase();
+      for (var i = 0; i < compiled.length; i++) {
+        var c = compiled[i];
+        if (c.re) {
+          if (c.re.test(hay)) return c.raw;
+        } else if (hayLower.indexOf(c.plain) !== -1) {
+          return c.raw;
+        }
+      }
+      return null;
+    };
+  }
+
+  /* ------------------------------------------------------------------
+   * 卡片解析
+   * ------------------------------------------------------------------ */
+
+  function isNestedCard(el) {
+    var parent = el.parentElement;
+    if (!parent) return false;
+    return !!parent.closest('[data-bf-card]');
+  }
+
+  function textOf(el) {
+    if (!el) return '';
+    var t = el.getAttribute && el.getAttribute('title');
+    if (t && t.trim()) return t.trim();
+    return (el.textContent || '').replace(/\s+/g, ' ').trim();
+  }
+
+  function getTitle(card) {
+    for (var i = 0; i < TITLE_SELECTORS.length; i++) {
+      var el = card.querySelector(TITLE_SELECTORS[i]);
+      if (!el) continue;
+      var t = textOf(el);
+      if (t) return t;
+    }
+    var anchor = card.querySelector('a[title]');
+    if (anchor) {
+      var at = anchor.getAttribute('title');
+      if (at && at.trim()) return at.trim();
+    }
+    var own = card.getAttribute('title');
+    if (own && own.trim()) return own.trim();
+    return '';
+  }
+
+  function getUpName(card) {
+    for (var i = 0; i < UP_SELECTORS.length; i++) {
+      var el = card.querySelector(UP_SELECTORS[i]);
+      if (!el) continue;
+      var t = textOf(el);
+      if (t) return t;
+    }
+    return '';
+  }
+
+  /** 判定卡片属于哪个分区 / 类型 */
+  function detectType(card) {
+    var hrefs = '';
+    var anchors = card.querySelectorAll('a[href]');
+    for (var i = 0; i < anchors.length && i < 20; i++) {
+      hrefs += ' ' + (anchors[i].getAttribute('href') || '');
+    }
+
+    for (var j = 0; j < TYPES.length; j++) {
+      var t = TYPES[j];
+      if (t.href && hrefs && t.href.test(hrefs)) return t.key;
+    }
+
+    var cls = typeof card.className === 'string' ? card.className : '';
+    for (var k = 0; k < TYPES.length; k++) {
+      var tt = TYPES[k];
+      if (tt.cls && tt.cls.test(cls)) return tt.key;
+    }
+
+    // 卡片内部的角标（广告等）
+    if (card.querySelector('.bili-video-card__stats--ad, .bili-video-card__info--ad, .ad-report, .video-card-ad-small')) {
+      return 'ad';
+    }
+
+    return 'video';
+  }
+
+  function typeLabel(key) {
+    for (var i = 0; i < TYPES.length; i++) {
+      if (TYPES[i].key === key) return TYPES[i].label;
+    }
+    return key;
+  }
+
+  /* ------------------------------------------------------------------
+   * 屏蔽 / 恢复
+   * ------------------------------------------------------------------ */
+
+  function buildMaskText(action) {
+    if (action.kind === 'keyword') {
+      return {
+        main: settings.maskText || DEFAULTS.maskText,
+        sub: action.kw ? '屏蔽词：' + action.kw : ''
+      };
+    }
+    var tpl = settings.typeMaskText || DEFAULTS.typeMaskText;
+    return {
+      main: tpl.replace('{type}', typeLabel(action.type)),
+      sub: ''
+    };
+  }
+
+  function ensureMask(card, action) {
+    var mask = card.querySelector(':scope > .bf-mask');
+    var chip = card.querySelector(':scope > .bf-mask-chip');
+    var text = buildMaskText(action);
+
+    if (!mask) {
+      mask = document.createElement('div');
+      mask.className = 'bf-mask';
+      mask.innerHTML =
+        '<span class="bf-mask__icon">' + MASK_ICON_SVG + '</span>' +
+        '<span class="bf-mask__text"></span>' +
+        '<span class="bf-mask__sub"></span>' +
+        '<span class="bf-mask__hint">点击可临时查看</span>';
+      card.appendChild(mask);
+    }
+    mask.querySelector('.bf-mask__text').textContent = text.main;
+    var sub = mask.querySelector('.bf-mask__sub');
+    sub.textContent = text.sub;
+    sub.style.display = text.sub ? 'block' : 'none';
+    var hint = mask.querySelector('.bf-mask__hint');
+    hint.style.display = settings.clickToReveal ? 'block' : 'none';
+
+    if (!chip && settings.clickToReveal) {
+      chip = document.createElement('div');
+      chip.className = 'bf-mask-chip';
+      chip.textContent = '已屏蔽 · 点击恢复';
+      card.appendChild(chip);
+    } else if (chip && !settings.clickToReveal) {
+      chip.remove();
+      if (card.classList.contains('bf-revealed')) card.classList.remove('bf-revealed');
+    }
+  }
+
+  function applyBlock(card, action) {
+    var already = card.dataset.bfState === 'blocked' && card.dataset.bfKey === action.key;
+    if (already) {
+      // 命中原因没变，但屏蔽方式 / 文案 / 点击查看等设置可能变了，这里同步刷新
+      card.dataset.bfCard = '1';
+      card.classList.toggle('bf-hide', settings.mode === 'hide');
+      card.classList.toggle('bf-clickable', !!settings.clickToReveal);
+      ensureMask(card, action);
+      updateCompact(card);
+      return;
+    }
+
+    card.dataset.bfCard = '1';
+    card.dataset.bfState = 'blocked';
+    card.dataset.bfKey = action.key;
+    card.dataset.bfKind = action.kind;
+    if (action.kind === 'type') card.dataset.bfType = action.type;
+    else delete card.dataset.bfType;
+
+    card.classList.remove('bf-revealed');
+    card.classList.add('bf-blocked');
+    card.classList.toggle('bf-hide', settings.mode === 'hide');
+    card.classList.toggle('bf-clickable', !!settings.clickToReveal);
+
+    ensureMask(card, action);
+    updateCompact(card);
+
+    sessionBlocked += 1;
+    bumpStat(1);
+    log('已屏蔽：', action.key, getTitle(card));
+  }
+
+  function clearBlock(card) {
+    if (card.dataset.bfState !== 'blocked') {
+      card.dataset.bfCard = '1';
+      return;
+    }
+    card.classList.remove('bf-blocked', 'bf-hide', 'bf-clickable', 'bf-revealed', 'bf-compact');
+    delete card.dataset.bfState;
+    delete card.dataset.bfKey;
+    delete card.dataset.bfKind;
+    delete card.dataset.bfType;
+    var mask = card.querySelector(':scope > .bf-mask');
+    if (mask) mask.remove();
+    var chip = card.querySelector(':scope > .bf-mask-chip');
+    if (chip) chip.remove();
+  }
+
+  /** 卡片很矮时压缩提示内容 */
+  function updateCompact(card) {
+    var h = card.getBoundingClientRect().height;
+    if (h && h < 120) card.classList.add('bf-compact');
+    else card.classList.remove('bf-compact');
+  }
+
+  function processCard(card) {
+    if (isNestedCard(card)) return;
+
+    if (!settings.enabled) {
+      clearBlock(card);
+      return;
+    }
+
+    var type = detectType(card);
+
+    if (settings.blockTypes && settings.blockTypes[type]) {
+      applyBlock(card, { key: 'type:' + type, kind: 'type', type: type });
+      return;
+    }
+
+    var hit = matcher ? matcher(getTitle(card)) : null;
+    if (!hit && settings.matchUpName) hit = matcher ? matcher(getUpName(card)) : null;
+
+    if (hit) applyBlock(card, { key: 'kw:' + hit, kind: 'keyword', kw: hit });
+    else clearBlock(card);
+  }
+
+  /* ------------------------------------------------------------------
+   * 扫描
+   * ------------------------------------------------------------------ */
+
+  function collectCards(root, out) {
+    if (!root || root.nodeType !== 1) return out;
+    if (root.matches && root.matches(CARD_SELECTOR)) out.push(root);
+    var found = root.querySelectorAll ? root.querySelectorAll(CARD_SELECTOR) : [];
+    for (var i = 0; i < found.length; i++) out.push(found[i]);
+    return out;
+  }
+
+  function fullScan(force) {
+    var all = document.querySelectorAll(CARD_SELECTOR);
+    for (var i = 0; i < all.length; i++) {
+      var card = all[i];
+      if (isNestedCard(card)) continue;
+      if (!force && card.dataset.bfCard === '1') continue;
+      processCard(card);
+    }
+    revision++;
+  }
+
+  function flush() {
+    flushTimer = null;
+    if (dirtyCards.size) {
+      var cards = Array.from(dirtyCards);
+      dirtyCards.clear();
+      for (var i = 0; i < cards.length; i++) {
+        if (cards[i].isConnected) processCard(cards[i]);
+      }
+    }
+    if (pendingFullScan) {
+      pendingFullScan = false;
+      fullScan(false);
+    }
+  }
+
+  var pendingFullScan = false;
+
+  function scheduleFlush() {
+    if (flushTimer) return;
+    flushTimer = setTimeout(flush, 180);
+  }
+
+  function markDirty(node) {
+    if (!node || node.nodeType !== 1) return;
+    if (node.classList && (node.classList.contains('bf-mask') || node.classList.contains('bf-mask-chip'))) return;
+    if (node.closest && node.closest('.bf-mask')) return;
+
+    var card = node.closest ? node.closest('[data-bf-card]') : null;
+    if (card) {
+      dirtyCards.add(card);
+      if (dirtyCards.size > 400) dirtyCards.clear();
+      return;
+    }
+    if (node.querySelector && node.querySelector(CARD_SELECTOR)) pendingFullScan = true;
+  }
+
+  function startObservers() {
+    var observer = new MutationObserver(function (mutations) {
+      for (var i = 0; i < mutations.length; i++) {
+        var m = mutations[i];
+        if (!m.target || !m.target.isConnected) continue;
+        markDirty(m.target);
+        for (var j = 0; j < m.addedNodes.length; j++) {
+          var n = m.addedNodes[j];
+          if (n.nodeType !== 1) continue;
+          if (n.classList && (n.classList.contains('bf-mask') || n.classList.contains('bf-mask-chip'))) continue;
+          markDirty(n);
+        }
+      }
+      scheduleFlush();
+    });
+
+    observer.observe(document.documentElement, { childList: true, subtree: true });
+
+    // SPA 路由切换后重新扫描
+    ['popstate', 'pushstate', 'replacestate', 'pjax:end', 'visibilitychange'].forEach(function (evt) {
+      window.addEventListener(evt, function () {
+        setTimeout(function () { fullScan(true); }, 300);
+      }, true);
+    });
+    window.addEventListener('scroll', function () {
+      // 滚动时懒加载出新卡片，节流做一次增量扫描
+      var now = Date.now();
+      if (pendingFullScan || now - lastScanAt < 1000) return;
+      lastScanAt = now;
+      pendingFullScan = true;
+      scheduleFlush();
+    }, { passive: true, capture: true });
+  }
+
+  function hookHistory() {
+    ['pushState', 'replaceState'].forEach(function (name) {
+      var orig = history[name];
+      if (!orig || orig.__bfHooked) return;
+      var wrapped = function () {
+        var r = orig.apply(this, arguments);
+        window.dispatchEvent(new Event(name === 'pushState' ? 'pushstate' : 'replacestate'));
+        return r;
+      };
+      wrapped.__bfHooked = true;
+      history[name] = wrapped;
+    });
+  }
+
+  /* ------------------------------------------------------------------
+   * 统计
+   * ------------------------------------------------------------------ */
+
+  var statTimer = null;
+  var pendingStat = 0;
+
+  function bumpStat(delta) {
+    pendingStat += delta;
+    if (statTimer) return;
+    statTimer = setTimeout(function () {
+      statTimer = null;
+      var d = pendingStat;
+      pendingStat = 0;
+      try {
+        chrome.runtime.sendMessage({ type: 'BF_STATS', delta: d }, function () { void chrome.runtime.lastError; });
+      } catch (e) { /* 扩展被重载时忽略 */ }
+      updateStatsLabel();
+    }, 800);
+  }
+
+  function updateStatsLabel() {
+    var el = shadow && shadow.getElementById('bf-stats');
+    if (el) el.textContent = '本次屏蔽 ' + sessionBlocked + ' 个 · 累计 ' + totalBlocked;
+  }
+
+  /* ------------------------------------------------------------------
+   * 深色模式检测
+   * ------------------------------------------------------------------ */
+
+  function detectDark() {
+    var html = document.documentElement;
+    if (!html) return false;
+
+    if (html.hasAttribute('dark')) return true;
+    var attr = (html.getAttribute('data-theme') || html.getAttribute('theme') || '').toLowerCase();
+    if (attr === 'dark') return true;
+    if (attr === 'light') return false;
+    if (html.classList.contains('dark') || html.classList.contains('dark-theme')) return true;
+    if (html.classList.contains('light') || html.classList.contains('light-theme')) return false;
+
+    var body = document.body;
+    if (body) {
+      var lum = bgLuminance(getComputedStyle(body).backgroundColor);
+      if (lum !== null) return lum < 0.45;
+    }
+    return window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+  }
+
+  function refreshTheme() {
+    var dark = detectDark();
+    if (dark === isDark) return;
+    isDark = dark;
+    document.documentElement.classList.toggle('bf-dark', dark);
+    updateHostTheme();
+    log('深色模式：', dark);
+  }
+
+  function updateHostTheme() {
+    if (!hostEl) return;
+    var t = effectiveTheme();
+    hostEl.setAttribute('data-theme', t);
+  }
+
+  function effectiveTheme() {
+    if (settings.theme === 'dark') return 'dark';
+    if (settings.theme === 'light') return 'light';
+    return isDark ? 'dark' : 'light';
+  }
+
+  /* ------------------------------------------------------------------
+   * 页面内悬浮面板（Shadow DOM 隔离样式）
+   * ------------------------------------------------------------------ */
+
+  var PANEL_CSS = [
+    ':host { all: initial; }',
+    '* { box-sizing: border-box; }',
+    ':host {',
+    '  position: fixed; z-index: 2147483000;',
+    '  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Microsoft YaHei", "PingFang SC", sans-serif;',
+    '  font-size: 13px; line-height: 1.5; color: #18191c;',
+    '}',
+    ':host([data-theme="dark"]) { color: #e8eaed; }',
+    '.bf-root { position: relative; }',
+    '.bf-btn {',
+    '  display: inline-flex; align-items: center; gap: 6px;',
+    '  height: 34px; padding: 0 12px; cursor: pointer;',
+    '  border: 1px solid rgba(0,0,0,.08); border-radius: 17px;',
+    '  background: #fff; color: inherit; font-size: 13px; font-family: inherit;',
+    '  box-shadow: 0 2px 8px rgba(0,0,0,.08);',
+    '  transition: background-color .15s ease, border-color .15s ease;',
+    '  white-space: nowrap;',
+    '}',
+    '.bf-btn:hover { background: #f1f3f5; }',
+    ':host([data-theme="dark"]) .bf-btn { background: #2b2c2f; border-color: rgba(255,255,255,.12); box-shadow: 0 2px 8px rgba(0,0,0,.4); }',
+    ':host([data-theme="dark"]) .bf-btn:hover { background: #35373b; }',
+    '.bf-btn__icon { width: 16px; height: 16px; display: block; flex: none; }',
+    '.bf-btn__count {',
+    '  min-width: 18px; height: 18px; padding: 0 5px; border-radius: 9px;',
+    '  background: #00aeec; color: #fff; font-size: 11px; line-height: 18px; text-align: center;',
+    '}',
+    '.bf-btn__count[hidden] { display: none; }',
+    '.bf-btn.is-off { opacity: .62; }',
+
+    /* 面板 */
+    '.bf-panel {',
+    '  position: fixed; width: 320px; max-width: calc(100vw - 24px);',
+    '  background: #fff; color: #18191c;',
+    '  border: 1px solid rgba(0,0,0,.08); border-radius: 12px;',
+    '  box-shadow: 0 8px 32px rgba(0,0,0,.16);',
+    '  overflow: hidden;',
+    '}',
+    ':host([data-theme="dark"]) .bf-panel { background: #232427; color: #e8eaed; border-color: rgba(255,255,255,.1); box-shadow: 0 8px 32px rgba(0,0,0,.6); }',
+    '.bf-panel[hidden] { display: none; }',
+    '.bf-head { display: flex; align-items: center; gap: 8px; padding: 12px 14px; border-bottom: 1px solid rgba(0,0,0,.06); }',
+    ':host([data-theme="dark"]) .bf-head { border-bottom-color: rgba(255,255,255,.08); }',
+    '.bf-head__title { font-weight: 600; font-size: 14px; flex: 1; }',
+    '.bf-body { padding: 4px 14px 12px; max-height: min(70vh, 560px); overflow-y: auto; }',
+    '.bf-row { padding: 10px 0; border-bottom: 1px solid rgba(0,0,0,.05); }',
+    ':host([data-theme="dark"]) .bf-row { border-bottom-color: rgba(255,255,255,.06); }',
+    '.bf-row:last-child { border-bottom: none; }',
+    '.bf-label { font-size: 12px; color: #9499a0; margin-bottom: 8px; display: flex; align-items: center; justify-content: space-between; }',
+    '.bf-seg { display: flex; background: #f1f2f3; border-radius: 8px; padding: 3px; gap: 3px; }',
+    ':host([data-theme="dark"]) .bf-seg { background: #17181a; }',
+    '.bf-seg button {',
+    '  flex: 1; height: 30px; border: 0; border-radius: 6px; background: transparent;',
+    '  cursor: pointer; font-size: 12px; color: #61666d; font-family: inherit;',
+    '}',
+    '.bf-seg button:hover { color: #18191c; }',
+    ':host([data-theme="dark"]) .bf-seg button { color: #a2a7ae; }',
+    ':host([data-theme="dark"]) .bf-seg button:hover { color: #fff; }',
+    '.bf-seg button.is-active { background: #fff; color: #00aeec; font-weight: 600; box-shadow: 0 1px 4px rgba(0,0,0,.1); }',
+    ':host([data-theme="dark"]) .bf-seg button.is-active { background: #34363a; color: #24b3f0; }',
+    '.bf-input-row { display: flex; gap: 6px; }',
+    '.bf-input {',
+    '  flex: 1; min-width: 0; height: 32px; padding: 0 10px; border-radius: 8px;',
+    '  border: 1px solid #dcdfe6; background: #fff; color: inherit; font-size: 12px; font-family: inherit; outline: none;',
+    '}',
+    '.bf-input:focus { border-color: #00aeec; }',
+    ':host([data-theme="dark"]) .bf-input { background: #17181a; border-color: #3a3c3f; color: #e8eaed; }',
+    '.bf-btn-primary {',
+    '  height: 32px; padding: 0 12px; border: 0; border-radius: 8px; cursor: pointer;',
+    '  background: #00aeec; color: #fff; font-size: 12px; font-family: inherit; flex: none;',
+    '}',
+    '.bf-btn-primary:hover { background: #0a9fd6; }',
+    '.bf-chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }',
+    '.bf-chip {',
+    '  display: inline-flex; align-items: center; gap: 4px; max-width: 100%;',
+    '  padding: 3px 6px 3px 8px; border-radius: 6px; font-size: 12px;',
+    '  background: #f1f2f3; color: #18191c;',
+    '}',
+    ':host([data-theme="dark"]) .bf-chip { background: #34363a; color: #e8eaed; }',
+    '.bf-chip__text { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 180px; }',
+    '.bf-chip__del {',
+    '  border: 0; background: transparent; cursor: pointer; color: #9499a0;',
+    '  font-size: 13px; line-height: 1; padding: 0 2px; font-family: inherit;',
+    '}',
+    '.bf-chip__del:hover { color: #f25d8e; }',
+    '.bf-empty { font-size: 12px; color: #9499a0; margin-top: 8px; }',
+    '.bf-types { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; }',
+    '.bf-type {',
+    '  display: flex; align-items: center; justify-content: center; gap: 4px;',
+    '  height: 30px; border-radius: 8px; cursor: pointer; user-select: none;',
+    '  background: #f1f2f3; color: #61666d; font-size: 12px; border: 1px solid transparent;',
+    '}',
+    ':host([data-theme="dark"]) .bf-type { background: #2b2c2f; color: #a2a7ae; }',
+    '.bf-type.is-active { background: rgba(0,174,236,.12); border-color: #00aeec; color: #00aeec; font-weight: 600; }',
+    ':host([data-theme="dark"]) .bf-type.is-active { color: #24b3f0; }',
+    '.bf-foot {',
+    '  display: flex; align-items: center; justify-content: space-between; gap: 8px;',
+    '  padding: 10px 14px; background: #fafafa; border-top: 1px solid rgba(0,0,0,.06);',
+    '  font-size: 12px; color: #9499a0;',
+    '}',
+    ':host([data-theme="dark"]) .bf-foot { background: #1d1e20; border-top-color: rgba(255,255,255,.08); }',
+    '.bf-link { border: 0; background: transparent; color: #00aeec; cursor: pointer; font-size: 12px; font-family: inherit; padding: 0; }',
+    '.bf-link:hover { text-decoration: underline; }',
+
+    /* 开关 */
+    '.bf-switch { position: relative; width: 40px; height: 22px; border-radius: 11px; border: 0; cursor: pointer; background: #c9ccd0; transition: background-color .15s ease; flex: none; padding: 0; }',
+    '.bf-switch::after { content: ""; position: absolute; top: 2px; left: 2px; width: 18px; height: 18px; border-radius: 50%; background: #fff; transition: transform .15s ease; }',
+    '.bf-switch.is-on { background: #00aeec; }',
+    '.bf-switch.is-on::after { transform: translateX(18px); }',
+    '.bf-hint { font-size: 11px; color: #9499a0; margin-top: 6px; }'
+  ].join('\n');
+
+  var PANEL_HTML = [
+    '<div class="bf-root">',
+    '  <button class="bf-btn" id="bf-toggle" type="button" title="B站屏蔽助手">',
+    '    <span class="bf-btn__icon">' + MASK_ICON_SVG + '</span>',
+    '    <span>屏蔽助手</span>',
+    '    <span class="bf-btn__count" id="bf-btn-count" hidden>0</span>',
+    '  </button>',
+    '  <div class="bf-panel" id="bf-panel" hidden>',
+    '    <div class="bf-head">',
+    '      <span class="bf-head__title">B站屏蔽助手</span>',
+    '      <button class="bf-switch" id="bf-enabled" type="button" role="switch" title="启用/停用"></button>',
+    '    </div>',
+    '    <div class="bf-body">',
+    '      <div class="bf-row">',
+    '        <div class="bf-label"><span>屏蔽方式</span></div>',
+    '        <div class="bf-seg" id="bf-mode">',
+    '          <button type="button" data-value="mask">整体遮蔽</button>',
+    '          <button type="button" data-value="hide">完全隐藏</button>',
+    '        </div>',
+    '        <div class="bf-hint" id="bf-mode-hint"></div>',
+    '      </div>',
+    '      <div class="bf-row">',
+    '        <div class="bf-label"><span>标题屏蔽词</span></div>',
+    '        <div class="bf-input-row">',
+    '          <input class="bf-input" id="bf-kw-input" type="text" placeholder="输入后回车，支持逗号分隔多个" />',
+    '          <button class="bf-btn-primary" id="bf-kw-add" type="button">添加</button>',
+    '        </div>',
+    '        <div class="bf-chips" id="bf-chips"></div>',
+    '      </div>',
+    '      <div class="bf-row">',
+    '        <div class="bf-label"><span>屏蔽分区推广</span></div>',
+    '        <div class="bf-types" id="bf-types"></div>',
+    '      </div>',
+    '      <div class="bf-row">',
+    '        <div class="bf-label"><span>界面外观</span></div>',
+    '        <div class="bf-seg" id="bf-theme">',
+    '          <button type="button" data-value="auto">跟随B站</button>',
+    '          <button type="button" data-value="light">浅色</button>',
+    '          <button type="button" data-value="dark">深色</button>',
+    '        </div>',
+    '      </div>',
+    '    </div>',
+    '    <div class="bf-foot">',
+    '      <span id="bf-stats">本次屏蔽 0 个</span>',
+    '      <button class="bf-link" id="bf-open-options" type="button">完整设置</button>',
+    '    </div>',
+    '  </div>',
+    '</div>'
+  ].join('\n');
+
+  function mountUI() {
+    if (hostEl && hostEl.isConnected) return;
+    if (!document.body) return;
+
+    hostEl = document.createElement('div');
+    hostEl.id = 'bili-filter-host';
+    shadow = hostEl.attachShadow({ mode: 'open' });
+    shadow.innerHTML = '<style>' + PANEL_CSS + '</style>' + PANEL_HTML;
+
+    document.body.appendChild(hostEl);
+
+    bindUI();
+    positionHost();
+    updateHostTheme();
+    renderUI();
+  }
+
+  function unmountUI() {
+    if (hostEl && hostEl.parentNode) hostEl.parentNode.removeChild(hostEl);
+    hostEl = null;
+    shadow = null;
+    panelOpen = false;
+  }
+
+  function positionHost() {
+    if (!hostEl) return;
+    var btnW = 130;
+    var left = null;
+    var top = 15;
+
+    var rightEntry = document.querySelector('.right-entry');
+    var searchBox = document.querySelector('#nav-searchform, .center-search-container, .nav-search-content');
+
+    if (rightEntry) {
+      var r = rightEntry.getBoundingClientRect();
+      if (r.width > 0 && r.top < 200) left = r.left - btnW - 10;
+    }
+    if (searchBox) {
+      var s = searchBox.getBoundingClientRect();
+      if (s.width > 0 && left !== null && left < s.right + 12) left = null;
+    }
+    if (left === null) {
+      left = window.innerWidth - btnW - 16;
+      top = 74;
+    }
+    if (left < 8) left = 8;
+
+    hostEl.style.left = Math.round(left) + 'px';
+    hostEl.style.top = Math.round(top) + 'px';
+  }
+
+  function positionPanel() {
+    if (!hostEl || !shadow) return;
+    var panel = shadow.getElementById('bf-panel');
+    if (!panel || panel.hidden) return;
+
+    var r = hostEl.getBoundingClientRect();
+    var pw = panel.offsetWidth || 320;
+    var ph = panel.offsetHeight || 420;
+
+    var left = r.right - pw;
+    if (left < 8) left = 8;
+    if (left + pw > window.innerWidth - 8) left = window.innerWidth - pw - 8;
+
+    var top = r.bottom + 8;
+    if (top + ph > window.innerHeight - 8) {
+      top = Math.max(8, r.top - ph - 8);
+    }
+
+    panel.style.left = Math.round(left) + 'px';
+    panel.style.top = Math.round(top) + 'px';
+  }
+
+  function togglePanel(open) {
+    if (!shadow) return;
+    var panel = shadow.getElementById('bf-panel');
+    if (!panel) return;
+    panelOpen = typeof open === 'boolean' ? open : panel.hidden;
+    panel.hidden = !panelOpen;
+    if (panelOpen) {
+      renderUI();
+      positionPanel();
+    }
+  }
+
+  function bindUI() {
+    var toggle = shadow.getElementById('bf-toggle');
+    var panel = shadow.getElementById('bf-panel');
+
+    toggle.addEventListener('click', function (e) {
+      e.preventDefault();
+      e.stopPropagation();
+      togglePanel();
+    });
+
+    panel.addEventListener('click', function (e) { e.stopPropagation(); });
+
+    // 点击面板 / 按钮以外的区域时收起面板
+    document.addEventListener('click', function (e) {
+      if (!panelOpen || !hostEl) return;
+      var path = typeof e.composedPath === 'function' ? e.composedPath() : [];
+      if (path.indexOf(hostEl) !== -1) return;
+      togglePanel(false);
+    }, true);
+    window.addEventListener('resize', function () { positionHost(); positionPanel(); });
+    window.addEventListener('scroll', function () { positionHost(); positionPanel(); }, { passive: true, capture: true });
+
+    shadow.getElementById('bf-enabled').addEventListener('click', function () {
+      updateSettings({ enabled: !settings.enabled });
+    });
+
+    shadow.getElementById('bf-mode').addEventListener('click', function (e) {
+      var b = e.target.closest('button[data-value]');
+      if (b) updateSettings({ mode: b.dataset.value });
+    });
+
+    shadow.getElementById('bf-theme').addEventListener('click', function (e) {
+      var b = e.target.closest('button[data-value]');
+      if (b) updateSettings({ theme: b.dataset.value });
+    });
+
+    var input = shadow.getElementById('bf-kw-input');
+    shadow.getElementById('bf-kw-add').addEventListener('click', addKeywordFromInput);
+    input.addEventListener('keydown', function (e) {
+      if (e.key === 'Enter') { e.preventDefault(); addKeywordFromInput(); }
+    });
+
+    shadow.getElementById('bf-chips').addEventListener('click', function (e) {
+      var del = e.target.closest('.bf-chip__del');
+      if (!del) return;
+      var idx = parseInt(del.dataset.index, 10);
+      var list = settings.keywords.slice();
+      list.splice(idx, 1);
+      updateSettings({ keywords: list });
+    });
+
+    shadow.getElementById('bf-types').addEventListener('click', function (e) {
+      var el = e.target.closest('.bf-type');
+      if (!el) return;
+      var key = el.dataset.key;
+      var next = Object.assign({}, settings.blockTypes);
+      next[key] = !next[key];
+      updateSettings({ blockTypes: next });
+    });
+
+    shadow.getElementById('bf-open-options').addEventListener('click', function () {
+      try {
+        chrome.runtime.sendMessage({ type: 'BF_OPEN_OPTIONS' }, function () { void chrome.runtime.lastError; });
+      } catch (err) { /* ignore */ }
+      togglePanel(false);
+    });
+  }
+
+  function addKeywordFromInput() {
+    var input = shadow.getElementById('bf-kw-input');
+    var raw = (input.value || '').trim();
+    if (!raw) return;
+    var parts = settings.useRegex ? [raw] : raw.split(/[,，、;；\n\r\t ]+/);
+    var list = settings.keywords.slice();
+    parts.forEach(function (p) {
+      var v = p.trim();
+      if (v && list.indexOf(v) === -1) list.push(v);
+    });
+    input.value = '';
+    updateSettings({ keywords: list });
+  }
+
+  function renderUI() {
+    if (!shadow) return;
+
+    var enabledBtn = shadow.getElementById('bf-enabled');
+    enabledBtn.classList.toggle('is-on', !!settings.enabled);
+    enabledBtn.setAttribute('aria-checked', settings.enabled ? 'true' : 'false');
+    shadow.getElementById('bf-toggle').classList.toggle('is-off', !settings.enabled);
+
+    var count = shadow.getElementById('bf-btn-count');
+    if (sessionBlocked > 0) {
+      count.hidden = false;
+      count.textContent = sessionBlocked > 999 ? '999+' : String(sessionBlocked);
+    } else {
+      count.hidden = true;
+    }
+
+    shadow.querySelectorAll('#bf-mode button').forEach(function (b) {
+      b.classList.toggle('is-active', b.dataset.value === settings.mode);
+    });
+    shadow.getElementById('bf-mode-hint').textContent =
+      settings.mode === 'mask'
+        ? '封面与标题合并为一整块提示区域'
+        : '直接从页面移除，如同从未出现';
+
+    shadow.querySelectorAll('#bf-theme button').forEach(function (b) {
+      b.classList.toggle('is-active', b.dataset.value === settings.theme);
+    });
+
+    // 屏蔽词
+    var chips = shadow.getElementById('bf-chips');
+    chips.innerHTML = '';
+    if (!settings.keywords.length) {
+      var empty = document.createElement('div');
+      empty.className = 'bf-empty';
+      empty.textContent = '还没有屏蔽词，添加后立即生效';
+      chips.appendChild(empty);
+    } else {
+      settings.keywords.forEach(function (kw, i) {
+        var chip = document.createElement('span');
+        chip.className = 'bf-chip';
+        var t = document.createElement('span');
+        t.className = 'bf-chip__text';
+        t.textContent = kw;
+        t.title = kw;
+        var del = document.createElement('button');
+        del.className = 'bf-chip__del';
+        del.type = 'button';
+        del.dataset.index = String(i);
+        del.textContent = '✕';
+        del.title = '删除';
+        chip.appendChild(t);
+        chip.appendChild(del);
+        chips.appendChild(chip);
+      });
+    }
+
+    // 分区类型
+    var typesBox = shadow.getElementById('bf-types');
+    if (!typesBox.dataset.built) {
+      TYPES.forEach(function (t) {
+        var el = document.createElement('div');
+        el.className = 'bf-type';
+        el.dataset.key = t.key;
+        el.title = t.desc;
+        el.textContent = t.label;
+        typesBox.appendChild(el);
+      });
+      typesBox.dataset.built = '1';
+    }
+    typesBox.querySelectorAll('.bf-type').forEach(function (el) {
+      el.classList.toggle('is-active', !!settings.blockTypes[el.dataset.key]);
+    });
+
+    updateStatsLabel();
+  }
+
+  /* ------------------------------------------------------------------
+   * 设置读写
+   * ------------------------------------------------------------------ */
+
+  var writeQueue = Promise.resolve();
+
+  function updateSettings(patch) {
+    settings = normalize(Object.assign({}, settings, patch));
+    rebuildMatcher();
+    renderUI();
+    updateHostTheme();
+    fullScan(true);
+
+    writeQueue = writeQueue.then(function () {
+      return storageSet('sync', { bfSettings: settings });
+    });
+  }
+
+  async function initSettings() {
+    var stored = await storageGet('sync', 'bfSettings');
+    settings = normalize(stored.bfSettings);
+    rebuildMatcher();
+
+    var stats = await storageGet('local', 'bfStats');
+    totalBlocked = (stats.bfStats && stats.bfStats.total) || 0;
+  }
+
+  function watchStorage() {
+    chrome.storage.onChanged.addListener(function (changes, area) {
+      if (area !== 'sync' || !changes.bfSettings) return;
+      var next = normalize(changes.bfSettings.newValue);
+      if (JSON.stringify(next) === JSON.stringify(settings)) return;
+      settings = next;
+      rebuildMatcher();
+      renderUI();
+      updateHostTheme();
+      fullScan(true);
+    });
+
+    chrome.storage.onChanged.addListener(function (changes, area) {
+      if (area !== 'local' || !changes.bfStats) return;
+      totalBlocked = (changes.bfStats.newValue && changes.bfStats.newValue.total) || 0;
+      updateStatsLabel();
+    });
+
+    try {
+      chrome.runtime.onMessage.addListener(function (msg) {
+        if (!msg) return;
+        if (msg.type === 'BF_RESCAN') fullScan(true);
+      });
+    } catch (e) { /* ignore */ }
+  }
+
+  /* ------------------------------------------------------------------
+   * 启动
+   * ------------------------------------------------------------------ */
+
+  function tick() {
+    refreshTheme();
+
+    if (settings.showHeaderButton && document.body) {
+      if (!hostEl || !hostEl.isConnected) mountUI();
+      else positionHost();
+    } else if (hostEl && hostEl.isConnected) {
+      unmountUI();
+    }
+  }
+
+  async function init() {
+    hookHistory();
+    await initSettings();
+    watchStorage();
+    startObservers();
+
+    refreshTheme();
+
+    var ready = function () {
+      mountUI();
+      fullScan(true);
+      setInterval(tick, 1200);
+      if (window.matchMedia) {
+        try {
+          window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', refreshTheme);
+        } catch (e) { /* 老版本 Edge 忽略 */ }
+      }
+      log('已启动，屏蔽词数量：', settings.keywords.length);
+    };
+
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', ready, { once: true });
+    } else {
+      ready();
+    }
+  }
+
+  init();
+})();
