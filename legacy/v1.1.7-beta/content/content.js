@@ -1,5 +1,5 @@
 /**
- * B站屏蔽助手 - 内容脚本  v1.1.8
+ * B站屏蔽助手 - 内容脚本  v1.1.7
  * ---------------------------------------------------------------
  * 功能：
  *  1. 按用户自定义的「标题屏蔽词」屏蔽视频卡片
@@ -575,118 +575,73 @@
   }
 
   /**
-   * 是不是"空占位项"。
-   * 判定要点（每一条都是真实页面上踩出来的）：
-   *   - 有实际文字（> 4 字）→ 真实内容
-   *   - 有已加载完成的图片 / 任何视频画布 → 真实内容
-   *     （只看 naturalWidth：图片没加载完时不算内容，这正是 B 站占位骨架的样子）
-   *   - 必须"看起来就是占位"：完全空壳，或含骨架屏 / 垫片（shim）元素
+   * 是不是"空占位项"：网格里既没有图片/视频，也没有实际内容。
+   * 两种情况都算：
+   *   - 完全空白（B 站为未加载内容预留的槽位）
+   *   - 只含骨架屏 + 极短文字（例如"加载中"之类的提示）
    */
   function isEmptyPlaceholder(el) {
     if (!el || el.nodeType !== 1) return false;
     if (el.classList.contains('bf-blocked')) return false;
-
+    if (el.querySelector('img, picture, video, canvas, iframe')) return false;
     var text = (el.textContent || '').replace(/\s+/g, '').trim();
-    if (text.length > 4) return false;
-
-    var media = el.querySelectorAll('img, video, canvas, iframe');
-    for (var i = 0; i < media.length; i++) {
-      if (media[i].tagName === 'IMG') {
-        if (media[i].naturalWidth > 0) return false;   // 图片已加载 → 真实内容
-      } else {
-        return false;                                  // 视频 / 画布 / 内嵌页 → 真实内容
-      }
-    }
-
-    if (!text) return true;                            // 一个字都没有 → 空占位
-    // 有极短文字（例如"加载中"）→ 必须带骨架屏 / 垫片标记才认定是占位
-    return !!el.querySelector('[class*="skeleton"], [class*="shim"]');
-  }
-
-  /** 只在实际需要时改类名，避免无谓的样式重算与抖动 */
-  function toggleClass(el, cls, on) {
-    if (on) {
-      if (!el.classList.contains(cls)) el.classList.add(cls);
-    } else if (el.classList.contains(cls)) {
-      el.classList.remove(cls);
-    }
-  }
-
-  /** 从被隐藏的卡片往上找真正的网格容器（可能隔了几层，例如 .floor-single-card） */
-  function findGridAncestor(el) {
-    var cur = el ? el.parentElement : null;
-    for (var i = 0; cur && i < 6; cur = cur.parentElement, i++) {
-      var display = '';
-      try { display = getComputedStyle(cur).display; } catch (e) { display = ''; }
-      if (display === 'grid' || display === 'inline-grid') return cur;
-    }
-    return null;
-  }
-
-  /** 收集网格里的空占位项：先看直接子元素，再往下看一层（覆盖 .floor-* 这类包裹） */
-  function collectPlaceholders(grid, out) {
-    var level1 = grid.children;
-    for (var i = 0; i < level1.length; i++) {
-      var el = level1[i];
-      if (el.classList.contains('bf-blocked')) continue;
-      if (isEmptyPlaceholder(el)) { out.push(el); continue; }
-      var level2 = el.children;
-      for (var k = 0; k < level2.length; k++) {
-        var inner = level2[k];
-        if (inner.classList.contains('bf-blocked')) continue;
-        if (isEmptyPlaceholder(inner)) out.push(inner);
-      }
-    }
-    return out;
+    if (!text) return true;
+    return text.length <= 4 && !!el.querySelector('[class*="skeleton"]');
   }
 
   /**
-   * 「完全隐藏 · 移除位置」专用：
-   * 卡片被整个移除后，网格会把排在末尾的空占位项拉到前面填空，
-   * 看起来就是内容中间多出一块块灰色空盒。这里把它们收敛掉：
-   *   - 普通空占位项 → display:none
-   *   - 加载哨兵（.load-more-anchor 等）→ 只 visibility:hidden，
-   *     保留布局盒与位置，避免影响 B 站继续加载内容
-   *   - 又高又空的"占位容器"（> 400px）→ 同样只隐身，
-   *     避免隐藏后页面高度骤变导致滚动跳动
-   * 占位项被真实内容填充后会立刻自动恢复；每次只做必要的类名变更。
+   * 完全隐藏模式专用：
+   * 我们把卡片隐藏后，网格会把排在末尾的空占位项拉到前面填空，
+   * 看起来就是内容中间多出一块块灰色空盒。这里把这类空占位项一并收敛：
+   *   - 普通空占位项：直接 display:none
+   *   - 加载哨兵（.load-more-anchor 等）：只做 visibility:hidden，
+   *     保留它的布局盒与位置，避免影响 B 站继续加载
+   * 每次扫描都会先清空标记再重新判定，占位项被真实内容填充后会立刻自动恢复。
    */
   function applyPlaceholderCollapse() {
-    var wantedCollapsed = [];
-    var wantedMuted = [];
+    var marked = document.querySelectorAll('.bf-ph-collapsed, .bf-ph-muted');
+    for (var i = 0; i < marked.length; i++) {
+      marked[i].classList.remove('bf-ph-collapsed');
+      marked[i].classList.remove('bf-ph-muted');
+    }
 
-    if (settings.enabled && settings.mode === 'hide' && settings.hideKeepSlot === false) {
-      var hiddenCards = document.querySelectorAll('.bf-blocked.bf-hide');
-      var grids = [];
-      for (var j = 0; j < hiddenCards.length; j++) {
-        var grid = findGridAncestor(hiddenCards[j]);
-        if (grid && grids.indexOf(grid) === -1) grids.push(grid);
-      }
-      for (var g = 0; g < grids.length; g++) {
-        var items = collectPlaceholders(grids[g], []);
-        for (var c = 0; c < items.length; c++) {
-          var el = items[c];
-          var h = 0;
-          try { h = el.getBoundingClientRect().height; } catch (e) { h = 0; }
-          if (isLoadSentinel(el) || h > 400) wantedMuted.push(el);
-          else wantedCollapsed.push(el);
+    if (!settings.enabled || settings.mode !== 'hide') return;
+    // 只在"移除位置"模式下才需要收敛：保留位置时页面不重排，不会有占位块被顶上来
+    if (settings.hideKeepSlot !== false) return;
+
+    var hiddenCards = document.querySelectorAll('.bf-blocked.bf-hide');
+    if (!hiddenCards.length) return;
+
+    // 只处理"确实藏着我们屏蔽卡片"的网格容器
+    var grids = [];
+    for (var j = 0; j < hiddenCards.length; j++) {
+      var grid = hiddenCards[j].parentElement;
+      if (!grid || grids.indexOf(grid) !== -1) continue;
+      var display = '';
+      try { display = getComputedStyle(grid).display; } catch (e) { display = ''; }
+      if (display !== 'grid' && display !== 'inline-grid') continue;
+      grids.push(grid);
+    }
+
+    var collapsed = 0;
+    var muted = 0;
+    for (var g = 0; g < grids.length; g++) {
+      var children = grids[g].children;
+      for (var c = 0; c < children.length; c++) {
+        var el = children[c];
+        if (!isEmptyPlaceholder(el)) continue;
+        if (isLoadSentinel(el)) {
+          el.classList.add('bf-ph-muted');
+          muted++;
+        } else {
+          el.classList.add('bf-ph-collapsed');
+          collapsed++;
         }
       }
     }
-
-    // 只做必要变更：先撤掉不再需要的，再补上需要的
-    var marked = document.querySelectorAll('.bf-ph-collapsed, .bf-ph-muted');
-    for (var i = 0; i < marked.length; i++) {
-      toggleClass(marked[i], 'bf-ph-collapsed', wantedCollapsed.indexOf(marked[i]) !== -1);
-      toggleClass(marked[i], 'bf-ph-muted', wantedMuted.indexOf(marked[i]) !== -1);
-    }
-    for (var a = 0; a < wantedCollapsed.length; a++) toggleClass(wantedCollapsed[a], 'bf-ph-collapsed', true);
-    for (var b = 0; b < wantedMuted.length; b++) toggleClass(wantedMuted[b], 'bf-ph-muted', true);
-
-    if (wantedCollapsed.length || wantedMuted.length) {
-      log('收敛空占位项：隐藏 ' + wantedCollapsed.length + ' 个，隐身保留 ' + wantedMuted.length + ' 个');
-    }
+    if (collapsed || muted) log('收敛空占位项：隐藏 ' + collapsed + ' 个，隐身保留 ' + muted + ' 个');
   }
+
   /* ------------------------------------------------------------------
    * 屏蔽 / 恢复
    * ------------------------------------------------------------------ */
@@ -1708,7 +1663,7 @@
     // 只有"移除位置"模式才会把空占位块顶上来，这时才需要定期复核
     if (settings.enabled && settings.mode === 'hide' && settings.hideKeepSlot === false) {
       var now = Date.now();
-      if (now - lastPlaceholderCheck > 1500) {
+      if (now - lastPlaceholderCheck > 2500) {
         lastPlaceholderCheck = now;
         applyPlaceholderCollapse();
       }

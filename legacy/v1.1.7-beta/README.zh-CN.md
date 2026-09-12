@@ -2,10 +2,10 @@
 
 > B站视频标题屏蔽助手 —— 一个按标题屏蔽词过滤 B 站视频的浏览器扩展。
 
-[![version](https://img.shields.io/badge/version-1.1.8--beta-orange)](https://github.com/ke25019/bili-title-filter/releases)
+[![version](https://img.shields.io/badge/version-1.1.7--beta-orange)](https://github.com/ke25019/bili-title-filter/releases)
 [![manifest](https://img.shields.io/badge/Manifest-V3-blue)]()
 [![browser](https://img.shields.io/badge/Edge%20%7C%20Chrome-Chromium-00aeec)]()
-[![tests](https://img.shields.io/badge/tests-165%20passed-brightgreen)]()
+[![tests](https://img.shields.io/badge/tests-160%20passed-brightgreen)]()
 
 一个适用于 **Microsoft Edge / Chrome 等 Chromium 浏览器** 的 B 站网页端扩展（Manifest V3）。
 按你自己添加的**视频标题屏蔽词**屏蔽视频：可以整体遮蔽（封面与标题合并成一块提示区域，鼠标悬停即可查看），
@@ -15,13 +15,13 @@
 
 ## ⚠️ Beta 说明
 
-当前版本为 **v1.1.8-beta**，功能完整可用，但仍处于测试阶段，欢迎反馈问题。
+当前版本为 **v1.1.7-beta**，功能完整可用，但仍处于测试阶段，欢迎反馈问题。
 
-- 自动化校验：核心屏蔽逻辑 93 项、设置界面 52 项、后台服务 20 项，**共 165 项全部通过**。
+- 自动化校验：核心屏蔽逻辑 88 项、设置界面 52 项、后台服务 20 项，**共 160 项全部通过**。
 - **本版的核心原则：宁可不屏蔽，也绝不乱遮**。任何一步无法确认是一张卡片时，扩展会直接跳过该推广，不影响页面其它内容。
 - 已知限制：B 站页面结构改版后，个别卡片的识别可能需要调整（见文末「常见问题」）。
 - 反馈渠道：请在 [Issues](https://github.com/ke25019/bili-title-filter/issues) 中提交，附上页面地址与截图更好定位。
-- 旧版本（v1.0.0-beta / v1.1.0-beta / v1.1.3-beta / v1.1.4-beta / v1.1.5-beta / v1.1.6-beta / v1.1.7-beta）已归档在 [`legacy/`](legacy/) 目录，可分别作为独立扩展加载。
+- 旧版本（v1.0.0-beta / v1.1.0-beta / v1.1.3-beta / v1.1.4-beta / v1.1.5-beta / v1.1.6-beta）已归档在 [`legacy/`](legacy/) 目录，可分别作为独立扩展加载。
 
 ---
 
@@ -182,7 +182,7 @@ bili-title-filter/
 ```bash
 cd tests
 npm install      # 仅测试需要 jsdom
-npm test         # 165 项行为校验
+npm test         # 160 项行为校验
 ```
 
 验证覆盖：屏蔽逻辑与两种屏蔽方式、悬停展示、**真实直播楼层结构下的封面+标题合并遮蔽**、14 类分区与兜底规则、
@@ -229,25 +229,10 @@ A：B 站是单页应用，列表滚动与切换会让卡片重新渲染，统�
 
 ## 版本
 
-**v1.1.8-beta** · 适用于 Microsoft Edge (Chromium) 102+（`minimum_chrome_version: 102`）
+**v1.1.7-beta** · 适用于 Microsoft Edge (Chromium) 102+（`minimum_chrome_version: 102`）
 
 ### 更新日志
 
-**v1.1.8-beta**
-
-> 本版按你的要求**把「前移补位」（移除位置）这条路径逐行审了一遍**，修掉了 5 个真实缺陷。
-
-| # | 缺陷 | 后果 | 修复 |
-| --- | --- | --- | --- |
-| 1 | 找网格时只看**直接父元素** | 被隐藏的卡片若隔了一层（如命中的是 `.floor-card-inner`），整个网格的占位块都不会被收敛 → 灰块残留 | 改为向上最多 6 层找 `display:grid` 祖先 |
-| 2 | 每次调用**先全部清空类再重新加** | 状态没变也触发两次样式重算，滚动/加载时抖动 | 改为"只做必要变更"的差异更新 |
-| 3 | 判定空占位要求**没有 `<img>`** | B 站骨架带未加载图片时不收敛 → 灰块残留 | 改看 `naturalWidth`：图片没加载完仍算占位；一字皆无也直接算占位 |
-| 4 | 只扫描网格的**直接子元素** | 嵌在 `.floor-single-card` 里的空卡片漏掉 | 增加向下扫一层 |
-| 5 | 无差别隐藏"无文字无图"的网格子元素 | 可能藏掉承载高度的空容器 → 页面高度骤变、滚动跳动 | 超过 400px 的空容器改为只隐身、保留高度 |
-
-另外把定时复核的节流从 2.5s 收紧到 1.5s，让占位项恢复更及时。
-
-- 校验项 160 → 165，新增 5 项边界用例：带未加载图片的骨架、嵌在楼层里的空卡片、又高又空的容器、真实卡片不被误判、图片加载完成后自动恢复
 **v1.1.7-beta**
 
 > 本版根据你的线索复查了 v1.0.0-beta：**只有它的「完全隐藏」是你觉得好用的**。
@@ -269,7 +254,7 @@ A：B 站是单页应用，列表滚动与切换会让卡片重新渲染，统�
 
   面板 / 弹窗里只有切到「完全隐藏」时才会显示这个开关；设置页也可以调。
 - **空占位块收敛只在「移除位置」模式下运行**（保留位置时页面不重排，本来就没有东西被顶上来）
-- 校验项 160 → 165，新增 18 项用例覆盖两种隐藏行为的类名、CSS 规则与开关联动
+- 校验项 142 → 160，新增 18 项用例覆盖两种隐藏行为的类名、CSS 规则与开关联动
 
 **v1.1.6-beta**
 

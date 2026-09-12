@@ -110,36 +110,14 @@ const HTML = `<!DOCTYPE html><html><head></head><body>
       </div>
 
       <!-- B 站自己的"空占位项"（实测：排在网格末尾，前面卡片被隐藏后会被顶上来，
-           显示成一块灰色空盒）。下面几个分别覆盖不同的真实变体。 -->
+           显示成一块灰色空盒）。下面三个分别代表：带骨架屏的空占位、完全空白、
+           以及加载哨兵 .load-more-anchor。 -->
       <div class="bili-video-card" id="ph1" data-w="240" data-h="233">
         <div class="bili-video-card__skeleton"></div>
       </div>
       <div class="bili-video-card" id="ph2" data-w="240" data-h="233"></div>
       <div class="load-more-anchor" id="anchor1" data-w="240" data-h="233">
         <div class="bili-video-card__skeleton"></div>
-      </div>
-      <!-- 变体：带"未加载图片"的骨架（只看 naturalWidth，不能因为有 img 就放过） -->
-      <div class="bili-video-card" id="ph3" data-w="240" data-h="233">
-        <a href="#"><img src="skeleton.jpg"></a>
-      </div>
-      <!-- 变体：嵌在 .floor-single-card 里（隐藏的卡片隔了一层，仍要能找到网格） -->
-      <div class="floor-single-card" data-w="240" data-h="248">
-        <div class="floor-card single-card" data-w="240" data-h="248">
-          <div class="bili-video-card" id="ph4" data-w="240" data-h="248">
-            <div class="bili-video-card__skeleton"></div>
-          </div>
-        </div>
-      </div>
-      <!-- 又高又空的"占位容器"：只应隐身保留高度，不能真的隐藏（否则页面高度骤变） -->
-      <div class="bili-video-card" id="tallPh" data-w="240" data-h="520"></div>
-      <!-- 真实卡片：有标题 + 图片还没加载完，绝不能被当成占位项 -->
-      <div class="feed-card" id="realCard" data-w="240" data-h="233">
-        <div class="bili-feed-card">
-          <div class="bili-video-card">
-            <a href="//www.bilibili.com/video/BVreal"><img src="loading.jpg"></a>
-            <h3 class="bili-video-card__info--tit" title="正常显示的真实视频">正常显示的真实视频</h3>
-          </div>
-        </div>
       </div>
     </div>
   </main>
@@ -350,35 +328,6 @@ async function main() {
     '<h3 class="bili-video-card__info--tit" title="新加载的真实卡片">新加载的真实卡片</h3>';
   await sleep(900);
   check('占位项被真实内容填充后自动恢复显示', !$('ph1').classList.contains('bf-ph-collapsed'), $('ph1').className);
-
-  console.log('\n[10b] 空占位识别的边界（对照真实页面上踩过的坑）');
-  await pushSettings({ mode: 'hide', hideKeepSlot: false, keywords: ['剧透'] });
-  // 收敛可能发生在自身，也可能发生在它的祖先上（例如整个空楼层被收敛）
-  const collapsedWithin = (id) => {
-    let cur = $(id);
-    while (cur && cur !== doc.body) {
-      if (cur.classList.contains('bf-ph-collapsed')) return true;
-      cur = cur.parentElement;
-    }
-    return false;
-  };
-  check('带"未加载图片"的骨架也被收敛（不能因为有 img 就放过）',
-    collapsedWithin('ph3'), $('ph3').className);
-  check('嵌在 .floor-single-card 里的空卡片也能收敛（往上找网格，不只看直接父元素）',
-    collapsedWithin('ph4'), $('ph4').className);
-  check('又高又空的容器只隐身、保留高度（避免页面高度骤变）',
-    $('tallPh').classList.contains('bf-ph-muted') && !$('tallPh').classList.contains('bf-ph-collapsed'),
-    $('tallPh').className);
-  check('真实卡片不会被误判成占位项（即使图片尚未加载）',
-    !$('realCard').classList.contains('bf-ph-collapsed') && !$('realCard').classList.contains('bf-ph-muted'),
-    $('realCard').className);
-
-  // 图片加载完成后的占位项不应再被收敛
-  // （改 naturalWidth 不会触发 DOM 变更，因此要等一次定时复核：tick 为 1.2s）
-  const imgInPh3 = $('ph3').querySelector('img');
-  Object.defineProperty(imgInPh3, 'naturalWidth', { value: 320, configurable: true });
-  await sleep(2400);
-  check('占位项里的图片加载完成后不再被收敛', !collapsedWithin('ph3'), $('ph3').className);
 
   await pushSettings({ mode: 'mask', keywords: [], hideKeepSlot: false });
   check('切回遮蔽模式后占位项标记被清除', doc.querySelectorAll('.bf-ph-collapsed, .bf-ph-muted').length === 0);

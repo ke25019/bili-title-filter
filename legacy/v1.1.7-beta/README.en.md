@@ -2,10 +2,10 @@
 
 > A browser extension that filters Bilibili videos by the title keywords you choose.
 
-[![version](https://img.shields.io/badge/version-1.1.8--beta-orange)](https://github.com/ke25019/bili-title-filter/releases)
+[![version](https://img.shields.io/badge/version-1.1.7--beta-orange)](https://github.com/ke25019/bili-title-filter/releases)
 [![manifest](https://img.shields.io/badge/Manifest-V3-blue)]()
 [![browser](https://img.shields.io/badge/Edge%20%7C%20Chrome-Chromium-00aeec)]()
-[![tests](https://img.shields.io/badge/tests-165%20passed-brightgreen)]()
+[![tests](https://img.shields.io/badge/tests-160%20passed-brightgreen)]()
 
 A Manifest V3 extension for **Microsoft Edge / Google Chrome and other Chromium browsers**.
 Block videos whose titles match your own keyword list: either **mask** them (cover and title merged into a single
@@ -16,13 +16,13 @@ live streams and anime, and can hide the home-page carousel banner on its own.
 
 ## ⚠️ Beta Notice
 
-The current release is **v1.1.8-beta**. It is feature-complete but still in testing — feedback is very welcome.
+The current release is **v1.1.7-beta**. It is feature-complete but still in testing — feedback is very welcome.
 
-- Automated checks: 93 for the core blocking logic, 52 for the settings UI, 20 for the background service — **165 in total, all passing**.
+- Automated checks: 88 for the core blocking logic, 52 for the settings UI, 20 for the background service — **160 in total, all passing**.
 - **Core principle of this release: rather skip than mis-block.** Whenever the extension cannot confidently identify a card, it skips that promo instead of risking a broken page.
 - Known limitation: if Bilibili redesigns its pages, a few card selectors may need updating (see the FAQ below).
 - Feedback: please open an [Issue](https://github.com/ke25019/bili-title-filter/issues) with the page URL and a screenshot if possible.
-- Older versions (v1.0.0-beta / v1.1.0-beta / v1.1.3-beta / v1.1.4-beta / v1.1.5-beta / v1.1.6-beta / v1.1.7-beta) are archived under [`legacy/`](legacy/) and can each be loaded as a standalone extension.
+- Older versions (v1.0.0-beta / v1.1.0-beta / v1.1.3-beta / v1.1.4-beta / v1.1.5-beta / v1.1.6-beta) are archived under [`legacy/`](legacy/) and can each be loaded as a standalone extension.
 
 ---
 
@@ -225,25 +225,10 @@ A: Bilibili is a single-page app: scrolling and navigation re-render cards, so t
 
 ## Version
 
-**v1.1.8-beta** · Requires Microsoft Edge (Chromium) 102+ (`minimum_chrome_version: 102`)
+**v1.1.7-beta** · Requires Microsoft Edge (Chromium) 102+ (`minimum_chrome_version: 102`)
 
 ### Changelog
 
-**v1.1.8-beta**
-
-> This release audits the whole "remove the slot" (cards move up) path line by line and fixes five real defects.
-
-| # | Defect | Effect | Fix |
-| --- | --- | --- | --- |
-| 1 | The grid was looked up via the **immediate parent only** | If a hidden card was one level deeper (e.g. a `.floor-card-inner`), placeholders in that grid were never collapsed, leaving grey boxes | Walk up to 6 levels for a `display:grid` ancestor |
-| 2 | Every run **removed all classes and re-added them** | Two style recalculations even when nothing changed, causing jitter while scrolling/loading | Diff-based updates: only write what actually changed |
-| 3 | Placeholder detection required **no `<img>`** | Skeletons with an unloaded image were not collapsed, leaving grey boxes | Use `naturalWidth`: an unloaded image still counts as a placeholder; no text at all is a placeholder too |
-| 4 | Only **direct children** of the grid were scanned | Empty cards nested inside `.floor-single-card` were missed | Also scan one level deeper |
-| 5 | Any text-less, image-less grid child was hidden | Could hide height-carrying empty containers, making the page height jump | Containers taller than 400px are only made invisible, keeping their height |
-
-The periodic re-check throttle was also tightened from 2.5s to 1.5s so placeholders recover sooner.
-
-- Checks 160 → 165, with 5 new boundary cases
 **v1.1.7-beta**
 
 > Following your hint, this release went back to v1.0.0-beta - **only its hide mode behaves the way you want**.
