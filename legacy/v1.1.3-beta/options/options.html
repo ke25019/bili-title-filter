@@ -133,16 +133,13 @@
         <section class="card">
           <h2>屏蔽分区推广</h2>
           <p class="desc">
-            勾选后，这些分区的推广卡片会与你屏蔽的视频一样被处理（遮蔽时封面与标题合并成一整块）。
-            识别不依赖单一 class，无法确认是一张卡片时会跳过，不会影响页面其它内容。
+            两个粒度互相独立：<b>卡片</b> 只处理该分区的每一张卡片；
+            <b>整行板块</b> 会把该分区所在的整行推广位（含首页顶部轮播横幅）一起隐藏。
           </p>
           <div class="typetable" id="types"></div>
-          <label class="check" style="margin-top:14px">
-            <input type="checkbox" id="block-banner" />
-            <span>屏蔽<strong>首页顶部的大轮播横幅</strong>（只作用于首页那一块，不影响其它内容）</span>
-          </label>
           <div class="row-actions">
-            <button class="btn" id="types-all" type="button">全选</button>
+            <button class="btn" id="types-all" type="button">卡片全选</button>
+            <button class="btn" id="sections-all" type="button">整行全选</button>
             <button class="btn" id="types-none" type="button">全部取消</button>
           </div>
         </section>

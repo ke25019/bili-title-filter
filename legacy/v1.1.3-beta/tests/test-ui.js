@@ -105,16 +105,28 @@ async function testPopup() {
   await sleep(60);
   check('勾选屏蔽直播卡片已保存', store.sync.bfSettings.blockTypes.live === true);
 
-  // 首页顶部轮播横幅开关
-  check('存在「屏蔽首页顶部轮播横幅」开关', !!doc.getElementById('banner'));
-  doc.getElementById('banner').click();
+  // 整行板块开关（只作用于已勾选卡片级的分区）
+  check('存在「整行板块」开关', !!doc.getElementById('sections'));
+  doc.getElementById('sections').click();
   await sleep(60);
-  check('轮播横幅开关已保存', store.sync.bfSettings.blockBanner === true, JSON.stringify(store.sync.bfSettings.blockBanner));
-  check('轮播横幅开关回显为开启', doc.getElementById('banner').classList.contains('is-on'));
-  doc.getElementById('banner').click();
+  check('整行板块开关只开启已勾选分区的板块',
+    store.sync.bfSettings.blockSections.live === true && store.sync.bfSettings.blockSections.bangumi !== true,
+    JSON.stringify(store.sync.bfSettings.blockSections));
+  check('整行板块开关回显为开启', doc.getElementById('sections').classList.contains('is-on'));
+  doc.getElementById('sections').click();
   await sleep(60);
-  check('再次点击可关闭轮播横幅', store.sync.bfSettings.blockBanner === false);
-  check('弹窗不再包含「整行板块」开关', !doc.getElementById('sections'));
+  check('再次点击可关闭整行板块', store.sync.bfSettings.blockSections.live === false);
+
+  // 一个分区都没勾选时点击不应产生任何效果
+  doc.querySelector('#types .type[data-key="live"]').click();
+  await sleep(40);
+  doc.getElementById('sections').click();
+  await sleep(60);
+  check('未勾选任何分区时点击板块开关不会开启板块',
+    Object.values(store.sync.bfSettings.blockSections).every((v) => !v),
+    JSON.stringify(store.sync.bfSettings.blockSections));
+  check('此时会提示先勾选分区', /请先/.test(doc.getElementById('sections-hint').textContent),
+    doc.getElementById('sections-hint').textContent);
 
   // 总开关
   doc.getElementById('enabled').click();
@@ -132,9 +144,8 @@ async function testOptions() {
 
   check('脚本执行无异常', errors.length === 0, errors.join(' | '));
   check('分区表格渲染出 14 行', doc.querySelectorAll('#types .trow').length === 14, doc.querySelectorAll('#types .trow').length);
-  check('每个分区一个「屏蔽」开关', doc.querySelectorAll('#types input[data-key]').length === 14,
-    doc.querySelectorAll('#types input[data-key]').length);
-  check('设置页包含「屏蔽首页顶部轮播横幅」', !!doc.getElementById('block-banner'));
+  check('每个分区有「卡片 / 整行」两个开关', doc.querySelectorAll('#types input[data-scope="card"]').length === 14
+    && doc.querySelectorAll('#types input[data-scope="section"]').length === 14);
   check('默认选中「整体遮蔽」', doc.querySelector('input[name="mode"][value="mask"]').checked);
   check('遮蔽文案输入框已填充默认值',
     doc.getElementById('mask-text').value === '根据您的屏蔽词已将此视频屏蔽',
@@ -169,25 +180,26 @@ async function testOptions() {
   doc.getElementById('types-all').click();
   await sleep(60);
   const all = store.sync.bfSettings.blockTypes;
-  check('全选后 14 个分区均开启', Object.keys(all).length === 14 && Object.values(all).every(Boolean), JSON.stringify(all));
+  check('卡片全选后 14 个分区均开启', Object.keys(all).length === 14 && Object.values(all).every(Boolean), JSON.stringify(all));
 
-  // 单个分区开关
-  const liveCard = doc.querySelector('#types input[data-key="live"]');
+  doc.getElementById('sections-all').click();
+  await sleep(60);
+  const allSec = store.sync.bfSettings.blockSections;
+  check('整行全选后 14 个分区板块均开启', Object.keys(allSec).length === 14 && Object.values(allSec).every(Boolean), JSON.stringify(allSec));
+
+  // 单个分区的两个开关互相独立
+  const liveCard = doc.querySelector('#types input[data-scope="card"][data-key="live"]');
   liveCard.checked = false;
   liveCard.dispatchEvent(new win.Event('change', { bubbles: true }));
   await sleep(60);
-  check('分区开关可单独关闭', store.sync.bfSettings.blockTypes.live === false);
-
-  // 顶部轮播横幅
-  const bannerBox = doc.getElementById('block-banner');
-  bannerBox.checked = true;
-  bannerBox.dispatchEvent(new win.Event('change', { bubbles: true }));
-  await sleep(60);
-  check('轮播横幅开关已保存', store.sync.bfSettings.blockBanner === true);
+  check('卡片开关可单独关闭', store.sync.bfSettings.blockTypes.live === false);
+  check('关闭卡片开关不影响整行板块开关', store.sync.bfSettings.blockSections.live === true);
 
   doc.getElementById('types-none').click();
   await sleep(60);
-  check('全部取消后所有分区均关闭', Object.values(store.sync.bfSettings.blockTypes).every((v) => !v));
+  check('全部取消后卡片与板块均关闭',
+    Object.values(store.sync.bfSettings.blockTypes).every((v) => !v) &&
+    Object.values(store.sync.bfSettings.blockSections).every((v) => !v));
 
   // 正则 / 大小写 / UP 主开关
   const rx = doc.getElementById('use-regex');

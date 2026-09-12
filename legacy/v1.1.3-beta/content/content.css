@@ -123,7 +123,7 @@ html.bf-dark {
   opacity: 0 !important;
 }
 
-/* ---------- 首页顶部轮播横幅（独立开关，只作用于首页那一块） ---------- */
-.bf-banner-blocked {
+/* ---------- 板块级屏蔽（整行 / 整个推广位） ---------- */
+.bf-section-blocked {
   display: none !important;
 }

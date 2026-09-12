@@ -2,10 +2,10 @@
 
 > 按标题屏蔽词过滤 B 站视频的浏览器扩展 · A browser extension that filters Bilibili videos by title keywords.
 
-[![version](https://img.shields.io/badge/version-1.1.4--beta-orange)](https://github.com/ke25019/bili-title-filter/releases)
+[![version](https://img.shields.io/badge/version-1.1.3--beta-orange)](https://github.com/ke25019/bili-title-filter/releases)
 [![manifest](https://img.shields.io/badge/Manifest-V3-blue)]()
 [![browser](https://img.shields.io/badge/Edge%20%7C%20Chrome-Chromium-00aeec)]()
-[![tests](https://img.shields.io/badge/tests-129%20passed-brightgreen)]()
+[![tests](https://img.shields.io/badge/tests-142%20passed-brightgreen)]()
 
 **适用于 Microsoft Edge / Chrome 等 Chromium 浏览器的 B 站网页端扩展（Manifest V3）。**
 
@@ -24,13 +24,13 @@
 
 - **按标题屏蔽词屏蔽视频** —— 支持批量管理、正则、区分大小写、匹配 UP 主名称
 - **两种屏蔽方式** —— 整体遮蔽（封面与标题合并成一块提示区域，**鼠标悬停即可查看**）或完全隐藏（如同从未出现）
-- **屏蔽分区推广** —— **14 类**：直播、番剧、影视、课堂、专栏、动态、漫画、游戏、音乐、赛事、会员购、活动、广告 + **「其他推广」兜底**；另有**独立的「屏蔽首页顶部轮播横幅」开关**；识别不依赖单一 class，无法确认时宁可不屏蔽
+- **屏蔽分区推广** —— **14 类**：直播、番剧、影视、课堂、专栏、动态、漫画、游戏、音乐、赛事、会员购、活动、广告 + **「其他推广」兜底**；**卡片级 / 整行板块级两个粒度独立开关**；识别不依赖单一 class，改版不易失效
 - **B 站页面内悬浮面板** —— 位于标题栏附近，**可自由拖动**并记住位置，随时调整所有属性
 - **深色模式适配** —— 自动跟随 B 站 web 端深色模式，也可手动锁定
 
 - **Block videos by title keywords** — bulk management, regex, case sensitivity, uploader matching
 - **Two blocking styles** — mask (cover + title merged into one block, **reveals on hover**) or hide entirely
-- **Block section promotions** — **14 types** plus an **“other promos” catch-all**, and a **separate switch for the home-page carousel banner**; detection is class-independent and skips rather than mis-blocks
+- **Block section promotions** — **14 types**: live, anime, movies, courses, articles, dynamics, manga, games, music, esports, merch store, events, ads, plus an **“other promos” catch-all** — with **independent card-level / row-level switches**
 - **Draggable in-page panel** near the top bar, position remembered, all settings at hand
 - **Dark mode support** — follows Bilibili’s dark theme automatically, or force light/dark
 
@@ -54,7 +54,7 @@ Full instructions are available in the language-specific documents linked above.
 ```bash
 cd tests
 npm install
-npm test        # 129 项校验全部通过 / 129 checks, all passing
+npm test        # 142 项校验全部通过 / 142 checks, all passing
 ```
 
 本扩展的代码是纯原生 JavaScript、零运行时依赖。

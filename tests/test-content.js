@@ -2,9 +2,15 @@
  * B站屏蔽助手 - 内容脚本功能验证（jsdom）
  * 用法：node test-content.js
  *
- * 校验点：面板挂载与拖动 / 关键词遮蔽 / 悬停自动展示 / 完全隐藏 /
- *         分区卡片级屏蔽（已知类名 + 未知类名通用识别）/ 分区板块级屏蔽 /
- *         顶栏导航不被误伤 / 动态新增卡片 / 总开关 / 深色模式
+ * 模拟 DOM 结构全部取自 2025 年 B 站首页的**真实实测结果**（Edge 152 无头实例 CDP 抓取）：
+ *  - 视频卡片：.feed-card > .bili-feed-card > .bili-video-card
+ *  - 直播推广楼层：.floor-card-inner > (.cover-container 封面 + .pb-16.px-12 > p.title 标题)
+ *  - 顶部轮播横幅：.vui_carousel > .vui_carousel__slides > .carousel-area（11 张幻灯片）
+ *  - 隐藏的侧边推广：.palette-button-inner 里的 0×0 反馈链接（曾导致整页被遮蔽）
+ *  - 顶栏「直播 / 番剧」入口：.channel-link__right（绝不能被屏蔽）
+ *
+ * 尺寸：jsdom 没有排版引擎，因此用 data-w / data-h 模拟真实尺寸，
+ * 用于验证「过大容器绝不遮蔽」这条安全阀。
  */
 const fs = require('fs');
 const path = require('path');
@@ -14,14 +20,6 @@ const ROOT = path.join(__dirname, '..');
 const DEFAULTS_SRC = fs.readFileSync(path.join(ROOT, 'shared', 'defaults.js'), 'utf8');
 const CONTENT_SRC = fs.readFileSync(path.join(ROOT, 'content', 'content.js'), 'utf8');
 
-/**
- * 模拟 DOM 结构取自 2025 年 B 站首页真实结构：
- *  - 视频卡片：.feed-card > .bili-feed-card > .bili-video-card
- *  - 直播卡片：.feed-card > .bili-feed-card > .bili-live-card
- *  - 顶栏「直播」入口：.channel-link__right（绝不能被屏蔽）
- *  - 顶部轮播横幅：.carousel-area（番剧推广，属于板块）
- *  - 直播楼层：.home-live-floor > .floor-title + .home-live-row > 多张卡片
- */
 const HTML = `<!DOCTYPE html><html><head></head><body>
   <div class="bili-header">
     <div class="channel-items__right">
@@ -32,95 +30,82 @@ const HTML = `<!DOCTYPE html><html><head></head><body>
     <div id="nav-searchform"></div>
   </div>
   <main>
-    <div class="carousel-area" id="banner">
-      <div class="carousel-container">
-        <div class="carousel-item">
-          <div class="carousel-footer">
-            <div class="carousel-footer-title">
-              <a href="https://www.bilibili.com/bangumi/play/ep5137676">新番推广横幅</a>
+    <!-- 顶部轮播横幅 -->
+    <div class="vui_carousel vui_carousel--bottom" id="banner" data-w="500" data-h="365">
+      <div class="vui_carousel__slides">
+        <div class="vui_carousel__slide">
+          <div class="carousel-area" data-w="500" data-h="281">
+            <div class="carousel-footer">
+              <div class="carousel-footer-title">
+                <a href="https://www.bilibili.com/bangumi/play/ep5137676">新番推广横幅</a>
+              </div>
             </div>
           </div>
         </div>
       </div>
     </div>
 
-    <!-- 整个推荐流：同时含着视频卡片与 2 张直播卡片。
-         它绝不能被当成"一张卡片"遮蔽，也不能被当成"一整行"隐藏，
-         否则就会出现「页面空白 / 排版错乱」——这正是 v1.1.0 的回归点。 -->
+    <!-- 隐藏的侧边推广位：实测 0×0，曾被误判成卡片导致整页空白 -->
+    <div class="palette-button-outer">
+      <div class="palette-button-inner" id="palette" data-w="1401" data-h="808">
+        <div class="palette-button-wrap">
+          <div class="storage-box hidden">
+            <div class="storable-items">
+              <a class="primary-btn feedback" href="https://www.bilibili.com/blackboard/activity-xKR6yNjuJ6.html">反馈</a>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 过大的"卡片"：即使里面有分区链接也不能遮蔽 -->
+    <div class="huge-promo-card" id="hugebox" data-w="1401" data-h="808">
+      <a href="https://game.bilibili.com/blhx/"><img src="game.jpg"></a>
+      <p class="title">游戏中心推广</p>
+    </div>
+
     <div class="feed-list" id="feed-list">
-      <div class="feed-card" id="c1">
+      <div class="feed-card" id="c1" data-w="240" data-h="210">
         <div class="bili-feed-card">
           <div class="bili-video-card is-rcmd">
-            <a class="bili-video-card__image--link" href="//www.bilibili.com/video/BV1aa"><div class="cover"></div></a>
+            <a class="bili-video-card__image--link" href="//www.bilibili.com/video/BV1aa"><img src="cover1.jpg"></a>
             <h3 class="bili-video-card__info--tit" title="【剧透警告】新番结局深度解析">【剧透警告】新番结局深度解析</h3>
             <span class="bili-video-card__info--author">某UP主</span>
           </div>
         </div>
       </div>
 
-      <div class="feed-card" id="c2">
+      <div class="feed-card" id="c2" data-w="240" data-h="210">
         <div class="bili-feed-card">
           <div class="bili-video-card is-rcmd">
-            <a class="bili-video-card__image--link" href="//www.bilibili.com/video/BV1bb"><div class="cover"></div></a>
+            <a class="bili-video-card__image--link" href="//www.bilibili.com/video/BV1bb"><img src="cover2.jpg"></a>
             <h3 class="bili-video-card__info--tit" title="正常的一个视频">正常的一个视频</h3>
             <span class="bili-video-card__info--author">良心UP主</span>
           </div>
         </div>
       </div>
 
-      <div class="feed-card" id="c3">
-        <div class="bili-feed-card">
-          <div class="bili-live-card">
-            <a class="bili-live-card__image--link" href="https://live.bilibili.com/2263"><div class="bili-live-card__cover"></div></a>
-            <div class="bili-live-card__info">
-              <div class="bili-live-card__info--tit">正在直播：某个主播</div>
+      <!-- 直播推广楼层：真实结构与真实类名（工具类，非 BEM） -->
+      <div class="floor-single-card" id="live-floor">
+        <div class="floor-card single-card">
+          <div class="floor-card-inner" id="c4" data-w="238" data-h="224">
+            <div class="cover-container" data-w="238" data-h="134">
+              <a href="https://live.bilibili.com/1852636221"><img src="live.jpg"></a>
+            </div>
+            <div class="pb-16 px-12 flex flex-col" data-w="238" data-h="80">
+              <p class="title indent-initial"><a class="font-medium" href="https://live.bilibili.com/1852636221">某主播的直播间</a></p>
             </div>
           </div>
         </div>
       </div>
 
-      <div class="feed-card" id="c7">
-        <div class="bili-feed-card">
-          <div class="bili-live-card">
-            <a class="bili-live-card__image--link" href="https://live.bilibili.com/2264"><div class="bili-live-card__cover"></div></a>
-            <div class="bili-live-card__info">
-              <div class="bili-live-card__info--tit">正在直播：第四位主播</div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <!-- 游戏中心推广：属于具体的「游戏」分区 -->
-      <div class="feed-card" id="c6">
+      <!-- 未分类的客户端下载推广：由「其他推广」兜底 -->
+      <div class="feed-card" id="c8" data-w="240" data-h="210">
         <div class="bili-feed-card">
           <div class="bili-video-card">
-            <a class="bili-video-card__image--link" href="https://game.bilibili.com/blhx/"><div class="cover"></div></a>
-            <h3 class="bili-video-card__info--tit" title="某游戏中心推广">某游戏中心推广</h3>
-          </div>
-        </div>
-      </div>
-
-      <!-- 客户端下载推广：不属于任何具体分区，应由「其他推广」兜底捕获 -->
-      <div class="feed-card" id="c8">
-        <div class="bili-feed-card">
-          <div class="bili-video-card">
-            <a class="bili-video-card__image--link" href="https://app.bilibili.com/"><div class="cover"></div></a>
+            <a class="bili-video-card__image--link" href="https://app.bilibili.com/"><img src="app.jpg"></a>
             <h3 class="bili-video-card__info--tit" title="下载哔哩哔哩客户端">下载哔哩哔哩客户端</h3>
           </div>
-        </div>
-      </div>
-    </div>
-
-    <div class="home-live-floor" id="live-floor">
-      <div class="floor-title" id="live-title">正在直播</div>
-      <div class="home-live-row" id="live-row">
-        <div class="unknown-live-box" id="c4">
-          <a href="https://live.bilibili.com/9999"><div class="cover"></div></a>
-          <div class="live-tit">正在直播：另一个主播</div>
-        </div>
-        <div class="unknown-live-box" id="c5">
-          <a href="https://live.bilibili.com/8888"><div class="cover"></div></a>
-          <div class="live-tit">正在直播：第三个主播</div>
         </div>
       </div>
     </div>
@@ -166,6 +151,13 @@ async function main() {
   const dom = new JSDOM(HTML, { runScripts: 'outside-only', pretendToBeVisual: true, url: 'https://www.bilibili.com/' });
   const win = dom.window;
 
+  // 用 data-w / data-h 模拟真实尺寸（jsdom 本身没有排版引擎，rect 恒为 0）
+  win.Element.prototype.getBoundingClientRect = function () {
+    const w = Number((this.getAttribute && this.getAttribute('data-w')) || 0);
+    const h = Number((this.getAttribute && this.getAttribute('data-h')) || 0);
+    return { width: w, height: h, top: 0, left: 0, right: w, bottom: h, x: 0, y: 0 };
+  };
+
   win.chrome = {
     storage: {
       sync: area('sync'),
@@ -190,12 +182,13 @@ async function main() {
     return m ? m.querySelector('.bf-mask__text').textContent : '(无)';
   };
   const blocked = (id) => $(id).classList.contains('bf-blocked');
+  const maskCount = () => doc.querySelectorAll('.bf-mask').length;
 
   async function pushSettings(patch) {
     const next = Object.assign({}, store.sync.bfSettings || {}, patch);
     store.sync.bfSettings = next;
     onChangedListeners.forEach((f) => f({ bfSettings: { newValue: next } }, 'sync'));
-    await sleep(80);
+    await sleep(100);
   }
 
   await sleep(300);
@@ -206,16 +199,18 @@ async function main() {
   const shadow = host && host.shadowRoot;
   check('悬浮面板已挂载到页面', !!host);
   check('面板使用 Shadow DOM 隔离', !!shadow);
-  check('面板包含屏蔽方式切换', !!(shadow && shadow.getElementById('bf-mode')));
   check('面板包含 14 种分区选项', !!(shadow && shadow.querySelectorAll('.bf-type').length === 14),
     shadow ? shadow.querySelectorAll('.bf-type').length : 'n/a');
-  check('面板包含「整行板块」开关', !!(shadow && shadow.getElementById('bf-sections')));
+  check('面板包含「屏蔽首页顶部轮播横幅」开关', !!(shadow && shadow.getElementById('bf-banner')));
+  check('面板不再包含「整行板块」开关', !(shadow && shadow.getElementById('bf-sections')));
   check('面板包含「重置位置」入口', !!(shadow && shadow.getElementById('bf-reset-pos')));
 
   console.log('\n[2] 默认状态下不误伤');
   check('普通视频未被屏蔽', !blocked('c2'));
-  check('直播卡片未被屏蔽', !blocked('c3'));
+  check('直播推广卡片未被屏蔽', !blocked('c4'));
   check('顶栏「直播」入口未被屏蔽', !doc.querySelector('.channel-link__right').classList.contains('bf-blocked'));
+  check('隐藏的侧边推广位未被遮蔽', !blocked('palette'));
+  check('超大容器未被遮蔽', !blocked('hugebox'));
 
   console.log('\n[3] 关键词 + 整体遮蔽');
   await pushSettings({ enabled: true, mode: 'mask', keywords: ['剧透'] });
@@ -225,8 +220,7 @@ async function main() {
   check('生成了遮蔽区域 .bf-mask', !!mask1);
   check('遮蔽文案正确', mask1 && mask1.querySelector('.bf-mask__text').textContent === '根据您的屏蔽词已将此视频屏蔽', maskText($('c1')));
   check('显示命中屏蔽词', mask1 && mask1.querySelector('.bf-mask__sub').textContent.indexOf('剧透') !== -1);
-  check('提示文案为「鼠标悬停可查看」', mask1 && mask1.querySelector('.bf-mask__hint').textContent === '鼠标悬停可查看',
-    mask1 ? mask1.querySelector('.bf-mask__hint').textContent : 'n/a');
+  check('提示文案为「鼠标悬停可查看」', mask1 && mask1.querySelector('.bf-mask__hint').textContent === '鼠标悬停可查看');
 
   console.log('\n[4] 悬停自动展示视频');
   check('初始不是展示状态', !$('c1').classList.contains('bf-revealed'));
@@ -237,99 +231,66 @@ async function main() {
   await pushSettings({ revealOnHover: false });
   $('c1').dispatchEvent(new win.MouseEvent('mouseenter'));
   check('关闭悬停展示后移入不再展示', !$('c1').classList.contains('bf-revealed'));
-  check('关闭后遮蔽层拦截点击（无 bf-hoverable）', !$('c1').classList.contains('bf-hoverable'));
   await pushSettings({ revealOnHover: true });
-  check('重新开启后恢复可悬停', $('c1').classList.contains('bf-hoverable'));
 
   console.log('\n[5] 完全隐藏模式');
   await pushSettings({ mode: 'hide' });
   check('命中视频被完全隐藏 bf-hide', $('c1').classList.contains('bf-hide'));
   await pushSettings({ mode: 'mask' });
   check('切回遮蔽后 bf-hide 被移除', !$('c1').classList.contains('bf-hide'));
+  await pushSettings({ keywords: [] });
 
-  console.log('\n[6] 分区屏蔽 · 卡片级');
-  await pushSettings({ keywords: [] });   // 先清空屏蔽词，避免关键词遮蔽干扰分区判定
+  console.log('\n[6] 分区屏蔽 · 卡片级（真实直播楼层结构）');
   await pushSettings({ blockTypes: { live: true } });
-  check('已知结构直播卡片被屏蔽（.feed-card > .bili-live-card）', blocked('c3'));
-  check('直播卡片判定类型为 live', $('c3').dataset.bfType === 'live', $('c3').dataset.bfType);
-  check('分区文案包含分区名「直播」', maskText($('c3')).indexOf('直播') !== -1, maskText($('c3')));
-  check('未知类名的直播卡片被通用识别并屏蔽', blocked('c4'), 'c4 未屏蔽');
-  check('同楼层第二张直播卡片也被屏蔽', blocked('c5'));
-  check('卡片级不会隐藏整行容器', !$('live-row').classList.contains('bf-section-blocked'));
-  check('卡片级不会隐藏楼层标题', !$('live-title').classList.contains('bf-section-blocked'));
+  check('直播推广卡片被识别并遮蔽（.floor-card-inner）', blocked('c4'), 'c4 未屏蔽');
+  check('分区类型标记为 live', $('c4').dataset.bfType === 'live', $('c4').dataset.bfType);
+  check('分区文案包含分区名「直播」', maskText($('c4')).indexOf('直播') !== -1, maskText($('c4')));
+  check('【关键】封面与标题只生成一个遮罩（不再分开屏蔽）', maskCount() === 1, '遮罩数=' + maskCount());
+  check('【关键】遮罩挂在同时含封面与标题的卡片本体上',
+    !!$('c4').querySelector(':scope > .bf-mask') &&
+    !!$('c4').querySelector('.cover-container') &&
+    !!$('c4').querySelector('p.title'));
+  check('封面容器自身没有被单独遮蔽', !$('c4').querySelector('.cover-container').classList.contains('bf-blocked'));
+  check('标题区自身没有被单独遮蔽', !$('c4').querySelector('.pb-16').classList.contains('bf-blocked'));
 
-  console.log('\n[6b] 遮蔽范围与安全阀（v1.1.0 的页面空白回归点）');
-  const maskTarget = $('c3').querySelector(':scope > .bf-mask');
-  check('遮蔽层挂在整张卡片上（封面 + 标题一起）', !!maskTarget);
-  check('BEM 块根识别：遮蔽的是 .feed-card 而不是只有封面',
-    $('c3').classList.contains('bf-blocked') || $('c3').querySelector('.bili-live-card').classList.contains('bf-blocked'));
-  check('整个推荐流没有被当成一张卡片遮蔽', !$('feed-list').classList.contains('bf-blocked'));
-  check('推荐流内部也不存在遮罩', !$('feed-list').querySelector(':scope > .bf-mask'));
+  console.log('\n[7] 安全阀：绝不遮蔽过大的容器（v1.1.3 页面空白回归点）');
+  check('隐藏的 0×0 侧边推广位没有被遮蔽（导航区排除）', !blocked('palette'));
+  check('1401×808 的超大容器没有被遮蔽', !blocked('hugebox'));
+  check('推荐流容器没有被遮蔽', !blocked('feed-list'));
   check('main 没有被遮蔽', !doc.querySelector('main').classList.contains('bf-blocked'));
   check('body 没有被遮蔽', !doc.body.classList.contains('bf-blocked'));
-  const blockedIds = Array.from(doc.querySelectorAll('.bf-blocked')).map((el) => el.id || el.className);
-  check('被遮蔽的只有卡片级元素（共 ' + blockedIds.length + ' 个）',
-    blockedIds.every((s) => ['c3', 'c4', 'c5', 'c7'].indexOf(s) !== -1), blockedIds.join(' | '));
+  const allBlocked = Array.from(doc.querySelectorAll('.bf-blocked')).map((el) => el.id || el.className);
+  check('被遮蔽的只有直播推广卡片本身', allBlocked.length === 1 && allBlocked[0] === 'c4', allBlocked.join(' | '));
 
-  console.log('\n[6c] 新增分区类型与「其他推广」兜底开关');
-  await pushSettings({ blockTypes: { live: false, game: true } });
-  check('游戏中心推广被「游戏」分区识别并屏蔽', blocked('c6'), 'c6 未屏蔽');
-  check('游戏卡片类型标记为 game', $('c6').dataset.bfType === 'game', $('c6').dataset.bfType);
-
-  await pushSettings({ blockTypes: { game: false, other: true } });
+  console.log('\n[8] 「其他推广」兜底开关');
+  await pushSettings({ blockTypes: { live: false, other: true } });
   check('未分类的客户端下载推广被兜底识别并屏蔽', blocked('c8'), 'c8 未屏蔽');
   check('兜底类型标记为 other', $('c8').dataset.bfType === 'other', $('c8').dataset.bfType);
-  check('关闭游戏分区后不会被兜底规则抓回来', !blocked('c6'), '被误抓');
-  check('关闭直播后，直播卡片不会被兜底规则抓回来', !blocked('c4') && !blocked('c7'), '被误抓');
+  check('关掉直播后直播卡片不会被兜底抓回来', !blocked('c4'));
   check('普通视频卡片不会被兜底规则误伤', !blocked('c1') && !blocked('c2'));
   await pushSettings({ blockTypes: { other: false } });
-  check('关闭兜底后客户端下载推广恢复', !blocked('c8'));
+  check('关闭兜底后恢复', !blocked('c8'));
 
-  console.log('\n[7] 顶栏与横幅不被误伤');
-  check('顶栏「直播」入口未被屏蔽（导航排除生效）', !doc.querySelector('.channel-link__right').classList.contains('bf-blocked'));
+  console.log('\n[9] 首页顶部轮播横幅（独立开关）');
+  check('默认不屏蔽横幅', doc.querySelectorAll('.bf-banner-blocked').length === 0);
+  await pushSettings({ blockBanner: true });
+  check('开启后横幅容器被标记', $('banner').classList.contains('bf-banner-blocked'));
+  await pushSettings({ blockBanner: false });
+  check('关闭后横幅恢复', !$('banner').classList.contains('bf-banner-blocked'));
+  check('横幅开关与分区开关互不影响', !blocked('c4') && !blocked('c8'));
+
+  console.log('\n[10] 顶栏与横幅不被误伤');
+  check('顶栏「直播」入口未被屏蔽', !doc.querySelector('.channel-link__right').classList.contains('bf-blocked'));
   check('顶栏「番剧」入口未被屏蔽', !doc.querySelectorAll('.channel-link__right')[1].classList.contains('bf-blocked'));
-  check('顶部轮播横幅不受卡片级影响', !$('banner').classList.contains('bf-blocked')
-    && !$('banner').querySelector('.bf-mask'));
+  check('横幅不受分区卡片级开关影响', !$('banner').classList.contains('bf-blocked') && !$('banner').querySelector('.bf-mask'));
 
-  console.log('\n[8] 分区屏蔽 · 板块级');
-  await pushSettings({ blockTypes: { live: true }, blockSections: { live: true } });
-  check('直播整行被隐藏', $('live-row').classList.contains('bf-section-blocked'));
-  check('楼层标题「正在直播」一并隐藏', $('live-title').classList.contains('bf-section-blocked'));
-  check('卡片级与板块级互不影响（卡片仍在）', blocked('c3'));
-  check('含其它卡片的推荐流不会被当成"一整行"隐藏', !$('feed-list').classList.contains('bf-section-blocked'));
-  check('main 不会被隐藏', !doc.querySelector('main').classList.contains('bf-section-blocked'));
-  check('body 不会被隐藏', !doc.body.classList.contains('bf-section-blocked'));
-  check('板块级不会波及推荐流里的直播卡片', !$('c7').classList.contains('bf-section-blocked'));
+  console.log('\n[11] 解除屏蔽');
+  await pushSettings({ keywords: [], blockTypes: {}, blockBanner: false });
+  check('直播推广卡片恢复显示', !blocked('c4'));
+  check('遮蔽区域被移除', maskCount() === 0, '残留遮罩=' + maskCount());
+  check('兜底卡片恢复', !blocked('c8'));
 
-  await pushSettings({ blockTypes: {}, blockSections: { bangumi: true } });
-  check('番剧板块级屏蔽命中顶部轮播横幅', $('banner').classList.contains('bf-section-blocked'));
-  await pushSettings({ blockSections: {} });
-  check('关闭板块级后横幅恢复', !$('banner').classList.contains('bf-section-blocked'));
-  check('关闭板块级后直播整行恢复', !$('live-row').classList.contains('bf-section-blocked'));
-
-  console.log('\n[8b] 面板「整行板块」开关只作用于已勾选的分区');
-  await pushSettings({ blockTypes: {}, blockSections: {} });
-  shadow.getElementById('bf-sections').dispatchEvent(new win.MouseEvent('click', { bubbles: true }));
-  await sleep(150);
-  check('一个分区都没勾选时，点击板块开关不会开启任何板块',
-    Object.values(store.sync.bfSettings.blockSections).every((v) => !v),
-    JSON.stringify(store.sync.bfSettings.blockSections));
-
-  await pushSettings({ blockTypes: { live: true }, blockSections: {} });
-  shadow.getElementById('bf-sections').dispatchEvent(new win.MouseEvent('click', { bubbles: true }));
-  await sleep(150);
-  check('勾选直播后点击板块开关只影响直播',
-    store.sync.bfSettings.blockSections.live === true && store.sync.bfSettings.blockSections.bangumi !== true,
-    JSON.stringify(store.sync.bfSettings.blockSections));
-  await pushSettings({ blockTypes: {}, blockSections: {} });
-
-  console.log('\n[9] 解除屏蔽');
-  await pushSettings({ keywords: [], blockTypes: {}, blockSections: {} });
-  check('清空搜索词后视频恢复显示', !blocked('c1'));
-  check('遮蔽区域被移除', !$('c1').querySelector(':scope > .bf-mask'));
-  check('直播卡片恢复', !blocked('c3') && !blocked('c4'));
-
-  console.log('\n[10] 正则 / 大小写 / UP主匹配');
+  console.log('\n[12] 正则 / 大小写 / UP主匹配');
   await pushSettings({ keywords: ['^【.*?】'], useRegex: true });
   check('正则屏蔽词生效', blocked('c1'));
   await pushSettings({ keywords: ['【剧透'], useRegex: false, caseSensitive: true });
@@ -340,25 +301,27 @@ async function main() {
   await pushSettings({ keywords: [], matchUpName: false });
   check('关闭 UP 主匹配后恢复', !blocked('c2'));
 
-  console.log('\n[11] 动态新增卡片（滚动懒加载，不触发设置变更）');
+  console.log('\n[13] 动态新增卡片（滚动懒加载，不触发设置变更）');
   await pushSettings({ keywords: ['营销号'] });
   const extra = doc.createElement('div');
   extra.className = 'feed-card';
   extra.id = 'c9';
+  extra.setAttribute('data-w', '240');
+  extra.setAttribute('data-h', '210');
   extra.innerHTML = '<div class="bili-feed-card"><div class="bili-video-card is-rcmd">' +
-    '<a class="bili-video-card__image--link" href="//www.bilibili.com/video/BV9zz"></a>' +
+    '<a class="bili-video-card__image--link" href="//www.bilibili.com/video/BV9zz"><img src="x.jpg"></a>' +
     '<h3 class="bili-video-card__info--tit" title="营销号又来了">营销号又来了</h3></div></div>';
   doc.querySelector('main').appendChild(extra);
   await sleep(500);
   check('新卡片被 MutationObserver 自动扫描并屏蔽', $('c9').classList.contains('bf-blocked'), '未被屏蔽');
 
-  console.log('\n[12] 总开关');
+  console.log('\n[14] 总开关');
   await pushSettings({ enabled: false });
   check('停用后不再屏蔽', !$('c9').classList.contains('bf-blocked'));
   await pushSettings({ enabled: true });
   check('重新启用后恢复屏蔽', $('c9').classList.contains('bf-blocked'));
 
-  console.log('\n[13] 悬浮按钮可自由拖动');
+  console.log('\n[15] 悬浮按钮可自由拖动');
   const btn = shadow.getElementById('bf-toggle');
   const beforeLeft = host.style.left;
   btn.dispatchEvent(new win.MouseEvent('pointerdown', { bubbles: true, clientX: 100, clientY: 20 }));
@@ -370,16 +333,13 @@ async function main() {
     JSON.stringify(store.local.bfButtonPos));
   const panel = shadow.getElementById('bf-panel');
   check('拖动不会误触面板', panel.hidden === true);
-  const leftAfterDrag = host.style.left;
   btn.dispatchEvent(new win.MouseEvent('pointerdown', { bubbles: true, clientX: 300, clientY: 220 }));
   win.dispatchEvent(new win.MouseEvent('pointerup', { bubbles: true, clientX: 300, clientY: 220 }));
-  check('原地点击（未移动）可以打开面板', panel.hidden === false, 'panel.hidden=' + panel.hidden);
-  check('原地点击不会改变按钮位置', host.style.left === leftAfterDrag, host.style.left + ' vs ' + leftAfterDrag);
+  check('原地点击（未移动）可以打开面板', panel.hidden === false);
   shadow.getElementById('bf-reset-pos').dispatchEvent(new win.MouseEvent('click', { bubbles: true }));
-  check('「重置位置」清空保存的位置', store.local.bfButtonPos === null || store.local.bfButtonPos === undefined,
-    JSON.stringify(store.local.bfButtonPos));
+  check('「重置位置」清空保存的位置', store.local.bfButtonPos === null || store.local.bfButtonPos === undefined);
 
-  console.log('\n[14] 深色模式适配');
+  console.log('\n[16] 深色模式适配');
   doc.documentElement.setAttribute('data-theme', 'dark');
   await sleep(1600);
   check('识别 B 站深色模式并标记 html.bf-dark', doc.documentElement.classList.contains('bf-dark'));

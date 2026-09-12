@@ -9,10 +9,11 @@
   /**
    * 可屏蔽的"分区推广"类型（按实测的 B 站首页真实域名 / 路径整理）。
    *
-   * label : 面板 / 弹窗里的短标签（≤4 字，保证网格对齐）
-   * desc  : 设置页里的说明文字
-   * href  : 命中卡片内任意链接时判定为该类型
-   * cls   : 卡片 class 兜底判定
+   * label  : 面板 / 弹窗里的短标签（≤4 字，保证网格对齐）
+   * desc   : 设置页里的说明文字
+   * href   : 命中卡片内任意链接时判定为该类型
+   * cls    : 卡片 class 兜底判定
+   * block  : 板块级屏蔽时向上寻找的语义容器
    *
    * 注意：other 必须放在最后，它只在该卡片没有命中任何其它类型时才生效，
    *       因此"关掉直播 + 打开其他推广"不会把直播卡片一起带走。
@@ -23,98 +24,112 @@
       label: '直播',
       desc: '直播卡片与直播推广位（live.bilibili.com）',
       href: /(^|\/\/)live\.bilibili\.com|\/blanc\/|\/live\//,
-      cls: /\bbili-live-card\b|\blive-card\b|\bis-live\b|\bcarousel-inner__live\b/i
+      cls: /\bbili-live-card\b|\blive-card\b|\bis-live\b|\bcarousel-inner__live\b/i,
+      block: '.floor-card, [class*="live-floor"], [class*="floor-"]'
     },
     {
       key: 'bangumi',
       label: '番剧',
-      desc: '番剧、国创、动画剧集卡片（/bangumi/、/anime/、/guochuang/）',
+      desc: '番剧、国创、动画剧集卡片（含顶部轮播与追番推广位）',
       href: /\/bangumi\/(play|media)\/|\/anime\/|\/guochuang\//,
-      cls: /\bbili-bangumi-card\b|\bbangumi-card\b|\bpgc-card\b|\banime-list-item\b|\banime-entry\b/i
+      cls: /\bbili-bangumi-card\b|\bbangumi-card\b|\bpgc-card\b|\banime-list-item\b|\banime-entry\b/i,
+      block: '.carousel-area, .anime-list, .floor-card, [class*="floor-"]'
     },
     {
       key: 'movie',
       label: '影视',
       desc: '电影、电视剧、纪录片、综艺（movie / tv / documentary / variety）',
       href: /\/movie\/|\/film\/|\/tv\/|\/documentary\/|\/variety\/|bangumi\/media\/md/,
-      cls: /\bbili-movie-card\b|\bmovie-card\b|\bbili-cinema-card\b/i
+      cls: /\bbili-movie-card\b|\bmovie-card\b|\bbili-cinema-card\b/i,
+      block: '.floor-card, [class*="floor-"]'
     },
     {
       key: 'cheese',
       label: '课堂',
       desc: '付费课程、课堂推广卡片（/cheese/）',
       href: /\/cheese\//,
-      cls: /\bbili-cheese-card\b|\bcheese-card\b/i
+      cls: /\bbili-cheese-card\b|\bcheese-card\b/i,
+      block: '.floor-card, [class*="floor-"]'
     },
     {
       key: 'read',
       label: '专栏',
       desc: '专栏文章、图文类卡片（/read/）',
       href: /\/read\//,
-      cls: /\bbili-article-card\b|\barticle-card\b/i
+      cls: /\bbili-article-card\b|\barticle-card\b/i,
+      block: '.floor-card, [class*="floor-"]'
     },
     {
       key: 'opus',
       label: '动态',
       desc: '动态、视频号推广卡片（/opus/、t.bilibili.com）',
       href: /\/opus\/|(^|\/\/)t\.bilibili\.com/,
-      cls: /\bbili-dyn-card\b|\bbili-opus-card\b|\bdyn-card\b/i
+      cls: /\bbili-dyn-card\b|\bbili-opus-card\b|\bdyn-card\b/i,
+      block: '.floor-card, [class*="floor-"]'
     },
     {
       key: 'manga',
       label: '漫画',
       desc: '漫画卡片与漫画推广位（manga.bilibili.com）',
       href: /\/\/manga\.bilibili\.com|\/manga\//,
-      cls: /\bbili-manga-card\b|\bmanga-card\b/i
+      cls: /\bbili-manga-card\b|\bmanga-card\b/i,
+      block: '.floor-card, [class*="floor-"]'
     },
     {
       key: 'game',
       label: '游戏',
       desc: '游戏中心、游戏推广与专区卡片（game.bilibili.com、/v/game）',
       href: /\/\/game\.bilibili\.com|\/v\/game|\/game\//,
-      cls: /\bbili-game-card\b|\bgame-card\b/i
+      cls: /\bbili-game-card\b|\bgame-card\b/i,
+      block: '.floor-card, [class*="floor-"]'
     },
     {
       key: 'music',
       label: '音乐',
       desc: '音频、音乐区推广卡片（music.bilibili.com、/audio/）',
       href: /\/\/music\.bilibili\.com|\/audio\//,
-      cls: /\bbili-audio-card\b|\baudio-card\b/i
+      cls: /\bbili-audio-card\b|\baudio-card\b/i,
+      block: '.floor-card, [class*="floor-"]'
     },
     {
       key: 'match',
       label: '赛事',
       desc: '赛事、电竞赛程与直播预约推广（/match/、/esports/）',
       href: /\/match\/|\/\/match\.bilibili\.com|\/esports\//,
-      cls: /\bmatch-card\b|\besports-card\b/i
+      cls: /\bmatch-card\b|\besports-card\b/i,
+      block: '.floor-card, [class*="floor-"]'
     },
     {
       key: 'mall',
       label: '会员购',
       desc: '会员购、周边商城与演出票务推广（love / show / mall.bilibili.com）',
       href: /\/\/(love|show|mall)\.bilibili\.com|\/mall\//,
-      cls: /\bmall-card\b|\bshop-card\b/i
+      cls: /\bmall-card\b|\bshop-card\b/i,
+      block: '.floor-card, [class*="floor-"]'
     },
     {
       key: 'activity',
       label: '活动',
       desc: '活动页、话题页、专题聚合推广位（/blackboard/、/festival/、/topic/）',
       href: /\/blackboard\/|\/festival\/|\/topic\/|\/platform\//,
-      cls: /\bbili-activity-card\b|\bactivity-card\b/i
+      cls: /\bbili-activity-card\b|\bactivity-card\b/i,
+      block: '.floor-card, .floor-single-card, [class*="floor-"], [class*="banner"]'
     },
     {
       key: 'ad',
       label: '广告',
       desc: '带"广告"标识的商业推广卡片',
       href: /(^|\/\/)(cm|ad)\.bilibili\.com|[?&]from_spmid=.*ad/,
-      cls: /\bad-card\b|\bad-item\b|\badvert|\bbili-video-card__stats--ad\b|\bad-report\b/i
+      cls: /\bad-card\b|\bad-item\b|\badvert|\bbili-video-card__stats--ad\b|\bad-report\b/i,
+      block: '.floor-card, [class*="ad-"], [class*="banner"]'
     },
     {
       key: 'other',
       label: '其他推广',
       desc: '兜底：跳往站内其它频道、客户端下载或站外链接的推广卡片（不含上面已分类的分区）',
       href: /\/\/(?!www|space|i0|i1|i2|s1|s2|static|api|grpc)[a-z0-9-]+\.bilibili\.com|\/blackboard\/|\/festival\/|\/topic\/|\/platform\/|\/read\/|\/cheese\/|\/anime\/|\/guochuang\/|\/variety\/|\/documentary\/|\/movie\/|\/tv\/|\/bangumi\/|\/audio\/|\/manga\/|\/v\/[a-z]/i,
-      cls: ''
+      cls: '',
+      block: '.floor-card, .floor-single-card, [class*="floor-"], [class*="banner"]'
     }
   ];
 
@@ -147,8 +162,12 @@
       ad: false, other: false
     },
 
-    /** 屏蔽首页顶部的大轮播横幅（独立开关，只作用于首页那一块） */
-    blockBanner: false,
+    /** 分区推广屏蔽：板块级（该分区所在的整行 / 整个推广位） */
+    blockSections: {
+      live: false, bangumi: false, movie: false, cheese: false, read: false, opus: false,
+      manga: false, game: false, music: false, match: false, mall: false, activity: false,
+      ad: false, other: false
+    },
 
     /** 注入界面的外观：auto = 跟随 B 站深色模式 */
     theme: 'auto',
@@ -168,6 +187,14 @@
     return JSON.parse(JSON.stringify(BF_DEFAULTS));
   }
 
+  function normalizeBoolMap(raw, out) {
+    if (raw && typeof raw === 'object') {
+      BF_TYPES.forEach(function (t) {
+        out[t.key] = !!raw[t.key];
+      });
+    }
+  }
+
   /** 把任意（可能残缺的）配置规范化成完整配置 */
   function bfNormalize(raw) {
     var out = bfCloneDefaults();
@@ -181,9 +208,11 @@
       if (!(k in raw)) return;
 
       if (k === 'blockTypes') {
-        if (val && typeof val === 'object') {
-          BF_TYPES.forEach(function (t) { out.blockTypes[t.key] = !!val[t.key]; });
-        }
+        normalizeBoolMap(val, out.blockTypes);
+        return;
+      }
+      if (k === 'blockSections') {
+        normalizeBoolMap(val, out.blockSections);
         return;
       }
       if (k === 'revealOnHover') {
@@ -204,14 +233,6 @@
       else if (typeof def === 'string') out[k] = typeof val === 'string' ? val : def;
       else out[k] = val;
     });
-
-    // 1.1.3 及更早版本遗留的"整行板块"配置：功能已移除，这里直接丢弃，
-    // 但如果有任何一个分区开过整行屏蔽，就把新的"顶部轮播横幅"开关打开作为替代。
-    if (raw.blockSections && typeof raw.blockSections === 'object') {
-      var anySection = BF_TYPES.some(function (t) { return !!raw.blockSections[t.key]; });
-      if (anySection && !('blockBanner' in raw)) out.blockBanner = true;
-    }
-
     return out;
   }
 
