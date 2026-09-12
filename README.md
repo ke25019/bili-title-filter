@@ -1,6 +1,6 @@
 # B站屏蔽助手 · BiliTitleFilter
 
-这是我自己在用的一个 B 站网页端扩展：给不想看的视频标题加几个关键词，它们就从页面上消失；也能按分区屏蔽直播、番剧这类推广内容。
+一个 B 站网页端扩展：给不想看的视频标题加几个关键词，它们就从页面上消失；也能按分区屏蔽直播、番剧这类推广内容。
 
 An extension I wrote for myself to filter Bilibili. Add a few keywords and the videos whose titles contain them disappear; it can also block whole categories of promoted content, like live streams and anime.
 
