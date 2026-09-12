@@ -91,6 +91,26 @@ const HTML = `<!DOCTYPE html><html><head><style id="bf-style">${CONTENT_CSS}</st
         </div>
       </div>
 
+      <!-- 首页「分区推荐」里的直播卡片（DOM 照抄真实页面）：标题里带着「直播中」角标，
+           算上 <picture><source><source><img> 一共 8 个后代元素。
+           曾经因为"标题元素个数 ≤ 4"这条判据，整张卡片识别不出来 —— 直播开关打开也不屏蔽。 -->
+      <div class="floor-single-card" id="liveTagHost" data-w="238" data-h="248">
+        <div class="single-card floor-card" id="liveTagBox" data-w="238" data-h="248"
+             style="border:1px solid #e3e5e7;background:#fff">
+          <div class="floor-card-inner" id="liveTagInner" data-w="238" data-h="224">
+            <div class="cover-container" data-w="238" data-h="134">
+              <a id="liveTagLink" href="//live.bilibili.com/1888542250"><img src="live3.jpg"></a>
+              <div class="badge"><svg class="icon-title"></svg><span class="floor-title">直播</span></div>
+            </div>
+            <div class="pb-16 px-12 flex flex-col items-start info-container" data-w="238" data-h="90">
+              <!-- 标题里的「直播中」角标用 DOM API 拼（见下面的 buildLiveTagTitle）：
+                   HTML 解析规则不允许 <p> 里嵌 <div>，而真实页面是 Vue 用 DOM API 建出来的 -->
+              <p class="title indent-initial" id="liveTagTitle" title="乖乖女装的好累"></p>
+            </div>
+          </div>
+        </div>
+      </div>
+
       <div class="feed-card" id="c1" data-w="240" data-h="210">
         <div class="bili-feed-card">
           <div class="bili-video-card is-rcmd">
@@ -281,6 +301,28 @@ async function main() {
   const blocked = (id) => $(id).classList.contains('bf-blocked');
   const maskCount = () => doc.querySelectorAll('.bf-mask').length;
 
+  /**
+   * 直播推广卡片的标题 <p class="title"> 里带着「直播中」角标：
+   *   <a class="font-medium"><div class="living"><picture><source><source><img></picture><span>直播中</span></div>标题文字</a>
+   * 真实页面是 Vue 用 DOM API 建出来的（HTML 解析规则不允许 <p> 里直接嵌 <div>），
+   * 所以这里同样用 DOM API 拼，保证结构与实测一致：标题元素一共 8 个后代。
+   */
+  function buildLiveTagTitle() {
+    const titleEl = $('liveTagTitle');
+    const a = doc.createElement('a');
+    a.className = 'font-medium';
+    a.setAttribute('href', '//live.bilibili.com/1888542250');
+    a.setAttribute('data-mod', 'partition_recommend.content');
+    const living = doc.createElement('div');
+    living.className = 'living';
+    living.innerHTML = '<picture class="v-img gif"><source srcset="live.avif">' +
+      '<source srcset="live.webp"><img src="live.gif"></picture><span>直播中</span>';
+    a.appendChild(living);
+    a.appendChild(doc.createTextNode('乖乖女装的好累'));
+    titleEl.appendChild(a);
+  }
+  buildLiveTagTitle();
+
   async function pushSettings(patch) {
     const next = Object.assign({}, store.sync.bfSettings || {}, patch);
     store.sync.bfSettings = next;
@@ -379,8 +421,9 @@ async function main() {
   check('main 没有被遮蔽', !doc.querySelector('main').classList.contains('bf-blocked'));
   check('body 没有被遮蔽', !doc.body.classList.contains('bf-blocked'));
   const allBlocked = Array.from(doc.querySelectorAll('.bf-blocked')).map((el) => el.id || el.className);
-  check('被遮蔽的只有直播推广卡片本身（c4 与带阴影的 frameInner）',
-    allBlocked.length === 2 && allBlocked.indexOf('c4') !== -1 && allBlocked.indexOf('frameInner') !== -1,
+  check('被遮蔽的只有直播推广卡片本身（c4、带阴影的 frameInner、带「直播中」角标的 liveTagInner）',
+    allBlocked.length === 3 && allBlocked.indexOf('c4') !== -1 &&
+    allBlocked.indexOf('frameInner') !== -1 && allBlocked.indexOf('liveTagInner') !== -1,
     allBlocked.join(' | '));
 
   console.log('\n[8] 「其他推广」兜底开关');
@@ -541,6 +584,14 @@ async function main() {
   check('解除屏蔽后外层盒子恢复可见',
     cs($('badgeHost')).visibility === 'visible' && cs($('frameHost')).visibility === 'visible',
     cs($('badgeHost')).visibility + ' / ' + cs($('frameHost')).visibility);
+
+  // 8) 直播推广卡片的标题里带「直播中」角标（实测 8 个后代元素），不能因此识别不出来
+  await pushSettings({ mode: 'mask', hideKeepSlot: true, keywords: [], blockTypes: { live: true } });
+  check('【关键】带「直播中」角标的直播卡片能被识别并屏蔽（标题元素多也不影响）',
+    blocked('liveTagInner') && $('liveTagInner').dataset.bfType === 'live',
+    $('liveTagInner').className + ' / type=' + $('liveTagInner').dataset.bfType);
+  check('直播卡片的封面链接没有被当成一张卡片',
+    !$('liveTagLink').dataset.bfCard && !$('liveTagLink').classList.contains('bf-blocked'));
 
   // 7) 懒加载插入的推广卡片：只配置屏蔽词、分区开关全关，也应该被自动扫到并屏蔽
   await pushSettings({ mode: 'mask', hideKeepSlot: true, keywords: ['我准备好了'], blockTypes: {} });

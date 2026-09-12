@@ -6,7 +6,7 @@ Manifest V3，Edge 和 Chrome 都能装，纯 JavaScript，没有运行时依赖
 
 ![version](https://img.shields.io/badge/version-1.1.12--beta-orange)
 ![browser](https://img.shields.io/badge/Edge%20%7C%20Chrome-Chromium-00aeec)
-![tests](https://img.shields.io/badge/tests-190%20passed-brightgreen)
+![tests](https://img.shields.io/badge/tests-192%20passed-brightgreen)
 
 ---
 
@@ -101,7 +101,7 @@ npm install
 npm test
 ```
 
-一共 190 项校验，覆盖屏蔽逻辑、分区识别、两种隐藏行为、设置页交互和后台统计。
+一共 192 项校验，覆盖屏蔽逻辑、分区识别、两种隐藏行为、设置页交互和后台统计。
 
 测试里的模拟 DOM 和尺寸都是从真实页面上量出来的（`.floor-card-inner > .cover-container + .pb-16.px-12 > p.title` 这种工具类结构、`.vui_carousel` 包裹的轮播、`.palette-button-inner` 里 0×0 的隐藏链接等等）。
 
@@ -139,6 +139,8 @@ B 站是单页应用，滚动和切页会让卡片重新渲染，所以统计的
 同一张卡片（首页「分区推荐」里那条番剧推广）还牵出另一个问题：封面左上角的徽标 `.badge > .floor-title`（文案正是「番剧」）跟标题选择器同名，而且就在封面链接内部。后果有两个：卡片识别会在封面链接上就停下，把**一个链接当成一整张卡片**；关键词拿到的「标题」其实是「番剧」两个字，真正的标题被完全忽略。现在徽标文字一律不算标题，卡片正确定位到 `.floor-card-inner`，关键词也回到真正的标题上。
 
 顺手补了两处发现路径：筛候选卡片时不再只看设置里打开的那几个分区开关（否则只开「直播」时，番剧推广卡片永远扫不到），懒加载插入的推广卡片会立刻触发一次扫描，不用等滚动。
+
+最后在隔离实例上按真实页面逐层复核时又抓到一个：**首页分区推荐里的直播卡片一直就没被屏蔽过**。标题判据里有一条「标题元素的后代不超过 4 个」，而直播卡片的标题里塞着「直播中」角标 —— `<div class="living">` 套 `<picture>`，里面还有两个 `<source>` 和一个 `<img>`，再加上 `<span>`，实测 8 个后代元素，整条标题直接被判掉，卡片因此完全识别不出来。上限放宽到 12 之后直播卡片正常命中：真实页面上 7 张带分区徽标的卡片现在全部被屏蔽（直播、番剧、国创、综艺、课堂、电影……）。这条上限是按实测的 8 改的，不是拍的。
 
 ### 1.1.11
 

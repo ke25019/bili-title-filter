@@ -6,7 +6,7 @@ Manifest V3, works in Edge and Chrome, plain JavaScript with no runtime dependen
 
 ![version](https://img.shields.io/badge/version-1.1.12--beta-orange)
 ![browser](https://img.shields.io/badge/Edge%20%7C%20Chrome-Chromium-00aeec)
-![tests](https://img.shields.io/badge/tests-190%20passed-brightgreen)
+![tests](https://img.shields.io/badge/tests-192%20passed-brightgreen)
 
 ---
 
@@ -101,7 +101,7 @@ npm install
 npm test
 ```
 
-190 checks covering the blocking logic, category detection, both hiding behaviours, the settings pages and the background stats.
+192 checks covering the blocking logic, category detection, both hiding behaviours, the settings pages and the background stats.
 
 The mock DOM and its sizes were measured on the real site (utility-class structures like `.floor-card-inner > .cover-container + .pb-16.px-12 > p.title`, the `.vui_carousel` banner, the 0×0 hidden links inside `.palette-button-inner`, and so on).
 
@@ -139,6 +139,8 @@ In the previous version I said the outer container gets hidden too. **That code 
 The same card (a bangumi promo in the home-page recommend feed) exposed a second problem: the badge in the cover's top-left corner, `.badge > .floor-title` - its text is literally "番剧" - shares a class name with the title selectors and sits inside the cover link. Two consequences: card detection stopped right at the cover link and treated **one link as a whole card**, and the keyword matcher compared against the two characters "番剧" while the real title was ignored entirely. Badge text no longer counts as a title, the card is located on `.floor-card-inner`, and keywords match the real title again.
 
 I also fixed two discovery paths while I was in there: candidate cards are no longer filtered by whichever category switches happen to be on (with only "live" enabled, a bangumi promo card could never be found), and promo cards inserted by lazy loading now trigger a scan immediately instead of waiting for a scroll.
+
+The last one came out of walking the real page layer by layer in an isolated browser: **live promo cards in the home-page recommend feed had never been blocked at all**. One of the title heuristics said "a title element may not have more than 4 descendants", but a live card's title carries the "直播中" tag - `<div class="living">` wrapping a `<picture>` with two `<source>` elements and an `<img>`, plus a `<span>`, so 8 descendants. The whole title was rejected and the card could not be identified. With the limit at 12 the live cards match again: on the real page all 7 badge cards are now blocked (live, bangumi, guochuang, variety, courses, films...). That 12 comes from the 8 I measured, not from guessing.
 
 ### 1.1.11
 

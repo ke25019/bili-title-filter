@@ -389,12 +389,21 @@
     return null;
   }
 
-  /** 标题一般是叶子节点，且文字不会太长 */
+  /**
+   * 标题一般是叶子节点，且文字不会太长。
+   *
+   * 元素个数上限不能定得太死：实测首页「分区推荐」里的**直播卡片**，
+   * 标题 <p class="title"> 里塞着「直播中」角标 ——
+   * <div class="living"><picture><source><source><img></picture><span>直播中</span></div>，
+   * 一共 8 个后代元素，旧的上限 4 直接把整个标题判掉，卡片因此完全识别不出来
+   * （直播推广卡片开了开关也不屏蔽）。所以放宽到 12：
+   * 真正的容器配上 150 字的文字上限依然会被排除。
+   */
   function isTitleish(el) {
     if (!el) return false;
     var text = (el.textContent || '').replace(/\s+/g, ' ').trim();
     if (!text || text.length > 150) return false;
-    if (el.querySelectorAll && el.querySelectorAll('*').length > 4) return false;
+    if (el.querySelectorAll && el.querySelectorAll('*').length > 12) return false;
     return true;
   }
 

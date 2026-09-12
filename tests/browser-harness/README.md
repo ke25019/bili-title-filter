@@ -38,6 +38,7 @@ cd tests\browser-harness
 
 # 2) 取页面数据 / 截图
 node probe.js my-expr.js        # 表达式文件，返回 JSON
+node probe.js scenarios\partition-residual.js   # 现成场景：完全隐藏下外层盒子是否真的消失
 node shot.js out.png            # 视口截图
 node shot.js out.png full       # 整页截图
 
