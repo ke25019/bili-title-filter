@@ -339,7 +339,22 @@
     }
   }
 
+  /**
+   * 页脚显示当前版本号。
+   * 必须从 manifest 读：这个位置以前写死成 v1.0.0，结果每个版本装上都显示 v1.0.0。
+   * 读不到就什么都不显示 —— 宁可空着，也不要显示错误的版本号。
+   */
+  function showVersion() {
+    var el = $('app-version');
+    if (!el) return;
+    try {
+      var v = chrome.runtime.getManifest().version;
+      if (v) el.textContent = ' v' + v;
+    } catch (e) { /* 忽略：读不到版本号时保持空白 */ }
+  }
+
   ready(function () {
+    showVersion();
     getSettings().then(function (s) {
       settings = s;
       render();

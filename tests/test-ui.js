@@ -63,7 +63,9 @@ function makeEnv(htmlPath, scriptRel) {
       lastError: null,
       onMessage: { addListener() {} },
       sendMessage(_m, cb) { if (cb) setTimeout(() => cb({ today: 3, total: 12 }), 0); },
-      openOptionsPage() {}
+      openOptionsPage() {},
+      // 模拟真实扩展环境：版本号只存在于 manifest
+      getManifest() { return { version: '9.9.9-test' }; }
     }
   };
   win.confirm = () => true;
@@ -168,6 +170,24 @@ async function testOptions() {
     doc.getElementById('mask-text').value);
   check('预览文案与设置一致', doc.getElementById('preview-text').textContent === '根据您的屏蔽词已将此视频屏蔽');
   check('统计已加载', /累计屏蔽 12 个/.test(doc.getElementById('stats-text').textContent), doc.getElementById('stats-text').textContent);
+
+  console.log('\n[B2] 页脚版本号必须跟 manifest 一致（回归：以前写死成 v1.0.0）');
+  const footText = doc.querySelector('.foot').textContent;
+  check('页脚显示的是 manifest 里的版本号',
+    doc.getElementById('app-version').textContent.trim() === 'v9.9.9-test',
+    JSON.stringify(doc.getElementById('app-version').textContent));
+  check('页脚文案里带上了版本号', /B站屏蔽助手 v9\.9\.9-test/.test(footText), footText.trim());
+  const optsHtml = fs.readFileSync(path.join(ROOT, 'options', 'options.html'), 'utf8');
+  const footHtml = (optsHtml.match(/<footer[\s\S]*?<\/footer>/) || [''])[0];
+  check('设置页页脚里没有写死的版本号',
+    !/v\d+\.\d+\.\d+/.test(footHtml),
+    (footHtml.match(/v\d+\.\d+\.\d+/g) || []).join(','));
+  check('设置页脚本从 manifest 读取版本号',
+    /getManifest\(\)\.version/.test(fs.readFileSync(path.join(ROOT, 'options', 'options.js'), 'utf8')));
+  const contentHeader = fs.readFileSync(path.join(ROOT, 'content', 'content.js'), 'utf8').split('\n').slice(0, 3).join('\n');
+  check('内容脚本头部注释里也没有写死的版本号',
+    !/v\d+\.\d+\.\d+/.test(contentHeader),
+    (contentHeader.match(/v\d+\.\d+\.\d+/g) || []).join(','));
 
   // 切换为完全隐藏 → 预览卡片应加上 bf-hide
   const hideRadio = doc.querySelector('input[name="mode"][value="hide"]');
