@@ -2,7 +2,7 @@
 
 一个 B 站网页端扩展：给不想看的视频标题加几个关键词，它们就从页面上消失；也能按分区屏蔽直播、番剧这类推广内容。
 
-An extension I wrote for myself to filter Bilibili. Add a few keywords and the videos whose titles contain them disappear; it can also block whole categories of promoted content, like live streams and anime.
+A Bilibili web extension: add a few keywords to filter out video titles you don’t want to see, and they disappear from the page; it can also block promoted content by category, such as live streams and anime.
 
 ![version](https://img.shields.io/badge/version-1.2.0-orange)
 ![browser](https://img.shields.io/badge/Edge%20%7C%20Chrome-Chromium-00aeec)
