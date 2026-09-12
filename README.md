@@ -19,13 +19,13 @@ A Bilibili web extension: add a few keywords to filter out video titles you don�
 
 ---
 
-## 装一下 / Install
+## 安装 / Install
 
-1. 到 [Releases](https://github.com/ke25019/bili-title-filter/releases) 下载最新的 zip，解压到一个固定目录
-2. Edge 打开 `edge://extensions/`，左下角打开「开发人员模式」，点「加载解压缩的扩展」，选到含 `manifest.json` 的那一层
+   到 [Releases](https://github.com/ke25019/bili-title-filter/releases) 下载最新的 zip，解压到一个固定目录
+   Edge 打开 `edge://extensions/`，左下角打开「开发人员模式」，点「加载解压缩的扩展」，选到含 `manifest.json` 的那一层
 
-1. Download the latest zip from [Releases](https://github.com/ke25019/bili-title-filter/releases) and extract it somewhere permanent
-2. Open `edge://extensions/`, turn on **Developer mode**, click **Load unpacked**, pick the folder containing `manifest.json`
+   Download the latest zip from [Releases](https://github.com/ke25019/bili-title-filter/releases) and extract it somewhere permanent
+   Open `edge://extensions/`, turn on **Developer mode**, click **Load unpacked**, pick the folder containing `manifest.json`
 
 详细说明和常见问题都在上面那两个文档里。
 Details and the FAQ live in the two documents linked above.
