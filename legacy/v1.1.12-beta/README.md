@@ -4,7 +4,7 @@
 
 An extension I wrote for myself to filter Bilibili. Add a few keywords and the videos whose titles contain them disappear; it can also block whole categories of promoted content, like live streams and anime.
 
-![version](https://img.shields.io/badge/version-1.2.0-orange)
+![version](https://img.shields.io/badge/version-1.1.12--beta-orange)
 ![browser](https://img.shields.io/badge/Edge%20%7C%20Chrome-Chromium-00aeec)
 ![tests](https://img.shields.io/badge/tests-192%20passed-brightgreen)
 

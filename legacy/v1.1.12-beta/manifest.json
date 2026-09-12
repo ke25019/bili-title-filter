@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "B站屏蔽助手 - 视频屏蔽 / 分区推广过滤",
-  "version": "1.2.0",
+  "version": "1.1.12",
   "description": "按自定义标题屏蔽词屏蔽 B 站视频：可整体遮蔽（封面+标题合成一块提示区域，鼠标悬停可查看）或完全隐藏；另可屏蔽直播、番剧等 14 类分区推广，并可单独屏蔽首页顶部轮播横幅。",
   "minimum_chrome_version": "102",
   "permissions": ["storage"],
