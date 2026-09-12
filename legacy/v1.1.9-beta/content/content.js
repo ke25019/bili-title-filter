@@ -1,5 +1,5 @@
 /**
- * B站屏蔽助手 - 内容脚本  v1.1.10
+ * B站屏蔽助手 - 内容脚本  v1.1.9
  * ---------------------------------------------------------------
  * 功能：
  *  1. 按用户自定义的「标题屏蔽词」屏蔽视频卡片
@@ -783,8 +783,6 @@
     card.dataset.bfState = 'blocked';
     card.dataset.bfKey = action.key;
     card.dataset.bfKind = action.kind;
-    // 记住承载外观的外层容器，隐藏/恢复时一起处理（见 findCardFrame 说明）
-    card.__bfFrame = findCardFrame(card);
     if (action.kind === 'type') card.dataset.bfType = action.type;
     else delete card.dataset.bfType;
 
@@ -802,34 +800,6 @@
   }
 
   /**
-   * 找出"承载这张卡片外观的最外层容器"。
-   *
-   * 真实 B 站里，分区推广卡片外面还套着一层带 边框 + 背景 + 阴影 的盒子，例如：
-   *   .floor-card { border:1px solid #e3e5e7; background:var(--bg1);
-   *                 box-shadow:0 0 40px rgba(0,0,0,.03); border-radius:6px; padding:12px }
-   * 而卡片本体（.floor-card-inner）在里面。
-   * 如果只隐藏本体，外层那个"空边框 + 阴影"的盒子会留在页面上，
-   * 看起来就是一块带淡边线的白色空框（用户反馈的"阴影的占位符还在"）。
-   *
-   * 规则：从卡片向上走，只要这一层仍然"只装着当前这一张卡片"就继续向上，
-   * 直到遇到网格项（再往上就是列表容器）或遇到含其它卡片的容器为止。
-   */
-  function findCardFrame(card) {
-    var frame = card;
-    var cur = card.parentElement;
-    for (var i = 0; cur && cur !== document.body && cur !== document.documentElement && i < 5; i++) {
-      if (countTopCards(cur) > 1) break;        // 这一层还装着别的卡片 → 不能越过
-      frame = cur;
-      var parent = cur.parentElement;
-      if (!parent) break;
-      var pd = '';
-      try { pd = getComputedStyle(parent).display; } catch (e) { pd = ''; }
-      if (pd === 'grid' || pd === 'inline-grid') break;   // 已经到网格项了
-      cur = parent;
-    }
-    return frame;
-  }
-  /**
    * 按当前屏蔽方式给卡片打类：
    *   整体遮蔽          → bf-blocked（内容隐藏 + 显示遮罩）
    *   完全隐藏·保留位置 → bf-hide-slot（只隐藏内容，位置留空，页面不重排）
@@ -838,18 +808,9 @@
   function applyModeClasses(card) {
     var hide = settings.mode === 'hide';
     var keepSlot = hide && settings.hideKeepSlot !== false;
-
     card.classList.toggle('bf-hide', hide && !keepSlot);
     card.classList.toggle('bf-hide-slot', keepSlot);
     card.classList.toggle('bf-hoverable', !hide && !!settings.revealOnHover);
-
-    // 外层的"卡片外观容器"（带边框 / 背景 / 阴影的那种）必须一起处理，
-    // 否则会出现"内容没了、边框和阴影的空盒子还在"的残留
-    var frame = card.__bfFrame;
-    if (frame && frame !== card) {
-      frame.classList.toggle('bf-hide', hide && !keepSlot);
-      frame.classList.toggle('bf-hide-slot', keepSlot);
-    }
   }
 
   function clearBlock(card) {
@@ -857,10 +818,6 @@
     if (card.dataset.bfState !== 'blocked') return;
 
     card.classList.remove('bf-blocked', 'bf-hide', 'bf-hide-slot', 'bf-hoverable', 'bf-revealed', 'bf-compact');
-    // 外层容器上的隐藏类也要撤掉
-    var frame = card.__bfFrame;
-    if (frame && frame !== card) frame.classList.remove('bf-hide', 'bf-hide-slot');
-    card.__bfFrame = null;
     delete card.dataset.bfState;
     delete card.dataset.bfKey;
     delete card.dataset.bfKind;

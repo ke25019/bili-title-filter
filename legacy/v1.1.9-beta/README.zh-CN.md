@@ -2,10 +2,10 @@
 
 > B站视频标题屏蔽助手 —— 一个按标题屏蔽词过滤 B 站视频的浏览器扩展。
 
-[![version](https://img.shields.io/badge/version-1.1.10--beta-orange)](https://github.com/ke25019/bili-title-filter/releases)
+[![version](https://img.shields.io/badge/version-1.1.9--beta-orange)](https://github.com/ke25019/bili-title-filter/releases)
 [![manifest](https://img.shields.io/badge/Manifest-V3-blue)]()
 [![browser](https://img.shields.io/badge/Edge%20%7C%20Chrome-Chromium-00aeec)]()
-[![tests](https://img.shields.io/badge/tests-172%20passed-brightgreen)]()
+[![tests](https://img.shields.io/badge/tests-166%20passed-brightgreen)]()
 
 一个适用于 **Microsoft Edge / Chrome 等 Chromium 浏览器** 的 B 站网页端扩展（Manifest V3）。
 按你自己添加的**视频标题屏蔽词**屏蔽视频：可以整体遮蔽（封面与标题合并成一块提示区域，鼠标悬停即可查看），
@@ -15,9 +15,9 @@
 
 ## ⚠️ Beta 说明
 
-当前版本为 **v1.1.10-beta**，功能完整可用，但仍处于测试阶段，欢迎反馈问题。
+当前版本为 **v1.1.9-beta**，功能完整可用，但仍处于测试阶段，欢迎反馈问题。
 
-- 自动化校验：核心屏蔽逻辑 100 项、设置界面 52 项、后台服务 20 项，**共 172 项全部通过**。
+- 自动化校验：核心屏蔽逻辑 94 项、设置界面 52 项、后台服务 20 项，**共 166 项全部通过**。
 - **本版的核心原则：宁可不屏蔽，也绝不乱遮**。任何一步无法确认是一张卡片时，扩展会直接跳过该推广，不影响页面其它内容。
 - 已知限制：B 站页面结构改版后，个别卡片的识别可能需要调整（见文末「常见问题」）。
 - 反馈渠道：请在 [Issues](https://github.com/ke25019/bili-title-filter/issues) 中提交，附上页面地址与截图更好定位。
@@ -182,7 +182,7 @@ bili-title-filter/
 ```bash
 cd tests
 npm install      # 仅测试需要 jsdom
-npm test         # 172 项行为校验
+npm test         # 166 项行为校验
 ```
 
 验证覆盖：屏蔽逻辑与两种屏蔽方式、悬停展示、**真实直播楼层结构下的封面+标题合并遮蔽**、14 类分区与兜底规则、
@@ -229,26 +229,10 @@ A：B 站是单页应用，列表滚动与切换会让卡片重新渲染，统�
 
 ## 版本
 
-**v1.1.10-beta** · 适用于 Microsoft Edge (Chromium) 102+（`minimum_chrome_version: 102`）
+**v1.1.9-beta** · 适用于 Microsoft Edge (Chromium) 102+（`minimum_chrome_version: 102`）
 
 ### 更新日志
 
-**v1.1.10-beta**
-
-> 关键修复：**分区推广卡片残留的「边框 + 阴影空盒」**（就是你截图里那条淡线和白色空框）。
-
-- **根因（真实 B 站 CSS 实测）**：分区推广卡片外面还套着一层带边框、背景和阴影的盒子——
-  ```css
-  .floor-card{ border:1px solid #e3e5e7; background:var(--bg1);
-               box-shadow:0 0 40px rgba(0,0,0,.03); border-radius:6px; padding:12px }
-  ```
-  而卡片本体（`.floor-card-inner`）在里面。我们的隐藏只打在本体上，
-  于是**内容没了、外层那个带边框和阴影的盒子还留着**。
-- **两种隐藏模式都受影响**：保留位置模式下留下一个「空边框盒子」；前移补位模式下同样残留 —— 这也是「前移补位仍有 bug」的原因之一。
-- **修复**：新增 `findCardFrame()`——从卡片向上找到「仍然只装着这一张卡片」的最外层容器（直到网格项为止），隐藏时把它一起处理：
-  * **保留位置**：给它 `visibility:hidden` → 边框、背景、阴影一起消失，位置依然保留（页面不重排）
-  * **前移补位**：给它 `display:none` → 整个网格项移除，不会留下空框
-- 校验项 166 → 172，新增 6 项用例覆盖该场景（含真实 CSS 的边框/背景/阴影结构）
 **v1.1.9-beta**
 
 > 关键修复：**「保留原位置」模式下那个"白色空块"**。

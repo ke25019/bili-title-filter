@@ -130,22 +130,6 @@ const HTML = `<!DOCTYPE html><html><head></head><body>
           </div>
         </div>
       </div>
-      <!-- 分区推广卡片（真实结构 + 真实 CSS）：外层 .floor-card 带 边框/背景/阴影，卡片本体在里面。
-           只隐藏本体的话，外层会留下一个带淡边线的空框（用户反馈的"阴影占位符还在"）。 -->
-      <div class="floor-single-card" id="frameHost" data-w="240" data-h="248">
-        <div class="floor-card single-card" id="frameBox" data-w="240" data-h="248"
-             style="border:1px solid #e3e5e7;background:#fff;box-shadow:0 0 40px rgba(0,0,0,.03);border-radius:6px;padding:12px">
-          <div class="floor-card-inner" id="frameInner" data-w="238" data-h="222">
-            <div class="cover-container" data-w="238" data-h="134">
-              <a href="https://live.bilibili.com/777"><img src="live2.jpg"></a>
-            </div>
-            <div class="pb-16 px-12" data-w="238" data-h="88">
-              <p class="title">剧透警告的直播丁</p>
-            </div>
-          </div>
-        </div>
-      </div>
-
       <!-- 又高又空的"占位容器"：只应隐身保留高度，不能真的隐藏（否则页面高度骤变） -->
       <div class="bili-video-card" id="tallPh" data-w="240" data-h="520"></div>
       <!-- 真实卡片：有标题 + 图片还没加载完，绝不能被当成占位项 -->
@@ -312,11 +296,7 @@ async function main() {
   check('直播推广卡片被识别并遮蔽（.floor-card-inner）', blocked('c4'), 'c4 未屏蔽');
   check('分区类型标记为 live', $('c4').dataset.bfType === 'live', $('c4').dataset.bfType);
   check('分区文案包含分区名「直播」', maskText($('c4')).indexOf('直播') !== -1, maskText($('c4')));
-  check('【关键】封面与标题只生成一个遮罩（不再分开屏蔽）',
-    $('c4').querySelectorAll(':scope > .bf-mask').length === 1 &&
-    !$('c4').querySelector('.cover-container > .bf-mask') &&
-    !$('c4').querySelector('.pb-16 > .bf-mask'),
-    'c4 内遮罩数=' + $('c4').querySelectorAll(':scope > .bf-mask').length);
+  check('【关键】封面与标题只生成一个遮罩（不再分开屏蔽）', maskCount() === 1, '遮罩数=' + maskCount());
   check('【关键】遮罩挂在同时含封面与标题的卡片本体上',
     !!$('c4').querySelector(':scope > .bf-mask') &&
     !!$('c4').querySelector('.cover-container') &&
@@ -331,9 +311,7 @@ async function main() {
   check('main 没有被遮蔽', !doc.querySelector('main').classList.contains('bf-blocked'));
   check('body 没有被遮蔽', !doc.body.classList.contains('bf-blocked'));
   const allBlocked = Array.from(doc.querySelectorAll('.bf-blocked')).map((el) => el.id || el.className);
-  check('被遮蔽的只有直播推广卡片本身（c4 与带阴影的 frameInner）',
-    allBlocked.length === 2 && allBlocked.indexOf('c4') !== -1 && allBlocked.indexOf('frameInner') !== -1,
-    allBlocked.join(' | '));
+  check('被遮蔽的只有直播推广卡片本身', allBlocked.length === 1 && allBlocked[0] === 'c4', allBlocked.join(' | '));
 
   console.log('\n[8] 「其他推广」兜底开关');
   await pushSettings({ blockTypes: { live: false, other: true } });
@@ -410,26 +388,6 @@ async function main() {
   await pushSettings({ mode: 'hide', hideKeepSlot: true, keywords: ['剧透'] });
   check('保留位置模式下不触碰占位项', doc.querySelectorAll('.bf-ph-collapsed, .bf-ph-muted').length === 0);
   await pushSettings({ mode: 'mask', keywords: [], hideKeepSlot: true });
-
-  console.log('\n[10c] 外层"边框 + 阴影"容器必须一起隐藏（用户反馈的阴影占位符残留）');
-  await pushSettings({ mode: 'mask', keywords: ['剧透警告的直播丁'], hideKeepSlot: true });
-  check('分区推广卡片本体被遮蔽', $('frameInner').classList.contains('bf-blocked'), $('frameInner').className);
-
-  await pushSettings({ mode: 'hide', hideKeepSlot: true, keywords: ['剧透警告的直播丁'] });
-  check('保留位置模式下：外层容器被标记 bf-hide-slot（连同边框与阴影一起消失）',
-    $('frameHost').classList.contains('bf-hide-slot'), $('frameHost').className);
-  check('保留位置模式下：卡片本体不再需要单独隐藏', $('frameInner').classList.contains('bf-blocked'));
-
-  await pushSettings({ hideKeepSlot: false });
-  check('前移补位模式下：外层容器被标记 bf-hide（整个网格项移除，不留空框）',
-    $('frameHost').classList.contains('bf-hide') && !$('frameHost').classList.contains('bf-hide-slot'),
-    $('frameHost').className);
-  check('前移补位模式下：外层容器不会残留 bf-hide-slot', !$('frameBox').classList.contains('bf-hide-slot'));
-
-  await pushSettings({ mode: 'mask', hideKeepSlot: true, keywords: [] });
-  check('解除屏蔽后外层容器上的类被清除',
-    !$('frameHost').classList.contains('bf-hide') && !$('frameHost').classList.contains('bf-hide-slot'),
-    $('frameHost').className);
 
   console.log('\n[11] 顶栏与横幅不被误伤');
   check('顶栏「直播」入口未被屏蔽', !doc.querySelector('.channel-link__right').classList.contains('bf-blocked'));
