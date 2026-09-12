@@ -94,8 +94,9 @@ async function main() {
   check('默认 14 个分区开关均为关闭',
     Object.keys(store.sync.bfSettings.blockTypes).length === 14 &&
     Object.values(store.sync.bfSettings.blockTypes).every((v) => v === false));
-  check('默认不屏蔽首页顶部轮播横幅', store.sync.bfSettings.blockBanner === false);
-  check('已移除旧的「整行板块」配置项', !('blockSections' in store.sync.bfSettings));
+  check('默认 14 个板块级开关均为关闭',
+    Object.keys(store.sync.bfSettings.blockSections).length === 14 &&
+    Object.values(store.sync.bfSettings.blockSections).every((v) => v === false));
   check('统计数据已初始化', !!store.local.bfStats, JSON.stringify(store.local.bfStats));
 
   // 模拟内容脚本上报屏蔽数量

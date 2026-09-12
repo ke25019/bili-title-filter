@@ -1,5 +1,5 @@
 /**
- * B站屏蔽助手 - 内容脚本  v1.1.5
+ * B站屏蔽助手 - 内容脚本  v1.1.4
  * ---------------------------------------------------------------
  * 功能：
  *  1. 按用户自定义的「标题屏蔽词」屏蔽视频卡片
@@ -561,78 +561,6 @@
   }
 
   /* ------------------------------------------------------------------
-   * 完全隐藏模式下：收敛被"顶上来"的空骨架占位项
-   * ------------------------------------------------------------------ */
-
-  /** 加载哨兵 / 锚点类元素绝不能动，否则会影响 B 站继续加载内容 */
-  function isLoadSentinel(el) {
-    var cls = typeof el.className === 'string' ? el.className : '';
-    return /load-more|loadmore|anchor|sentinel|observer|spinner|loading/i.test(cls);
-  }
-
-  /**
-   * 是不是"空占位项"：网格里既没有图片/视频，也没有任何文字。
-   * （B 站的推荐流会在末尾放一批这样的项，内容加载后才会填进去）
-   */
-  function isEmptyPlaceholder(el) {
-    if (!el || el.nodeType !== 1) return false;
-    if (el.classList.contains('bf-blocked')) return false;
-    if (el.querySelector('img, picture, video, canvas, iframe')) return false;
-    return !(el.textContent || '').trim();
-  }
-
-  /**
-   * 完全隐藏模式专用：
-   * 我们把卡片隐藏后，网格会把排在末尾的空占位项拉到前面填空，
-   * 看起来就是内容中间多出一块块灰色空盒。这里把这类空占位项一并收敛：
-   *   - 普通空占位项：直接 display:none
-   *   - 加载哨兵（.load-more-anchor 等）：只做 visibility:hidden，
-   *     保留它的布局盒与位置，避免影响 B 站继续加载
-   * 每次扫描都会先清空标记再重新判定，占位项被真实内容填充后会立刻自动恢复。
-   */
-  function applyPlaceholderCollapse() {
-    var marked = document.querySelectorAll('.bf-ph-collapsed, .bf-ph-muted');
-    for (var i = 0; i < marked.length; i++) {
-      marked[i].classList.remove('bf-ph-collapsed');
-      marked[i].classList.remove('bf-ph-muted');
-    }
-
-    if (!settings.enabled || settings.mode !== 'hide') return;
-
-    var hiddenCards = document.querySelectorAll('.bf-blocked.bf-hide');
-    if (!hiddenCards.length) return;
-
-    // 只处理"确实藏着我们屏蔽卡片"的网格容器
-    var grids = [];
-    for (var j = 0; j < hiddenCards.length; j++) {
-      var grid = hiddenCards[j].parentElement;
-      if (!grid || grids.indexOf(grid) !== -1) continue;
-      var display = '';
-      try { display = getComputedStyle(grid).display; } catch (e) { display = ''; }
-      if (display !== 'grid' && display !== 'inline-grid') continue;
-      grids.push(grid);
-    }
-
-    var collapsed = 0;
-    var muted = 0;
-    for (var g = 0; g < grids.length; g++) {
-      var children = grids[g].children;
-      for (var c = 0; c < children.length; c++) {
-        var el = children[c];
-        if (!isEmptyPlaceholder(el)) continue;
-        if (isLoadSentinel(el)) {
-          el.classList.add('bf-ph-muted');
-          muted++;
-        } else {
-          el.classList.add('bf-ph-collapsed');
-          collapsed++;
-        }
-      }
-    }
-    if (collapsed || muted) log('收敛空占位项：隐藏 ' + collapsed + ' 个，隐身保留 ' + muted + ' 个');
-  }
-
-  /* ------------------------------------------------------------------
    * 屏蔽 / 恢复
    * ------------------------------------------------------------------ */
 
@@ -852,7 +780,6 @@
     if (force || now - lastSectionScanAt > 800) {
       lastSectionScanAt = now;
       applyBannerBlock();
-      applyPlaceholderCollapse();
     }
   }
 
@@ -869,8 +796,6 @@
       pendingFullScan = false;
       scanAll(false);
     }
-    // 占位项一旦被真实内容填充就要立刻恢复，不能等到下一次轮询
-    applyPlaceholderCollapse();
   }
 
   function scheduleFlush() {
@@ -1615,9 +1540,6 @@
 
   function tick() {
     refreshTheme();
-
-    // 完全隐藏模式下定期复核一次：占位项被真实内容填充后要能自动恢复
-    if (settings.enabled && settings.mode === 'hide') applyPlaceholderCollapse();
 
     if (settings.showHeaderButton && document.body) {
       if (!hostEl || !hostEl.isConnected) mountUI();

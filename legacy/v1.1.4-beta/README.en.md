@@ -2,10 +2,10 @@
 
 > A browser extension that filters Bilibili videos by the title keywords you choose.
 
-[![version](https://img.shields.io/badge/version-1.1.5--beta-orange)](https://github.com/ke25019/bili-title-filter/releases)
+[![version](https://img.shields.io/badge/version-1.1.4--beta-orange)](https://github.com/ke25019/bili-title-filter/releases)
 [![manifest](https://img.shields.io/badge/Manifest-V3-blue)]()
 [![browser](https://img.shields.io/badge/Edge%20%7C%20Chrome-Chromium-00aeec)]()
-[![tests](https://img.shields.io/badge/tests-137%20passed-brightgreen)]()
+[![tests](https://img.shields.io/badge/tests-129%20passed-brightgreen)]()
 
 A Manifest V3 extension for **Microsoft Edge / Google Chrome and other Chromium browsers**.
 Block videos whose titles match your own keyword list: either **mask** them (cover and title merged into a single
@@ -16,13 +16,13 @@ live streams and anime, and can hide the home-page carousel banner on its own.
 
 ## ⚠️ Beta Notice
 
-The current release is **v1.1.5-beta**. It is feature-complete but still in testing — feedback is very welcome.
+The current release is **v1.1.4-beta**. It is feature-complete but still in testing — feedback is very welcome.
 
-- Automated checks: 75 for the core blocking logic, 42 for the settings UI, 20 for the background service — **137 in total, all passing**.
+- Automated checks: 67 for the core blocking logic, 42 for the settings UI, 20 for the background service — **129 in total, all passing**.
 - **Core principle of this release: rather skip than mis-block.** Whenever the extension cannot confidently identify a card, it skips that promo instead of risking a broken page.
 - Known limitation: if Bilibili redesigns its pages, a few card selectors may need updating (see the FAQ below).
 - Feedback: please open an [Issue](https://github.com/ke25019/bili-title-filter/issues) with the page URL and a screenshot if possible.
-- Older versions (v1.0.0-beta / v1.1.0-beta / v1.1.3-beta / v1.1.4-beta) are archived under [`legacy/`](legacy/) and can each be loaded as a standalone extension.
+- Older versions (v1.0.0-beta / v1.1.0-beta / v1.1.3-beta) are archived under [`legacy/`](legacy/) and can each be loaded as a standalone extension.
 
 ---
 
@@ -38,7 +38,7 @@ The current release is **v1.1.5-beta**. It is feature-complete but still in test
 | Style | Behaviour |
 | --- | --- |
 | **Mask** | The cover and title are merged into one block showing “根据您的屏蔽词已将此视频屏蔽”. The layout stays intact, and **hovering the mouse reveals the video**; moving the pointer away masks it again. |
-| **Hide** | The card is removed from the page entirely (`display:none`) — **as if the video never existed**. The grid re-flows, and Bilibili’s empty placeholder blocks that get pulled up to fill the gap are collapsed too (see below). |
+| **Hide** | The card is removed from the page entirely (`display:none`) — **as if the video never existed**. |
 
 - The mask text is customisable (Options → Blocking style → Mask text).
 - Hover-to-reveal can be turned off; when it is off, the mask intercepts clicks so you cannot open a blocked video by accident.
@@ -85,28 +85,17 @@ Hides only the large auto-rotating banner at the very top of the home page (meas
 11 `.carousel-area` slides, right below the header) — **no other page, no other content is touched**. It is an independent
 switch and does not interact with the section checkboxes above.
 
-### 5. Three places to configure it
+### 4. Three places to configure it
+- **Toolbar popup** — quick toggles and keyword management.
 - **Full options page** — section table, live preview, config import/export, statistics and reset.
 - **In-page floating panel** — sits near the top bar, **hold and drag it anywhere**; the position is remembered (and can be reset with one click). Click to expand the panel.
 
-### 6. Empty placeholder blocks in hide mode
-
-Bilibili’s feed grid keeps a number of **skeleton-only empty placeholder items** at the end of the grid; they are filled
-with real content as you scroll. Once we hide the cards before them, CSS Grid **pulls those placeholders forward** to fill
-the freed cells — which looks like grey empty boxes appearing in the middle of the content.
-
-The extension now handles this automatically in hide mode: pulled-up empty placeholders are collapsed
-(plain ones are hidden outright; load sentinels such as `.load-more-anchor` are only made invisible so their layout box
-and position survive and Bilibili keeps loading). A placeholder is restored the moment it receives real content.
-Measured: visible skeletons 89 → 18 (the remainder live inside the top-left carousel block and are real content),
-and scrolling to the bottom still loads new content as usual.
-
-### 7. Dark mode support
+### 5. Dark mode support
 - The mask and the in-page panel follow Bilibili’s own dark mode automatically.
 - Detection uses the `<html>` `dark` attribute / `data-theme` / class names, with a background-luminance fallback.
 - You can also force “always light” or “always dark”.
 
-### 8. Extras
+### 6. Extras
 - The toolbar badge shows how many videos were blocked today; totals are shown in the options page and can be reset.
 - Configuration can be **exported / imported as JSON** for backup or multi-machine use.
 - Settings live in `chrome.storage.sync`, so they sync across devices when you sign in to the browser.

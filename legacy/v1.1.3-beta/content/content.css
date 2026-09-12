@@ -123,20 +123,7 @@ html.bf-dark {
   opacity: 0 !important;
 }
 
-/* ---------- 首页顶部轮播横幅（独立开关，只作用于首页那一块） ---------- */
-.bf-banner-blocked {
+/* ---------- 板块级屏蔽（整行 / 整个推广位） ---------- */
+.bf-section-blocked {
   display: none !important;
-}
-
-/* ---------- 完全隐藏模式下被"顶上来"的空骨架占位项 ----------
-   B 站的推荐流网格末尾放着若干只含骨架屏的空占位项；
-   我们把前面的卡片隐藏后，CSS Grid 会把这些占位项拉到前面来填空，
-   看起来就是内容中间多出一块块灰色空盒。这里把它们一并收敛掉。 */
-.bf-ph-collapsed {
-  display: none !important;
-}
-
-/* 加载哨兵类空占位项：只隐身，保留布局盒与位置，确保 B 站仍能继续加载内容 */
-.bf-ph-muted {
-  visibility: hidden !important;
 }

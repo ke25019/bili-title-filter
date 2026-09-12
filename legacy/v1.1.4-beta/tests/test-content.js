@@ -64,7 +64,7 @@ const HTML = `<!DOCTYPE html><html><head></head><body>
       <p class="title">游戏中心推广</p>
     </div>
 
-    <div class="container is-version8" id="feed-list" style="display:grid">
+    <div class="feed-list" id="feed-list">
       <div class="feed-card" id="c1" data-w="240" data-h="210">
         <div class="bili-feed-card">
           <div class="bili-video-card is-rcmd">
@@ -107,17 +107,6 @@ const HTML = `<!DOCTYPE html><html><head></head><body>
             <h3 class="bili-video-card__info--tit" title="下载哔哩哔哩客户端">下载哔哩哔哩客户端</h3>
           </div>
         </div>
-      </div>
-
-      <!-- B 站自己的"空占位项"（实测：排在网格末尾，前面卡片被隐藏后会被顶上来，
-           显示成一块灰色空盒）。下面三个分别代表：带骨架屏的空占位、完全空白、
-           以及加载哨兵 .load-more-anchor。 -->
-      <div class="bili-video-card" id="ph1" data-w="240" data-h="233">
-        <div class="bili-video-card__skeleton"></div>
-      </div>
-      <div class="bili-video-card" id="ph2" data-w="240" data-h="233"></div>
-      <div class="load-more-anchor" id="anchor1" data-w="240" data-h="233">
-        <div class="bili-video-card__skeleton"></div>
       </div>
     </div>
   </main>
@@ -290,33 +279,7 @@ async function main() {
   check('关闭后横幅恢复', !$('banner').classList.contains('bf-banner-blocked'));
   check('横幅开关与分区开关互不影响', !blocked('c4') && !blocked('c8'));
 
-  console.log('\n[10] 完全隐藏模式：收敛被顶上来填空的"空占位项"');
-  // 遮蔽模式下不应动任何占位项（遮蔽保留占位，不会有东西被顶上来）
-  await pushSettings({ mode: 'mask', keywords: ['剧透'] });
-  check('遮蔽模式不动占位项', doc.querySelectorAll('.bf-ph-collapsed, .bf-ph-muted').length === 0,
-    doc.querySelectorAll('.bf-ph-collapsed, .bf-ph-muted').length);
-
-  await pushSettings({ mode: 'hide', keywords: ['剧透'] });
-  check('完全隐藏模式下收敛空占位项（含骨架屏）', $('ph1').classList.contains('bf-ph-collapsed'),
-    $('ph1').className);
-  check('完全隐藏模式下收敛完全空白的占位项', $('ph2').classList.contains('bf-ph-collapsed'), $('ph2').className);
-  check('加载哨兵只做隐身、保留布局盒（不影响继续加载）',
-    $('anchor1').classList.contains('bf-ph-muted') && !$('anchor1').classList.contains('bf-ph-collapsed'),
-    $('anchor1').className);
-  check('真实卡片不会被当成占位项收敛', !$('c2').classList.contains('bf-ph-collapsed')
-    && !$('c1').classList.contains('bf-ph-collapsed') && !$('c4').classList.contains('bf-ph-collapsed'));
-  check('有图有文的卡片即使被屏蔽也不进占位收敛', !$('c1').classList.contains('bf-ph-collapsed'));
-
-  // 占位项被真实内容填充后要自动恢复
-  $('ph1').innerHTML = '<a href="//www.bilibili.com/video/BVnew"><img src="new.jpg"></a>' +
-    '<h3 class="bili-video-card__info--tit" title="新加载的真实卡片">新加载的真实卡片</h3>';
-  await sleep(900);
-  check('占位项被真实内容填充后自动恢复显示', !$('ph1').classList.contains('bf-ph-collapsed'), $('ph1').className);
-
-  await pushSettings({ mode: 'mask', keywords: [] });
-  check('切回遮蔽模式后占位项标记被清除', doc.querySelectorAll('.bf-ph-collapsed, .bf-ph-muted').length === 0);
-
-  console.log('\n[11] 顶栏与横幅不被误伤');
+  console.log('\n[10] 顶栏与横幅不被误伤');
   check('顶栏「直播」入口未被屏蔽', !doc.querySelector('.channel-link__right').classList.contains('bf-blocked'));
   check('顶栏「番剧」入口未被屏蔽', !doc.querySelectorAll('.channel-link__right')[1].classList.contains('bf-blocked'));
   check('横幅不受分区卡片级开关影响', !$('banner').classList.contains('bf-blocked') && !$('banner').querySelector('.bf-mask'));

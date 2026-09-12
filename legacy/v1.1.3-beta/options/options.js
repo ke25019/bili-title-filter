@@ -114,22 +114,30 @@
     });
   }
 
-  function makeTypeCell(t) {
+  function makeTypeCell(t, scope) {
     var label = document.createElement('label');
     label.className = 'tcell';
     var input = document.createElement('input');
     input.type = 'checkbox';
     input.dataset.key = t.key;
+    input.dataset.scope = scope;
     var span = document.createElement('span');
-    span.textContent = '屏蔽';
+    span.textContent = scope === 'card' ? '卡片' : '整行';
     label.appendChild(input);
     label.appendChild(span);
 
     input.addEventListener('change', function () {
-      var next = Object.assign({}, settings.blockTypes);
-      next[t.key] = input.checked;
-      save({ blockTypes: next }, true);
-      toast(input.checked ? '已屏蔽「' + t.label + '」卡片' : '已恢复显示「' + t.label + '」卡片');
+      if (scope === 'card') {
+        var next = Object.assign({}, settings.blockTypes);
+        next[t.key] = input.checked;
+        save({ blockTypes: next }, true);
+      } else {
+        var nextS = Object.assign({}, settings.blockSections);
+        nextS[t.key] = input.checked;
+        save({ blockSections: nextS }, true);
+      }
+      toast(input.checked ? '已屏蔽「' + t.label + '」' + (scope === 'card' ? '卡片' : '整行板块')
+                          : '已恢复显示「' + t.label + '」' + (scope === 'card' ? '卡片' : '整行板块'));
     });
     return label;
   }
@@ -142,9 +150,12 @@
       var h1 = document.createElement('span');
       h1.textContent = '分区';
       var h2 = document.createElement('span');
-      h2.textContent = '屏蔽该分区的卡片';
+      h2.textContent = '屏蔽卡片';
+      var h3 = document.createElement('span');
+      h3.textContent = '整行板块';
       head.appendChild(h1);
       head.appendChild(h2);
+      head.appendChild(h3);
       box.appendChild(head);
 
       TYPES.forEach(function (t) {
@@ -162,7 +173,8 @@
         name.appendChild(desc);
 
         row.appendChild(name);
-        row.appendChild(makeTypeCell(t));
+        row.appendChild(makeTypeCell(t, 'card'));
+        row.appendChild(makeTypeCell(t, 'section'));
         box.appendChild(row);
       });
       box.dataset.built = '1';
@@ -171,14 +183,13 @@
   }
 
   function syncTypes() {
-    Array.prototype.forEach.call(document.querySelectorAll('#types input[data-key]'), function (input) {
-      var on = !!settings.blockTypes[input.dataset.key];
+    Array.prototype.forEach.call(document.querySelectorAll('#types input[data-scope]'), function (input) {
+      var k = input.dataset.key;
+      var on = input.dataset.scope === 'card' ? !!settings.blockTypes[k] : !!settings.blockSections[k];
       input.checked = on;
       var cell = input.closest('.tcell');
       if (cell) cell.classList.toggle('is-on', on);
     });
-    var banner = $('block-banner');
-    if (banner) banner.checked = !!settings.blockBanner;
   }
 
   function renderPreview() {
@@ -265,13 +276,15 @@
       toast('已屏蔽全部分区的卡片');
     });
 
-    $('block-banner').addEventListener('change', function () {
-      save({ blockBanner: $('block-banner').checked }, true);
-      toast($('block-banner').checked ? '已屏蔽首页顶部轮播横幅' : '已恢复显示首页顶部轮播横幅');
+    $('sections-all').addEventListener('click', function () {
+      var nextS = {};
+      TYPES.forEach(function (t) { nextS[t.key] = true; });
+      save({ blockSections: nextS }, true);
+      toast('已屏蔽全部分区的整行板块');
     });
 
     $('types-none').addEventListener('click', function () {
-      save({ blockTypes: {} }, true);
+      save({ blockTypes: {}, blockSections: {} }, true);
       toast('已恢复显示全部分区');
     });
 

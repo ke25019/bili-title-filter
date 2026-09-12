@@ -1,5 +1,5 @@
 /**
- * B站屏蔽助手 - 内容脚本  v1.1.5
+ * B站屏蔽助手 - 内容脚本  v1.1.0
  * ---------------------------------------------------------------
  * 功能：
  *  1. 按用户自定义的「标题屏蔽词」屏蔽视频卡片
@@ -7,16 +7,16 @@
  *     - mask：把封面 + 标题合成一整块「根据您的屏蔽词已将此视频屏蔽」区域
  *             （鼠标悬停可临时查看该视频）
  *     - hide：直接从页面上移除，就像这个视频没出现过
- *  3. 分区推广屏蔽（卡片级 blockTypes）：屏蔽该分区的每一张推广卡片
- *  4. 首页顶部轮播横幅屏蔽（blockBanner）：独立开关，只作用于首页那一块
- *  5. 标题栏附近的悬浮面板可自由拖动，位置自动记忆
- *  6. 自动适配 B 站 web 端深色模式
+ *  3. 分区推广屏蔽，两个粒度各自独立开关：
+ *     - 卡片级 blockTypes   ：屏蔽该分区的每一张卡片
+ *     - 板块级 blockSections：屏蔽该分区所在的整行 / 整个推广位（含轮播横幅）
+ *  4. 标题栏附近的悬浮面板可自由拖动，位置自动记忆
+ *  5. 自动适配 B 站 web 端深色模式
  *
- * 分区识别策略（全部结论来自真实浏览器实测，不依赖单一 class）：
+ * 分区识别策略（不依赖单一 class，B 站改版不易失效）：
  *   a) 先看卡片内链接指向哪个站（live.bilibili.com / bangumi / cheese ...）
- *   b) 已知卡片类名优先；BEM 子元素回推到块根（xxx__el → .xxx）
- *   c) 都不是时，向上找**同时包含标题与封面**的那一层作为卡片
- *   d) 任何一步无法确认就跳过 —— 宁可不屏蔽，也绝不乱遮导致页面空白
+ *   b) 再看卡片 class（使用实测到的真实类名兜底）
+ *   c) 若卡片本身不在已知卡片选择器里，则从命中的 <a> 向上自动推断卡片容器
  */
 (function () {
   'use strict';
@@ -54,9 +54,9 @@
     '.bili-note-card',
     '.bili-article-card',
     '.bili-opus-card',
-    /* 注意：.floor-card / .floor-card-inner 是"楼层里的卡片"，其真实结构
-       （实测）是 .floor-card-inner > 封面 + 标题，由通用识别用
-       「命中链接 + 标题 + 封面」定位，因此不写死在这里。 */
+    /* 注意：.floor-card / .floor-single-card 是"楼层区块"而不是单张卡片，
+       它们只作为板块级屏蔽的落点（见 SECTION_HINT_SELECTOR），
+       内部的具体卡片由通用分区识别负责，避免卡片级误遮一整块区域。 */
     '.anime-list-item'
   ].join(',');
 
@@ -78,10 +78,6 @@
     '.r-info .title',
     '.info .title',
     '.content .title',
-    '[class*="--tit"]',
-    '[class*="__tit"]',
-    '[class*="card-title"]',
-    '[class*="item-title"]',
     'h3[title]',
     'a[title]'
   ];
@@ -123,15 +119,23 @@
     '.v-popup',
     '.v-popup-wrap',
     '.popover',
-    '.bili-dropdown',
-    /* 实测补充：这两个区域里藏着 0×0 的隐藏推广链接，曾被误判成卡片 */
-    '.header-channel',
-    '.palette-button-outer',
-    '.palette-button-inner'
+    '.bili-dropdown'
   ].join(',');
 
-  /** 卡片容器语义提示（仅作为最末位的兜底提示，不再作为主要判据） */
+  /** 卡片容器语义提示（用于从链接向上推断卡片） */
   var CARD_HINT_RE = /card|item|module|entry|video|live|bangumi|pgc|media|floor|short|cover/i;
+
+  /** 板块容器语义提示（板块级屏蔽的落点） */
+  var SECTION_HINT_SELECTOR = [
+    '.floor-card',
+    '.floor-single-card',
+    '.carousel-area',
+    '.carousel-container',
+    '.anime-list',
+    '[class*="floor-"]',
+    '[class*="carousel"]',
+    '[class*="banner"]'
+  ].join(',');
 
   var MASK_ICON_SVG =
     '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" ' +
@@ -347,85 +351,33 @@
     return n;
   }
 
-  /** 在作用域内找到"标题"元素（含自身） */
-  function findTitleEl(scope) {
-    if (!scope || !scope.querySelector) {
-      // scope 可能是元素自身匹配的情况
-      if (scope && scope.matches) {
-        for (var k = 0; k < TITLE_SELECTORS.length; k++) {
-          if (scope.matches(TITLE_SELECTORS[k]) && isTitleish(scope)) return scope;
-        }
-      }
-      return null;
-    }
+  function hasTitleInside(el) {
     for (var i = 0; i < TITLE_SELECTORS.length; i++) {
-      if (scope.matches && scope.matches(TITLE_SELECTORS[i]) && isTitleish(scope)) return scope;
-      var el = scope.querySelector(TITLE_SELECTORS[i]);
-      if (el && isTitleish(el)) return el;
+      if (el.querySelector(TITLE_SELECTORS[i])) return true;
     }
-    return null;
+    return false;
   }
 
-  /** 标题一般是叶子节点，且文字不会太长 */
-  function isTitleish(el) {
-    if (!el) return false;
-    var text = (el.textContent || '').replace(/\s+/g, ' ').trim();
-    if (!text || text.length > 150) return false;
-    if (el.querySelectorAll && el.querySelectorAll('*').length > 4) return false;
-    return true;
+  /** 判定元素是不是"列表 / 板块"而不是"一张卡片" */
+  function isListNode(el, hrefRe) {
+    if (!el || el === document.body || el === document.documentElement) return true;
+    if (countDistinctEntries(el, hrefRe) > 1) return true;
+    if (el.matches && el.matches(SECTION_HINT_SELECTOR)) return true;
+    if (countTopCards(el) > 1) return true;
+    return false;
   }
 
-  /** 作用域内是否有封面图 */
-  function hasCoverInside(el) {
-    return !!(el.querySelector && el.querySelector('img, picture, [class*="cover"], [class*="image"]'));
-  }
-
-  /**
-   * 尺寸是否像"一张卡片"。
-   * 真实浏览器里严格执行（这正是防止整页被遮蔽的关键）；
-   * jsdom 等拿不到尺寸的环境（rect 全为 0）视为"未知"，交给结构判据兜底。
-   */
-  function hasLayoutEngine() {
-    if (hasLayoutEngine._v === undefined) {
-      var r = document.body ? document.body.getBoundingClientRect() : null;
-      hasLayoutEngine._v = !!(r && r.width > 0 && r.height > 0);
-    }
-    return hasLayoutEngine._v;
-  }
-
-  function isPlausibleCardSize(el) {
-    if (!el || !el.getBoundingClientRect) return true;
+  /** 尺寸明显不可能是单张卡片（真实浏览器里才有效，jsdom 中 rect 为 0 会跳过） */
+  function isAbsurdSize(el, factor) {
+    if (!el || !el.getBoundingClientRect) return false;
     var r = el.getBoundingClientRect();
-    if (!r || (!r.width && !r.height)) {
-      // 真实浏览器里 0 尺寸 = 隐藏元素（display:none 等）→ 不要遮蔽它
-      return !hasLayoutEngine();
-    }
+    if (!r || !r.width || !r.height) return false;
     var vw = window.innerWidth || 1280;
     var vh = window.innerHeight || 800;
-    if (r.width > 1100 || r.height > 700) return false;
-    if (r.width * r.height > vw * vh * 0.15) return false;
-    return true;
-  }
-
-  function commonAncestor(a, b) {
-    if (!a || !b) return null;
-    if (a.contains(b)) return a;
-    if (b.contains(a)) return b;
-    var el = b.parentElement;
-    while (el) {
-      if (el.contains(a)) return el;
-      el = el.parentElement;
-    }
-    return null;
-  }
-
-  /** 候选容器是否"安全"：不是列表、不装别的卡片、尺寸像卡片 */
-  function isSafeCardTarget(el, hrefRe) {
-    if (!el || el === document.body || el === document.documentElement) return false;
-    if (countDistinctEntries(el, hrefRe) > 1) return false;   // 内含多个同分区条目 → 是列表
-    if (countTopCards(el) > 1) return false;                  // 内含别的卡片 → 是容器
-    if (!isPlausibleCardSize(el)) return false;               // 尺寸不像一张卡片
-    return true;
+    var f = factor || 1;
+    if (r.height > vh * 1.5 * f) return true;
+    if (r.width > vw * 1.2 * f) return true;
+    return false;
   }
 
   /** B 站用 BEM 命名：bili-live-card__image--link 的块根是 bili-live-card */
@@ -435,45 +387,53 @@
     return m ? m[1] : null;
   }
 
-  /**
-   * 推断"该推广条目"对应的卡片容器。
-   *
-   * 关键点：向上找到第一层**同时包含标题与封面**的祖先，
-   * 这样遮蔽区域天然覆盖「封面 + 标题」，与视频卡片的表现一致；
-   * 任何一步无法确认就返回 null —— 宁可不屏蔽，也绝不乱遮一通。
-   */
-  function resolveCardTarget(a, hrefRe) {
-    // 1) 已经在已知卡片结构里：取最外层的那张卡片
+  /** 遮蔽要覆盖「封面 + 标题」，只有封面时向上补到含标题的那一层 */
+  function expandToTitle(el, hrefRe) {
+    var cur = el;
+    for (var i = 0; i < 3 && cur && cur.parentElement && cur.parentElement !== document.body; i++) {
+      if (hasTitleInside(cur)) return cur;
+      var parent = cur.parentElement;
+      if (isListNode(parent, hrefRe) || isAbsurdSize(parent)) break;
+      cur = parent;
+    }
+    return cur || el;
+  }
+
+  /** 从命中的链接推断「该卡片」容器 —— 关键在于绝不把列表/整块区域当成卡片 */
+  function pickCardContainer(a, hrefRe) {
+    // 1) 已经在已知卡片选择器内：取最外层那一个卡片
     var known = a.closest(CARD_SELECTOR);
-    if (known) {
+    if (known && !isListNode(known, hrefRe)) {
       var outer = known;
       while (outer.parentElement && outer.parentElement.matches &&
              outer.parentElement.matches(CARD_SELECTOR) &&
-             isSafeCardTarget(outer.parentElement, hrefRe)) {
+             !isListNode(outer.parentElement, hrefRe)) {
         outer = outer.parentElement;
       }
-      return isSafeCardTarget(outer, hrefRe) ? outer : null;
+      return expandToTitle(outer, hrefRe);
     }
 
     // 2) BEM 块根：bili-live-card__image--link -> .bili-live-card
     var root = bemRootOf(a);
     if (root) {
       var byRoot = a.closest('.' + root);
-      if (byRoot && hasTitleInside(byRoot) && isSafeCardTarget(byRoot, hrefRe)) return byRoot;
+      if (byRoot && !isListNode(byRoot, hrefRe) && !isAbsurdSize(byRoot)) {
+        return expandToTitle(byRoot, hrefRe);
+      }
     }
 
-    // 3) 通用推断：向上找同时含「标题」和「封面」的那一层
-    var scope = a;
-    for (var i = 0; i < 6 && scope && scope !== document.body; i++) {
-      if (!isSafeCardTarget(scope, hrefRe)) return null;
-      if (findTitleEl(scope) && hasCoverInside(scope)) return scope;
-      scope = scope.parentElement;
+    // 3) 通用向上推断：一遇到列表容器或过大容器立即停手
+    var el = a;
+    var best = null;
+    var last = null;
+    for (var d = 0; el && el !== document.body && el !== document.documentElement && d < 8; d++) {
+      if (isListNode(el, hrefRe) || isAbsurdSize(el)) break;
+      var cls = typeof el.className === 'string' ? el.className : '';
+      if (CARD_HINT_RE.test(cls)) best = el;
+      if (d <= 2) last = el;
+      el = el.parentElement;
     }
-    return null;
-  }
-
-  function hasTitleInside(el) {
-    return !!findTitleEl(el);
+    return expandToTitle(best || last || a, hrefRe);
   }
 
   /** 该卡片命中的所有具体分区类型（不含 other 兜底） */
@@ -522,114 +482,88 @@
   }
 
   /* ------------------------------------------------------------------
-   * 首页顶部轮播横幅
+   * 板块（整行 / 推广位）解析
    * ------------------------------------------------------------------ */
 
-  /**
-   * 找到首页顶部的大轮播横幅。
-   * 实测（Edge 152 / 2025-09）：轮播由 11 个 .carousel-area 幻灯片组成，
-   * 外层包在 .vui_carousel 里，位于页顶（header 265px 之下）。
-   * 判定条件：位于页面上部 + 尺寸够大 + 内部有 carousel 结构。
-   */
-  function findHomeBanner() {
-    if (location.pathname !== '/' && location.pathname !== '/index.html') return null;
+  function isOversized(el, hrefRe) {
+    if (countDistinctEntries(el, hrefRe) > 12) return true;
+    if (!el.getBoundingClientRect) return false;
+    var r = el.getBoundingClientRect();
+    if (!r || !r.width || !r.height) return false;
+    var vw = window.innerWidth || 1280;
+    var vh = window.innerHeight || 800;
+    if (r.height > vh * 1.2) return true;
+    if (r.width > vw * 0.98 && r.height > vh * 0.5) return true;
+    return false;
+  }
 
-    var areas = document.querySelectorAll('.carousel-area');
-    for (var i = 0; i < areas.length; i++) {
-      var root = areas[i].closest('.vui_carousel') || areas[i].parentElement;
-      if (!root) continue;
-      var r = root.getBoundingClientRect();
-      if (!r.width || !r.height) continue;   // 拿不到尺寸（隐藏幻灯片）就跳过
-      if (r.width < 300 || r.height < 150) continue;
-      if (r.top > 600) continue;             // 必须在页面顶部
-      return root;
+  /**
+   * 判定一个容器是不是"该分区的整行板块"。
+   * 关键防线：如果里面还夹着别的非本分区卡片（典型就是整个推荐流），
+   * 那就绝对不是"一行"，必须拒绝，否则会把整页藏掉。
+   */
+  function isSoundSection(el, type) {
+    if (!el || el === document.body || el === document.documentElement) return false;
+    var entries = countDistinctEntries(el, type.href);
+    if (entries < 2 || entries > 12) return false;
+    if (el.children && el.children.length > 40) return false;
+
+    var cards = el.querySelectorAll(CARD_SELECTOR);
+    var foreign = 0;
+    for (var i = 0; i < cards.length; i++) {
+      if (countDistinctEntries(cards[i], type.href) === 0) {
+        foreign++;
+        if (foreign > 2) return false;
+      }
     }
+    return !isOversized(el, type.href);
+  }
+
+  /** 语义板块容器：取最外层的那个（顶部轮播横幅等） */
+  function widestHint(a, type) {
+    var hintSel = (type.block ? type.block + ', ' : '') + SECTION_HINT_SELECTOR;
+    var hint = a.closest(hintSel);
+    while (hint && hint.parentElement) {
+      var outer = hint.parentElement.closest ? hint.parentElement.closest(hintSel) : null;
+      if (!outer || isOversized(outer, type.href)) break;
+      hint = outer;
+    }
+    return hint;
+  }
+
+  /** 找到该链接所属的"整行板块"容器；找不到就返回 null（宁可不屏蔽，也不乱屏蔽） */
+  function findSectionRoot(a, type) {
+    var el = a.parentElement;
+    for (var d = 0; el && el !== document.body && el !== document.documentElement && d < 12; d++) {
+      if (isSoundSection(el, type)) return el;                  // 取最内层的合格"一行"
+      if (countDistinctEntries(el, type.href) > 12) break;      // 已经扩到整页级别
+      el = el.parentElement;
+    }
+
+    // 单条目的推广位（顶部轮播横幅 / 楼层区块）走语义容器
+    var hint = widestHint(a, type);
+    if (hint && !isOversized(hint, type.href)) return hint;
+
     return null;
   }
 
-  /** 顶部轮播横幅：独立开关，只作用于首页那一块 */
-  function applyBannerBlock() {
-    var marked = document.querySelectorAll('.bf-banner-blocked');
-    for (var i = 0; i < marked.length; i++) marked[i].classList.remove('bf-banner-blocked');
-
-    if (!settings.enabled || !settings.blockBanner) return;
-    var banner = findHomeBanner();
-    if (banner) {
-      banner.classList.add('bf-banner-blocked');
-      log('已屏蔽首页顶部轮播横幅');
+  /** 板块本体 + 它旁边的标题元素 */
+  function sectionElements(root) {
+    var out = [root];
+    var parent = root.parentElement;
+    if (!parent) return out;
+    for (var i = 0; i < parent.children.length; i++) {
+      var sib = parent.children[i];
+      if (sib === root) continue;
+      var cls = typeof sib.className === 'string' ? sib.className : '';
+      var looksHeading = /title|header|head|name|more|sub-title/i.test(cls) || /^H[1-6]$/.test(sib.tagName);
+      if (!looksHeading) continue;
+      if (sib.querySelector('a[href]')) continue;   // 有链接的多半是内容，不动它
+      var text = (sib.textContent || '').trim();
+      if (!text || text.length > 60) continue;
+      out.push(sib);
     }
-  }
-
-  /* ------------------------------------------------------------------
-   * 完全隐藏模式下：收敛被"顶上来"的空骨架占位项
-   * ------------------------------------------------------------------ */
-
-  /** 加载哨兵 / 锚点类元素绝不能动，否则会影响 B 站继续加载内容 */
-  function isLoadSentinel(el) {
-    var cls = typeof el.className === 'string' ? el.className : '';
-    return /load-more|loadmore|anchor|sentinel|observer|spinner|loading/i.test(cls);
-  }
-
-  /**
-   * 是不是"空占位项"：网格里既没有图片/视频，也没有任何文字。
-   * （B 站的推荐流会在末尾放一批这样的项，内容加载后才会填进去）
-   */
-  function isEmptyPlaceholder(el) {
-    if (!el || el.nodeType !== 1) return false;
-    if (el.classList.contains('bf-blocked')) return false;
-    if (el.querySelector('img, picture, video, canvas, iframe')) return false;
-    return !(el.textContent || '').trim();
-  }
-
-  /**
-   * 完全隐藏模式专用：
-   * 我们把卡片隐藏后，网格会把排在末尾的空占位项拉到前面填空，
-   * 看起来就是内容中间多出一块块灰色空盒。这里把这类空占位项一并收敛：
-   *   - 普通空占位项：直接 display:none
-   *   - 加载哨兵（.load-more-anchor 等）：只做 visibility:hidden，
-   *     保留它的布局盒与位置，避免影响 B 站继续加载
-   * 每次扫描都会先清空标记再重新判定，占位项被真实内容填充后会立刻自动恢复。
-   */
-  function applyPlaceholderCollapse() {
-    var marked = document.querySelectorAll('.bf-ph-collapsed, .bf-ph-muted');
-    for (var i = 0; i < marked.length; i++) {
-      marked[i].classList.remove('bf-ph-collapsed');
-      marked[i].classList.remove('bf-ph-muted');
-    }
-
-    if (!settings.enabled || settings.mode !== 'hide') return;
-
-    var hiddenCards = document.querySelectorAll('.bf-blocked.bf-hide');
-    if (!hiddenCards.length) return;
-
-    // 只处理"确实藏着我们屏蔽卡片"的网格容器
-    var grids = [];
-    for (var j = 0; j < hiddenCards.length; j++) {
-      var grid = hiddenCards[j].parentElement;
-      if (!grid || grids.indexOf(grid) !== -1) continue;
-      var display = '';
-      try { display = getComputedStyle(grid).display; } catch (e) { display = ''; }
-      if (display !== 'grid' && display !== 'inline-grid') continue;
-      grids.push(grid);
-    }
-
-    var collapsed = 0;
-    var muted = 0;
-    for (var g = 0; g < grids.length; g++) {
-      var children = grids[g].children;
-      for (var c = 0; c < children.length; c++) {
-        var el = children[c];
-        if (!isEmptyPlaceholder(el)) continue;
-        if (isLoadSentinel(el)) {
-          el.classList.add('bf-ph-muted');
-          muted++;
-        } else {
-          el.classList.add('bf-ph-collapsed');
-          collapsed++;
-        }
-      }
-    }
-    if (collapsed || muted) log('收敛空占位项：隐藏 ' + collapsed + ' 个，隐身保留 ' + muted + ' 个');
+    return out;
   }
 
   /* ------------------------------------------------------------------
@@ -703,15 +637,13 @@
   }
 
   function applyBlock(card, action) {
-    var already = card.dataset.bfState === 'blocked' && card.dataset.bfKey === action.key;
-
-    // 安全阀：尺寸不像一张卡片时，宁可不屏蔽，也绝不制造页面空白
-    // （已屏蔽的卡片不再判断：mode=hide 时它本来就是 0 尺寸）
-    if (!already && !isPlausibleCardSize(card)) {
+    // 安全阀：尺寸显然不可能是单张卡片时，宁可不屏蔽，也绝不制造页面空白
+    if (isAbsurdSize(card)) {
       log('跳过尺寸异常的容器（避免页面空白）：', card.className, action.key);
       return;
     }
 
+    var already = card.dataset.bfState === 'blocked' && card.dataset.bfKey === action.key;
     if (already) {
       // 命中原因没变，但屏蔽方式 / 文案 / 悬停展示等设置可能变了，这里同步刷新
       card.dataset.bfCard = '1';
@@ -825,14 +757,44 @@
       }
       if (!hit) continue;
 
-      var card = resolveCardTarget(a, hit.href);
-      if (!card) continue;   // 无法确认是一张卡片 → 宁可不屏蔽
+      var card = pickCardContainer(a, hit.href);
+      if (!card) continue;
       // 记住这类卡片：它们不在 CARD_SELECTOR 里，
       // 关闭分区开关时需要靠这份记录把它们恢复原状
       if (!card.matches || !card.matches(CARD_SELECTOR)) trackedCards.add(card);
       if (card.dataset.bfState === 'blocked') continue;   // 已屏蔽，跳过
       processCard(card);
       handled++;
+    }
+  }
+
+  /** 板块级屏蔽：整行 / 整个推广位（含顶部轮播横幅） */
+  function applySectionBlocks() {
+    var marked = document.querySelectorAll('.bf-section-blocked');
+    for (var i = 0; i < marked.length; i++) marked[i].classList.remove('bf-section-blocked');
+
+    if (!settings.enabled) return;
+    var enabled = TYPES.filter(function (t) { return settings.blockSections[t.key]; });
+    if (!enabled.length) return;
+
+    var anchors = document.querySelectorAll('a[href]');
+    var roots = [];
+    for (var k = 0; k < anchors.length && roots.length < 40; k++) {
+      var a = anchors[k];
+      if (isExcludedAnchor(a)) continue;
+      var href = a.getAttribute('href') || '';
+      var hit = null;
+      for (var j = 0; j < enabled.length; j++) {
+        if (enabled[j].href.test(href)) { hit = enabled[j]; break; }
+      }
+      if (!hit) continue;
+
+      var root = findSectionRoot(a, hit);
+      if (!root || roots.indexOf(root) !== -1) continue;
+      roots.push(root);
+      var els = sectionElements(root);
+      for (var m = 0; m < els.length; m++) els[m].classList.add('bf-section-blocked');
+      log('已屏蔽板块：', hit.key, root.className);
     }
   }
 
@@ -851,8 +813,7 @@
     var now = Date.now();
     if (force || now - lastSectionScanAt > 800) {
       lastSectionScanAt = now;
-      applyBannerBlock();
-      applyPlaceholderCollapse();
+      applySectionBlocks();
     }
   }
 
@@ -869,8 +830,6 @@
       pendingFullScan = false;
       scanAll(false);
     }
-    // 占位项一旦被真实内容填充就要立刻恢复，不能等到下一次轮询
-    applyPlaceholderCollapse();
   }
 
   function scheduleFlush() {
@@ -880,7 +839,7 @@
 
   function markDirty(node) {
     if (!node || node.nodeType !== 1) return;
-    if (node.classList && (node.classList.contains('bf-mask') || node.classList.contains('bf-banner-blocked'))) return;
+    if (node.classList && (node.classList.contains('bf-mask') || node.classList.contains('bf-section-blocked'))) return;
     if (node.closest && node.closest('.bf-mask')) return;
 
     var card = node.closest ? node.closest('[data-bf-card]') : null;
@@ -1169,10 +1128,10 @@
     '        <div class="bf-label"><span>屏蔽分区推广（卡片）</span></div>',
     '        <div class="bf-types" id="bf-types"></div>',
     '        <div class="bf-subrow">',
-    '          <span>屏蔽首页顶部轮播横幅</span>',
-    '          <button class="bf-switch bf-switch--sm" id="bf-banner" type="button" role="switch"></button>',
+    '          <span>整行板块也一起屏蔽</span>',
+    '          <button class="bf-switch bf-switch--sm" id="bf-sections" type="button" role="switch"></button>',
     '        </div>',
-    '        <div class="bf-hint">只隐藏首页最上方那个会自动切换的大轮播图，不影响其它内容</div>',
+    '        <div class="bf-hint" id="bf-sections-hint">开启后，已勾选分区所在的整行推广板块（含顶部轮播横幅）会一并隐藏</div>',
     '      </div>',
     '      <div class="bf-row">',
     '        <div class="bf-label"><span>界面外观</span></div>',
@@ -1433,9 +1392,21 @@
       updateSettings({ blockTypes: next });
     });
 
-    // 首页顶部轮播横幅：独立开关，只作用于首页那一块
-    shadow.getElementById('bf-banner').addEventListener('click', function () {
-      updateSettings({ blockBanner: !settings.blockBanner });
+    // 整行板块：只作用于"已勾选卡片级"的分区，避免在没有选择任何分区时误伤整页
+    shadow.getElementById('bf-sections').addEventListener('click', function () {
+      var enabledKeys = TYPES.filter(function (t) { return settings.blockTypes[t.key]; })
+                             .map(function (t) { return t.key; });
+      if (!enabledKeys.length) {
+        flashSectionHint('请先在上方勾选至少一个分区');
+        return;
+      }
+      var on = !allSectionsOn();
+      var next = Object.assign({}, settings.blockSections);
+      enabledKeys.forEach(function (k) { next[k] = on; });
+      updateSettings({ blockSections: next });
+      flashSectionHint(on
+        ? '已连同整行推广板块一起屏蔽'
+        : '已恢复显示整行推广板块');
     });
 
     shadow.getElementById('bf-reset-pos').addEventListener('click', resetButtonPos);
@@ -1446,6 +1417,32 @@
       } catch (err) { /* ignore */ }
       togglePanel(false);
     });
+  }
+
+  /** 整行板块开关是否处于"开"：只看已勾选卡片级的分区 */
+  function allSectionsOn() {
+    var any = false;
+    for (var i = 0; i < TYPES.length; i++) {
+      var k = TYPES[i].key;
+      if (!settings.blockTypes[k]) continue;
+      any = true;
+      if (!settings.blockSections[k]) return false;
+    }
+    return any;
+  }
+
+  var sectionHintTimer = null;
+  function flashSectionHint(text) {
+    if (!shadow) return;
+    var el = shadow.getElementById('bf-sections-hint');
+    if (!el) return;
+    el.textContent = text;
+    el.classList.add('is-warn');
+    clearTimeout(sectionHintTimer);
+    sectionHintTimer = setTimeout(function () {
+      el.classList.remove('is-warn');
+      el.textContent = '开启后，已勾选分区所在的整行推广板块（含顶部轮播横幅）会一并隐藏';
+    }, 2600);
   }
 
   function addKeywordFromInput() {
@@ -1533,9 +1530,9 @@
       el.classList.toggle('is-active', !!settings.blockTypes[el.dataset.key]);
     });
 
-    var bannerBtn = shadow.getElementById('bf-banner');
-    bannerBtn.classList.toggle('is-on', !!settings.blockBanner);
-    bannerBtn.setAttribute('aria-checked', settings.blockBanner ? 'true' : 'false');
+    var sectionsBtn = shadow.getElementById('bf-sections');
+    sectionsBtn.classList.toggle('is-on', allSectionsOn());
+    sectionsBtn.setAttribute('aria-checked', allSectionsOn() ? 'true' : 'false');
 
     updateStatsLabel();
   }
@@ -1615,9 +1612,6 @@
 
   function tick() {
     refreshTheme();
-
-    // 完全隐藏模式下定期复核一次：占位项被真实内容填充后要能自动恢复
-    if (settings.enabled && settings.mode === 'hide') applyPlaceholderCollapse();
 
     if (settings.showHeaderButton && document.body) {
       if (!hostEl || !hostEl.isConnected) mountUI();
