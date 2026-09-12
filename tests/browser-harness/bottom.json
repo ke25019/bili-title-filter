@@ -1,0 +1,113 @@
+﻿{
+  "stats": {
+    "docHeight": 1401,
+    "scrollY": 593,
+    "lastContentBottom": 1341,
+    "lastContentCls": "floor-single-card",
+    "bottomBlank": 60,
+    "hiddenCards": 26,
+    "collapsed": 14,
+    "muted": 1,
+    "gridChildren": 57,
+    "realCards": 4
+  },
+  "spacerCount": 8,
+  "spacers": [
+    {
+      "cls": "div.layer",
+      "h": 224,
+      "top": 529,
+      "absTop": 1122,
+      "w": 214,
+      "display": "block",
+      "position": "absolute",
+      "children": 0,
+      "childClasses": "",
+      "collapsedKids": 0
+    },
+    {
+      "cls": "div.layer.tiny",
+      "h": 224,
+      "top": 535,
+      "absTop": 1128,
+      "w": 191,
+      "display": "block",
+      "position": "absolute",
+      "children": 0,
+      "childClasses": "",
+      "collapsedKids": 0
+    },
+    {
+      "cls": "div.layer",
+      "h": 224,
+      "top": 529,
+      "absTop": 1122,
+      "w": 214,
+      "display": "block",
+      "position": "absolute",
+      "children": 0,
+      "childClasses": "",
+      "collapsedKids": 0
+    },
+    {
+      "cls": "div.layer.tiny",
+      "h": 224,
+      "top": 535,
+      "absTop": 1128,
+      "w": 191,
+      "display": "block",
+      "position": "absolute",
+      "children": 0,
+      "childClasses": "",
+      "collapsedKids": 0
+    },
+    {
+      "cls": "div.layer",
+      "h": 224,
+      "top": 529,
+      "absTop": 1122,
+      "w": 214,
+      "display": "block",
+      "position": "absolute",
+      "children": 0,
+      "childClasses": "",
+      "collapsedKids": 0
+    },
+    {
+      "cls": "div.layer.tiny",
+      "h": 224,
+      "top": 535,
+      "absTop": 1128,
+      "w": 191,
+      "display": "block",
+      "position": "absolute",
+      "children": 0,
+      "childClasses": "",
+      "collapsedKids": 0
+    },
+    {
+      "cls": "div.layer",
+      "h": 224,
+      "top": 529,
+      "absTop": 1122,
+      "w": 214,
+      "display": "block",
+      "position": "absolute",
+      "children": 0,
+      "childClasses": "",
+      "collapsedKids": 0
+    },
+    {
+      "cls": "div.layer.tiny",
+      "h": 224,
+      "top": 535,
+      "absTop": 1128,
+      "w": 191,
+      "display": "block",
+      "position": "absolute",
+      "children": 0,
+      "childClasses": "",
+      "collapsedKids": 0
+    }
+  ]
+}

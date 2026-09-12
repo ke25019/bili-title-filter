@@ -13,7 +13,7 @@ if (!fs.existsSync(MARKER)) {
   console.error('未找到 .test-instance.json —— 请先用 safe-edge.ps1 -Action start 启动独立测试实例。');
   process.exit(2);
 }
-const meta = JSON.parse(fs.readFileSync(MARKER, 'utf8'));
+const meta = JSON.parse(fs.readFileSync(MARKER, 'utf8').replace(/^\uFEFF/, ''));
 const PORT = meta.port || 9223;
 
 (async () => {

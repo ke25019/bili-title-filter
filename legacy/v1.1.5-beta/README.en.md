@@ -2,10 +2,10 @@
 
 > A browser extension that filters Bilibili videos by the title keywords you choose.
 
-[![version](https://img.shields.io/badge/version-1.1.6--beta-orange)](https://github.com/ke25019/bili-title-filter/releases)
+[![version](https://img.shields.io/badge/version-1.1.5--beta-orange)](https://github.com/ke25019/bili-title-filter/releases)
 [![manifest](https://img.shields.io/badge/Manifest-V3-blue)]()
 [![browser](https://img.shields.io/badge/Edge%20%7C%20Chrome-Chromium-00aeec)]()
-[![tests](https://img.shields.io/badge/tests-142%20passed-brightgreen)]()
+[![tests](https://img.shields.io/badge/tests-137%20passed-brightgreen)]()
 
 A Manifest V3 extension for **Microsoft Edge / Google Chrome and other Chromium browsers**.
 Block videos whose titles match your own keyword list: either **mask** them (cover and title merged into a single
@@ -16,13 +16,13 @@ live streams and anime, and can hide the home-page carousel banner on its own.
 
 ## ⚠️ Beta Notice
 
-The current release is **v1.1.6-beta**. It is feature-complete but still in testing — feedback is very welcome.
+The current release is **v1.1.5-beta**. It is feature-complete but still in testing — feedback is very welcome.
 
-- Automated checks: 80 for the core blocking logic, 42 for the settings UI, 20 for the background service — **142 in total, all passing**.
+- Automated checks: 75 for the core blocking logic, 42 for the settings UI, 20 for the background service — **137 in total, all passing**.
 - **Core principle of this release: rather skip than mis-block.** Whenever the extension cannot confidently identify a card, it skips that promo instead of risking a broken page.
 - Known limitation: if Bilibili redesigns its pages, a few card selectors may need updating (see the FAQ below).
 - Feedback: please open an [Issue](https://github.com/ke25019/bili-title-filter/issues) with the page URL and a screenshot if possible.
-- Older versions (v1.0.0-beta / v1.1.0-beta / v1.1.3-beta / v1.1.4-beta / v1.1.5-beta) are archived under [`legacy/`](legacy/) and can each be loaded as a standalone extension.
+- Older versions (v1.0.0-beta / v1.1.0-beta / v1.1.3-beta / v1.1.4-beta) are archived under [`legacy/`](legacy/) and can each be loaded as a standalone extension.
 
 ---
 
@@ -225,37 +225,9 @@ A: Bilibili is a single-page app: scrolling and navigation re-render cards, so t
 
 ## Version
 
-**v1.1.6-beta** · Requires Microsoft Edge (Chromium) 102+ (`minimum_chrome_version: 102`)
+**v1.1.4-beta** · Requires Microsoft Edge (Chromium) 102+ (`minimum_chrome_version: 102`)
 
 ### Changelog
-
-**v1.1.6-beta**
-
-> This release re-examines hide mode. An A/B comparison was run in an isolated headless instance
-> (extension disabled vs. hide mode active).
-
-- **Fixed: after switching from Hide back to Mask, some cards stayed hidden forever.**
-  The size safety valve in `applyBlock` keyed off “is the match reason unchanged”; in hide mode a card is
-  `display:none` (zero size), so as soon as the matching keyword changed (e.g. you blocked “游” and later added “我”)
-  the valve misjudged it and refused to process the card, leaving it hidden permanently.
-  It now checks “has this card ever been blocked”, so the size check only runs for a first-time block.
-- **Fixed: `hasLayoutEngine()` cached its result permanently.**
-  If it was first called before `body` had a layout, the cache stuck at `false` and the size safety valve was
-  effectively disabled for the whole session. It is no longer cached.
-- **Investigation result (with evidence): the blank blocks seen in hide mode are not caused by the extension.**
-  In the A/B run the number of “empty blocks” (no text, no loaded image) was identical with the extension disabled
-  and with hide mode active — 15 in both cases — and their ancestry shows they are all Bilibili’s own
-  `extension-tips-v2` panels inside the top-left `.vui_carousel`. The bottom blank measured only 60px in the same setup.
-- Test hardening: the statistics assertion now polls instead of relying on a fixed delay; three consecutive full runs are stable.
-- Checks grew 137 → 142; v1.1.5-beta archived under `legacy/`.
-
-**v1.1.5-beta**
-
-- **Fixed: grey/white placeholder blocks appearing in the middle of the content in hide mode.**
-  Bilibili’s feed grid keeps skeleton-only empty placeholder items at the end; hiding cards makes CSS Grid pull them
-  forward into the freed cells. They are now collapsed (plain ones hidden, load sentinels such as `.load-more-anchor`
-  only made invisible so Bilibili keeps loading). Measured: visible skeletons 89 → 18.
-- Loading still works after the collapse (real cards 14 → 22 while scrolling to the bottom).
 
 **v1.1.4-beta**
 

@@ -15,7 +15,7 @@ if (!fs.existsSync(MARKER)) {
   console.error('（这条检查是为了防止误连到你自己正在使用的浏览器）');
   process.exit(2);
 }
-const meta = JSON.parse(fs.readFileSync(MARKER, 'utf8'));
+const meta = JSON.parse(fs.readFileSync(MARKER, 'utf8').replace(/^\uFEFF/, ''));
 const PORT = meta.port || 9223;
 const exprFile = process.argv[2];
 if (!exprFile) { console.error('用法: node probe.js <表达式文件>'); process.exit(2); }

@@ -17,16 +17,6 @@ function check(name, cond, extra) {
   else { fail++; console.log('  \u2717 ' + name + (extra !== undefined ? '  -> ' + extra : '')); }
 }
 
-/** 轮询等待条件成立，避免异步回调造成的时序抖动 */
-async function waitFor(fn, timeout = 1500) {
-  const t0 = Date.now();
-  while (Date.now() - t0 < timeout) {
-    if (fn()) return true;
-    await sleep(50);
-  }
-  return fn();
-}
-
 function makeEnv(htmlPath, scriptRel) {
   const html = fs.readFileSync(htmlPath, 'utf8');
   const dom = new JSDOM(html, { runScripts: 'outside-only', pretendToBeVisual: true, url: 'https://example.com/' });
@@ -87,9 +77,7 @@ async function testPopup() {
 
   check('脚本执行无异常', errors.length === 0, errors.join(' | '));
   check('渲染出 14 个分区选项', doc.querySelectorAll('#types .type').length === 14, doc.querySelectorAll('#types .type').length);
-  // 统计文案是通过 runtime 消息异步回调写入的，这里轮询等待，避免定时抖动
-  const statsOk = await waitFor(() => /今日屏蔽 3 个/.test(doc.getElementById('stats').textContent));
-  check('统计已加载', statsOk, doc.getElementById('stats').textContent);
+  check('统计文案已加载', /今日屏蔽 3 个/.test(doc.getElementById('stats').textContent), doc.getElementById('stats').textContent);
   check('默认屏蔽方式为整体遮蔽', doc.querySelector('#mode button[data-value="mask"]').classList.contains('is-active'));
 
   // 添加屏蔽词

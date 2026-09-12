@@ -87,8 +87,8 @@ switch ($Action) {
               "--no-first-run --no-default-browser-check --disable-features=Translate --window-size=1440,900 " +
               $Url
     $proc = Start-Process -FilePath $edge -ArgumentList $argStr -PassThru
-    @{ port = $Port; profile = $ProfileDir; extension = $ExtensionPath; startedAt = (Get-Date).ToString('s'); launcherPid = $proc.Id } |
-      ConvertTo-Json | Set-Content -Path $MarkerFile -Encoding UTF8
+    $markerJson = @{ port = $Port; profile = $ProfileDir; extension = $ExtensionPath; startedAt = (Get-Date).ToString('s'); launcherPid = $proc.Id } | ConvertTo-Json
+    [System.IO.File]::WriteAllText($MarkerFile, $markerJson, (New-Object System.Text.UTF8Encoding($false)))
 
     $ok = $false
     for ($i = 1; $i -le 25; $i++) {

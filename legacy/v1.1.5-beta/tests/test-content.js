@@ -376,32 +376,7 @@ async function main() {
   shadow.getElementById('bf-reset-pos').dispatchEvent(new win.MouseEvent('click', { bubbles: true }));
   check('「重置位置」清空保存的位置', store.local.bfButtonPos === null || store.local.bfButtonPos === undefined);
 
-  console.log('\n[16] 完全隐藏 → 遮蔽 切换时不能被尺寸安全阀卡住（回归）');
-  // 模拟"有真实排版引擎"的环境：body 有非零尺寸
-  doc.body.setAttribute('data-w', '1400');
-  doc.body.setAttribute('data-h', '900');
-  await pushSettings({ mode: 'hide', keywords: ['正常的一个视频'] });
-  check('完全隐藏模式下该卡片被隐藏', $('c2').classList.contains('bf-hide'), $('c2').className);
-  // 模拟 display:none 之后尺寸变为 0
-  $('c2').removeAttribute('data-w');
-  $('c2').removeAttribute('data-h');
-  // 换成另一个同样命中的关键词 → 命中原因（key）发生变化
-  await pushSettings({ keywords: ['正常'] });
-  check('命中词变化后仍处于隐藏状态', $('c2').classList.contains('bf-hide'));
-  await pushSettings({ mode: 'mask' });
-  check('【回归】切回遮蔽模式后卡片恢复（不再一直隐藏）',
-    !$('c2').classList.contains('bf-hide') && $('c2').classList.contains('bf-blocked'),
-    $('c2').className);
-  check('恢复后遮罩重新出现', !!$('c2').querySelector(':scope > .bf-mask'));
-  // 还原
-  $('c2').setAttribute('data-w', '240');
-  $('c2').setAttribute('data-h', '210');
-  doc.body.removeAttribute('data-w');
-  doc.body.removeAttribute('data-h');
-  await pushSettings({ mode: 'mask', keywords: [] });
-  check('还原后卡片正常显示', !$('c2').classList.contains('bf-blocked'));
-
-  console.log('\n[17] 深色模式适配');
+  console.log('\n[16] 深色模式适配');
   doc.documentElement.setAttribute('data-theme', 'dark');
   await sleep(1600);
   check('识别 B 站深色模式并标记 html.bf-dark', doc.documentElement.classList.contains('bf-dark'));

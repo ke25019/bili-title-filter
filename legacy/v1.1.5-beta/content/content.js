@@ -1,5 +1,5 @@
 /**
- * B站屏蔽助手 - 内容脚本  v1.1.6
+ * B站屏蔽助手 - 内容脚本  v1.1.5
  * ---------------------------------------------------------------
  * 功能：
  *  1. 按用户自定义的「标题屏蔽词」屏蔽视频卡片
@@ -158,7 +158,6 @@
   var pendingFullScan = false;
   var lastScanAt = 0;
   var lastSectionScanAt = 0;
-  var lastPlaceholderCheck = 0;
 
   var hostEl = null;
   var shadow = null;
@@ -386,15 +385,12 @@
    * 真实浏览器里严格执行（这正是防止整页被遮蔽的关键）；
    * jsdom 等拿不到尺寸的环境（rect 全为 0）视为"未知"，交给结构判据兜底。
    */
-  /**
-   * 当前环境是否有真实排版引擎（能给出非零尺寸）。
-   * 注意：这里**不做缓存** —— 首次调用可能发生在 body 还没渲染好时，
-   * 一旦缓存为 false，尺寸安全阀就会整场失效。
-   * 每次只多一次 getBoundingClientRect，代价可忽略。
-   */
   function hasLayoutEngine() {
-    var r = document.body ? document.body.getBoundingClientRect() : null;
-    return !!(r && r.width > 0 && r.height > 0);
+    if (hasLayoutEngine._v === undefined) {
+      var r = document.body ? document.body.getBoundingClientRect() : null;
+      hasLayoutEngine._v = !!(r && r.width > 0 && r.height > 0);
+    }
+    return hasLayoutEngine._v;
   }
 
   function isPlausibleCardSize(el) {
@@ -575,18 +571,14 @@
   }
 
   /**
-   * 是不是"空占位项"：网格里既没有图片/视频，也没有实际内容。
-   * 两种情况都算：
-   *   - 完全空白（B 站为未加载内容预留的槽位）
-   *   - 只含骨架屏 + 极短文字（例如"加载中"之类的提示）
+   * 是不是"空占位项"：网格里既没有图片/视频，也没有任何文字。
+   * （B 站的推荐流会在末尾放一批这样的项，内容加载后才会填进去）
    */
   function isEmptyPlaceholder(el) {
     if (!el || el.nodeType !== 1) return false;
     if (el.classList.contains('bf-blocked')) return false;
     if (el.querySelector('img, picture, video, canvas, iframe')) return false;
-    var text = (el.textContent || '').replace(/\s+/g, '').trim();
-    if (!text) return true;
-    return text.length <= 4 && !!el.querySelector('[class*="skeleton"]');
+    return !(el.textContent || '').trim();
   }
 
   /**
@@ -711,14 +703,11 @@
   }
 
   function applyBlock(card, action) {
-    var wasBlocked = card.dataset.bfState === 'blocked';
-    var already = wasBlocked && card.dataset.bfKey === action.key;
+    var already = card.dataset.bfState === 'blocked' && card.dataset.bfKey === action.key;
 
-    // 安全阀：尺寸不像一张卡片时，宁可不屏蔽，也绝不制造页面空白。
-    // 注意这里必须看"是否已被屏蔽过"而不是"命中原因是否相同"：
-    // 完全隐藏模式下卡片是 display:none（尺寸为 0），
-    // 若因为命中词变化就拒绝处理，切回遮蔽模式时这些卡片会一直隐藏不恢复。
-    if (!wasBlocked && !isPlausibleCardSize(card)) {
+    // 安全阀：尺寸不像一张卡片时，宁可不屏蔽，也绝不制造页面空白
+    // （已屏蔽的卡片不再判断：mode=hide 时它本来就是 0 尺寸）
+    if (!already && !isPlausibleCardSize(card)) {
       log('跳过尺寸异常的容器（避免页面空白）：', card.className, action.key);
       return;
     }
@@ -1627,15 +1616,8 @@
   function tick() {
     refreshTheme();
 
-    // 完全隐藏模式下定期复核：占位项被真实内容填充后要能自动恢复。
-    // 节流到 ~2.5s，避免每次轮询都重新计算（变更防抖回调里已经会即时复核）
-    if (settings.enabled && settings.mode === 'hide') {
-      var now = Date.now();
-      if (now - lastPlaceholderCheck > 2500) {
-        lastPlaceholderCheck = now;
-        applyPlaceholderCollapse();
-      }
-    }
+    // 完全隐藏模式下定期复核一次：占位项被真实内容填充后要能自动恢复
+    if (settings.enabled && settings.mode === 'hide') applyPlaceholderCollapse();
 
     if (settings.showHeaderButton && document.body) {
       if (!hostEl || !hostEl.isConnected) mountUI();

@@ -1,0 +1,142 @@
+/* ===========================================================
+   B站屏蔽助手 - 注入到 B 站页面的样式
+   所有类名统一使用 bf- 前缀，避免与 B 站自身样式冲突
+   =========================================================== */
+
+:root {
+  --bf-mask-bg: #eef0f3;
+  --bf-mask-bg-hover: #e6e9ee;
+  --bf-mask-border: #c9ccd0;
+  --bf-mask-fg: #61666d;
+  --bf-mask-fg-strong: #18191c;
+  --bf-mask-accent: #00aeec;
+}
+
+/* B 站深色模式（由内容脚本检测后打标） */
+html.bf-dark {
+  --bf-mask-bg: #2b2c2f;
+  --bf-mask-bg-hover: #323438;
+  --bf-mask-border: #45474b;
+  --bf-mask-fg: #a2a7ae;
+  --bf-mask-fg-strong: #e8eaed;
+  --bf-mask-accent: #24b3f0;
+}
+
+/* ---------- 被屏蔽卡片本体 ---------- */
+.bf-blocked {
+  position: relative !important;
+  overflow: hidden !important;
+  border-radius: 8px !important;
+}
+
+/* 隐藏卡片原有内容（保留占位高度，不会引起页面抖动） */
+.bf-blocked > *:not(.bf-mask) {
+  visibility: hidden !important;
+}
+
+/* 完全隐藏模式：就像这个视频没出现过一样 */
+.bf-blocked.bf-hide {
+  display: none !important;
+}
+
+/* ---------- 遮蔽区域：标题 + 封面合成的一整块 ---------- */
+.bf-mask {
+  position: absolute !important;
+  inset: 0 !important;
+  z-index: 20 !important;
+  display: flex !important;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  box-sizing: border-box;
+  padding: 10px 12px;
+  text-align: center;
+  font-size: 13px;
+  line-height: 1.5;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Microsoft YaHei", "PingFang SC", sans-serif;
+  color: var(--bf-mask-fg);
+  background: var(--bf-mask-bg);
+  border: 1px dashed var(--bf-mask-border);
+  border-radius: 8px;
+  user-select: none;
+  transition: background-color .15s ease, opacity .18s ease;
+  margin: 0 !important;
+  float: none !important;
+  /* 悬停查看模式下不拦截鼠标事件，让指针能"穿过"遮罩触发卡片的悬停 */
+  pointer-events: none !important;
+}
+
+/* 关闭"悬停查看"时，遮罩需要挡住点击，避免误点进被屏蔽的视频 */
+.bf-blocked:not(.bf-hoverable) .bf-mask {
+  pointer-events: auto !important;
+  cursor: not-allowed;
+}
+
+.bf-mask__icon {
+  display: block;
+  width: 26px;
+  height: 26px;
+  opacity: .85;
+  color: var(--bf-mask-fg);
+  flex: none;
+}
+
+.bf-mask__icon svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.bf-mask__text {
+  display: block;
+  max-width: 100%;
+  color: var(--bf-mask-fg-strong);
+  font-size: 13px;
+  font-weight: 500;
+  word-break: break-word;
+}
+
+.bf-mask__sub {
+  display: block;
+  font-size: 12px;
+  opacity: .75;
+  word-break: break-word;
+}
+
+.bf-mask__hint {
+  display: block;
+  font-size: 12px;
+  opacity: .6;
+}
+
+/* 卡片较矮时（如右侧推荐位）压缩内容 */
+.bf-blocked.bf-compact .bf-mask__icon { display: none; }
+.bf-blocked.bf-compact .bf-mask__hint { display: none; }
+
+/* ---------- 悬停临时查看：进入卡片即展示，移出自动恢复 ---------- */
+.bf-blocked.bf-revealed > *:not(.bf-mask) {
+  visibility: visible !important;
+}
+
+.bf-blocked.bf-revealed .bf-mask {
+  opacity: 0 !important;
+}
+
+/* ---------- 首页顶部轮播横幅（独立开关，只作用于首页那一块） ---------- */
+.bf-banner-blocked {
+  display: none !important;
+}
+
+/* ---------- 完全隐藏模式下被"顶上来"的空骨架占位项 ----------
+   B 站的推荐流网格末尾放着若干只含骨架屏的空占位项；
+   我们把前面的卡片隐藏后，CSS Grid 会把这些占位项拉到前面来填空，
+   看起来就是内容中间多出一块块灰色空盒。这里把它们一并收敛掉。 */
+.bf-ph-collapsed {
+  display: none !important;
+}
+
+/* 加载哨兵类空占位项：只隐身，保留布局盒与位置，确保 B 站仍能继续加载内容 */
+.bf-ph-muted {
+  visibility: hidden !important;
+}

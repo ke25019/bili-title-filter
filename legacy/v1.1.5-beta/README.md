@@ -2,10 +2,10 @@
 
 > 按标题屏蔽词过滤 B 站视频的浏览器扩展 · A browser extension that filters Bilibili videos by title keywords.
 
-[![version](https://img.shields.io/badge/version-1.1.6--beta-orange)](https://github.com/ke25019/bili-title-filter/releases)
+[![version](https://img.shields.io/badge/version-1.1.5--beta-orange)](https://github.com/ke25019/bili-title-filter/releases)
 [![manifest](https://img.shields.io/badge/Manifest-V3-blue)]()
 [![browser](https://img.shields.io/badge/Edge%20%7C%20Chrome-Chromium-00aeec)]()
-[![tests](https://img.shields.io/badge/tests-142%20passed-brightgreen)]()
+[![tests](https://img.shields.io/badge/tests-137%20passed-brightgreen)]()
 
 **适用于 Microsoft Edge / Chrome 等 Chromium 浏览器的 B 站网页端扩展（Manifest V3）。**
 
@@ -54,7 +54,7 @@ Full instructions are available in the language-specific documents linked above.
 ```bash
 cd tests
 npm install
-npm test        # 142 项校验全部通过 / 142 checks, all passing
+npm test        # 137 项校验全部通过 / 137 checks, all passing
 ```
 
 本扩展的代码是纯原生 JavaScript、零运行时依赖。

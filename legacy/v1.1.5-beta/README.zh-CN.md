@@ -2,10 +2,10 @@
 
 > B站视频标题屏蔽助手 —— 一个按标题屏蔽词过滤 B 站视频的浏览器扩展。
 
-[![version](https://img.shields.io/badge/version-1.1.6--beta-orange)](https://github.com/ke25019/bili-title-filter/releases)
+[![version](https://img.shields.io/badge/version-1.1.5--beta-orange)](https://github.com/ke25019/bili-title-filter/releases)
 [![manifest](https://img.shields.io/badge/Manifest-V3-blue)]()
 [![browser](https://img.shields.io/badge/Edge%20%7C%20Chrome-Chromium-00aeec)]()
-[![tests](https://img.shields.io/badge/tests-142%20passed-brightgreen)]()
+[![tests](https://img.shields.io/badge/tests-137%20passed-brightgreen)]()
 
 一个适用于 **Microsoft Edge / Chrome 等 Chromium 浏览器** 的 B 站网页端扩展（Manifest V3）。
 按你自己添加的**视频标题屏蔽词**屏蔽视频：可以整体遮蔽（封面与标题合并成一块提示区域，鼠标悬停即可查看），
@@ -15,13 +15,13 @@
 
 ## ⚠️ Beta 说明
 
-当前版本为 **v1.1.6-beta**，功能完整可用，但仍处于测试阶段，欢迎反馈问题。
+当前版本为 **v1.1.5-beta**，功能完整可用，但仍处于测试阶段，欢迎反馈问题。
 
-- 自动化校验：核心屏蔽逻辑 80 项、设置界面 42 项、后台服务 20 项，**共 142 项全部通过**。
+- 自动化校验：核心屏蔽逻辑 75 项、设置界面 42 项、后台服务 20 项，**共 137 项全部通过**。
 - **本版的核心原则：宁可不屏蔽，也绝不乱遮**。任何一步无法确认是一张卡片时，扩展会直接跳过该推广，不影响页面其它内容。
 - 已知限制：B 站页面结构改版后，个别卡片的识别可能需要调整（见文末「常见问题」）。
 - 反馈渠道：请在 [Issues](https://github.com/ke25019/bili-title-filter/issues) 中提交，附上页面地址与截图更好定位。
-- 旧版本（v1.0.0-beta / v1.1.0-beta / v1.1.3-beta / v1.1.4-beta / v1.1.5-beta）已归档在 [`legacy/`](legacy/) 目录，可分别作为独立扩展加载。
+- 旧版本（v1.0.0-beta / v1.1.0-beta / v1.1.3-beta / v1.1.4-beta）已归档在 [`legacy/`](legacy/) 目录，可分别作为独立扩展加载。
 
 ---
 
@@ -182,7 +182,7 @@ bili-title-filter/
 ```bash
 cd tests
 npm install      # 仅测试需要 jsdom
-npm test         # 142 项行为校验
+npm test         # 137 项行为校验
 ```
 
 验证覆盖：屏蔽逻辑与两种屏蔽方式、悬停展示、**真实直播楼层结构下的封面+标题合并遮蔽**、14 类分区与兜底规则、
@@ -229,26 +229,9 @@ A：B 站是单页应用，列表滚动与切换会让卡片重新渲染，统�
 
 ## 版本
 
-**v1.1.6-beta** · 适用于 Microsoft Edge (Chromium) 102+（`minimum_chrome_version: 102`）
+**v1.1.5-beta** · 适用于 Microsoft Edge (Chromium) 102+（`minimum_chrome_version: 102`）
 
 ### 更新日志
-
-**v1.1.6-beta**
-
-> 本版重点复查「完全隐藏」模式，并用独立无头实例做了 A/B 对照（扩展停用 vs 完全隐藏生效）。
-
-- **修复：从「完全隐藏」切回「整体遮蔽」时，部分卡片一直隐藏不恢复**
-  根因是 `applyBlock` 的尺寸安全阀用「命中原因是否相同」做判断；完全隐藏模式下卡片是 `display:none`（尺寸为 0），
-  命中词一旦变化（例如你先屏蔽「游」、之后又加了「我」），安全阀就会误判并拒绝处理，卡片再也不恢复。
-  现在改为看「是否已被屏蔽过」——尺寸校验只在**首次**屏蔽时进行。
-- **修复：`hasLayoutEngine()` 结果被永久缓存**
-  它可能在 `body` 尚未完成渲染时首次被调用，一旦缓存为 false，尺寸安全阀整场失效。现已取消缓存。
-- **排查结论（附实测证据）：完全隐藏模式下的空白块与插件无关**
-  A/B 对照显示：扩展停用与完全隐藏生效两种状态下，"无文字、无已加载图片的空块"数量完全一致（都是 15 个），
-  链路显示它们全部是 B 站自己的 `extension-tips-v2`，位于左上角轮播 `.vui_carousel` 的幻灯片内；
-  同一环境下页面底部空白也只有 60px。
-- 测试加固：统计文案改为轮询等待，连续 3 轮完整测试不再出现时序抖动
-- 校验项 137 → 142；`legacy/` 新增 v1.1.5-beta 归档
 
 **v1.1.5-beta**
 
