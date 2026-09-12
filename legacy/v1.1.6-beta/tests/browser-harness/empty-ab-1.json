@@ -1,0 +1,60 @@
+﻿{
+  "phase": "B 完全隐藏生效",
+  "enabled": true,
+  "hiddenCards": 6,
+  "collapsed": 14,
+  "emptyCount": 15,
+  "emptyInView": 13,
+  "empties": [
+    {
+      "cls": "taper-line",
+      "at": "0,0",
+      "chain": "div.taper-line(1401x100) < div.bili-header__banner(1401x155) < div.bili-header.large-header(1401x265) < div.bili-feed4(1401x861) < div(1401x861)"
+    },
+    {
+      "cls": "extension-tips-v2",
+      "at": "-3940,265",
+      "chain": "div.extension-tips-v2(500x281) < div.carousel-area-img(500x281) < div.carousel-area(500x281) < div.vui_carousel__slide.vui_carousel__slide--next(500x365) < div.vui_carousel__slides(500x365) < div.vui_carousel.vui_carousel--bottom(500x365)"
+    },
+    {
+      "cls": "extension-tips-v2",
+      "at": "-3440,265",
+      "chain": "div.extension-tips-v2(500x281) < div.carousel-area-img(500x281) < div.carousel-area(500x281) < div.vui_carousel__slide(500x365) < div.vui_carousel__slides(500x365) < div.vui_carousel.vui_carousel--bottom(500x365)"
+    },
+    {
+      "cls": "extension-tips-v2",
+      "at": "-2939,265",
+      "chain": "div.extension-tips-v2(500x281) < div.carousel-area-img(500x281) < div.carousel-area(500x281) < div.vui_carousel__slide(500x365) < div.vui_carousel__slides(500x365) < div.vui_carousel.vui_carousel--bottom(500x365)"
+    },
+    {
+      "cls": "extension-tips-v2",
+      "at": "-2439,265",
+      "chain": "div.extension-tips-v2(500x281) < div.carousel-area-img(500x281) < div.carousel-area(500x281) < div.vui_carousel__slide(500x365) < div.vui_carousel__slides(500x365) < div.vui_carousel.vui_carousel--bottom(500x365)"
+    },
+    {
+      "cls": "extension-tips-v2",
+      "at": "-1939,265",
+      "chain": "div.extension-tips-v2(500x281) < div.carousel-area-img(500x281) < div.carousel-area(500x281) < div.vui_carousel__slide(500x365) < div.vui_carousel__slides(500x365) < div.vui_carousel.vui_carousel--bottom(500x365)"
+    },
+    {
+      "cls": "extension-tips-v2",
+      "at": "-1438,265",
+      "chain": "div.extension-tips-v2(500x281) < div.carousel-area-img(500x281) < div.carousel-area(500x281) < div.vui_carousel__slide(500x365) < div.vui_carousel__slides(500x365) < div.vui_carousel.vui_carousel--bottom(500x365)"
+    },
+    {
+      "cls": "extension-tips-v2",
+      "at": "-938,265",
+      "chain": "div.extension-tips-v2(500x281) < div.carousel-area-img(500x281) < div.carousel-area(500x281) < div.vui_carousel__slide.vui_carousel__slide--prev(500x365) < div.vui_carousel__slides(500x365) < div.vui_carousel.vui_carousel--bottom(500x365)"
+    },
+    {
+      "cls": "extension-tips-v2",
+      "at": "-437,265",
+      "chain": "div.extension-tips-v2(500x281) < div.carousel-area-img(500x281) < div.carousel-area(500x281) < div.vui_carousel__slide.vui_carousel__slide--current(500x365) < div.vui_carousel__slides(500x365) < div.vui_carousel.vui_carousel--bottom(500x365)"
+    },
+    {
+      "cls": "extension-tips-v2",
+      "at": "63,265",
+      "chain": "div.extension-tips-v2(500x281) < div.carousel-area-img(500x281) < div.carousel-area(500x281) < div.vui_carousel__slide.vui_carousel__slide--next(500x365) < div.vui_carousel__slides(500x365) < div.vui_carousel.vui_carousel--bottom(500x365)"
+    }
+  ]
+}

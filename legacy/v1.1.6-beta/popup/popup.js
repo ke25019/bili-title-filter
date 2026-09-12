@@ -39,16 +39,7 @@
     });
     $('mode-hint').textContent = settings.mode === 'mask'
       ? (settings.revealOnHover ? '封面与标题合并为一整块，鼠标悬停可查看' : '封面与标题合并为一整块提示区域')
-      : (settings.hideKeepSlot !== false ? '卡片不再显示，但原来的位置留空（页面不重排）' : '卡片整个移除，后面的内容前移补位');
-
-    // 「隐藏时保留原位置」只对完全隐藏有意义
-    const keepRow = $('keepslot-row');
-    const keepBtn = $('keepslot');
-    const showKeep = settings.mode === 'hide';
-    keepRow.style.display = showKeep ? 'flex' : 'none';
-    $('keepslot-hint').style.display = showKeep ? 'block' : 'none';
-    keepBtn.classList.toggle('is-on', settings.hideKeepSlot !== false);
-    keepBtn.setAttribute('aria-checked', settings.hideKeepSlot !== false ? 'true' : 'false');
+      : '直接从页面移除，如同从未出现';
 
     Array.prototype.forEach.call(document.querySelectorAll('#theme button'), function (b) {
       b.classList.toggle('is-active', b.dataset.value === settings.theme);
@@ -145,11 +136,6 @@
     $('mode').addEventListener('click', function (e) {
       var b = e.target.closest('button[data-value]');
       if (b) save({ mode: b.dataset.value });
-    });
-
-    // 完全隐藏：保留原位置 / 移除位置
-    $('keepslot').addEventListener('click', function () {
-      save({ hideKeepSlot: !(settings.hideKeepSlot !== false) });
     });
 
     $('theme').addEventListener('click', function (e) {

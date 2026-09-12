@@ -1,5 +1,5 @@
 /**
- * B站屏蔽助手 - 内容脚本  v1.1.7
+ * B站屏蔽助手 - 内容脚本  v1.1.6
  * ---------------------------------------------------------------
  * 功能：
  *  1. 按用户自定义的「标题屏蔽词」屏蔽视频卡片
@@ -606,8 +606,6 @@
     }
 
     if (!settings.enabled || settings.mode !== 'hide') return;
-    // 只在"移除位置"模式下才需要收敛：保留位置时页面不重排，不会有占位块被顶上来
-    if (settings.hideKeepSlot !== false) return;
 
     var hiddenCards = document.querySelectorAll('.bf-blocked.bf-hide');
     if (!hiddenCards.length) return;
@@ -728,7 +726,8 @@
     if (already) {
       // 命中原因没变，但屏蔽方式 / 文案 / 悬停展示等设置可能变了，这里同步刷新
       card.dataset.bfCard = '1';
-      applyModeClasses(card);
+      card.classList.toggle('bf-hide', settings.mode === 'hide');
+      card.classList.toggle('bf-hoverable', !!settings.revealOnHover);
       ensureMask(card, action);
       updateCompact(card);
       return;
@@ -743,7 +742,8 @@
 
     card.classList.remove('bf-revealed');
     card.classList.add('bf-blocked');
-    applyModeClasses(card);
+    card.classList.toggle('bf-hide', settings.mode === 'hide');
+    card.classList.toggle('bf-hoverable', !!settings.revealOnHover);
 
     ensureMask(card, action);
     bindHoverReveal(card);
@@ -754,25 +754,11 @@
     log('已屏蔽：', action.key, getTitle(card));
   }
 
-  /**
-   * 按当前屏蔽方式给卡片打类：
-   *   整体遮蔽          → bf-blocked（内容隐藏 + 显示遮罩）
-   *   完全隐藏·保留位置 → bf-hide-slot（只隐藏内容，位置留空，页面不重排）
-   *   完全隐藏·移除位置 → bf-hide（display:none，后面的内容前移补位）
-   */
-  function applyModeClasses(card) {
-    var hide = settings.mode === 'hide';
-    var keepSlot = hide && settings.hideKeepSlot !== false;
-    card.classList.toggle('bf-hide', hide && !keepSlot);
-    card.classList.toggle('bf-hide-slot', keepSlot);
-    card.classList.toggle('bf-hoverable', !hide && !!settings.revealOnHover);
-  }
-
   function clearBlock(card) {
     card.dataset.bfCard = '1';
     if (card.dataset.bfState !== 'blocked') return;
 
-    card.classList.remove('bf-blocked', 'bf-hide', 'bf-hide-slot', 'bf-hoverable', 'bf-revealed', 'bf-compact');
+    card.classList.remove('bf-blocked', 'bf-hide', 'bf-hoverable', 'bf-revealed', 'bf-compact');
     delete card.dataset.bfState;
     delete card.dataset.bfKey;
     delete card.dataset.bfKind;
@@ -1181,11 +1167,6 @@
     '          <button type="button" data-value="hide">完全隐藏</button>',
     '        </div>',
     '        <div class="bf-hint" id="bf-mode-hint"></div>',
-    '        <div class="bf-subrow" id="bf-keepslot-row">',
-    '          <span>隐藏时保留原位置</span>',
-    '          <button class="bf-switch bf-switch--sm" id="bf-keepslot" type="button" role="switch"></button>',
-    '        </div>',
-    '        <div class="bf-hint" id="bf-keepslot-hint">开启：视频不显示但位置留空，页面不重排（更稳定）；关闭：卡片整个移除，后面内容前移补位</div>',
     '      </div>',
     '      <div class="bf-row">',
     '        <div class="bf-label"><span>标题屏蔽词</span></div>',
@@ -1439,11 +1420,6 @@
       if (b) updateSettings({ theme: b.dataset.value });
     });
 
-    // 完全隐藏：保留原位置（v1.0.0 行为） / 移除位置
-    shadow.getElementById('bf-keepslot').addEventListener('click', function () {
-      updateSettings({ hideKeepSlot: !settings.hideKeepSlot });
-    });
-
     var input = shadow.getElementById('bf-kw-input');
     shadow.getElementById('bf-kw-add').addEventListener('click', addKeywordFromInput);
     input.addEventListener('keydown', function (e) {
@@ -1519,14 +1495,7 @@
     shadow.getElementById('bf-mode-hint').textContent =
       settings.mode === 'mask'
         ? (settings.revealOnHover ? '封面与标题合并为一整块，鼠标悬停可查看' : '封面与标题合并为一整块提示区域')
-        : (settings.hideKeepSlot !== false ? '卡片不再显示，但原来的位置留空（页面不重排）' : '卡片整个移除，后面的内容前移补位');
-
-    var keepSlotRow = shadow.getElementById('bf-keepslot-row');
-    var keepSlotBtn = shadow.getElementById('bf-keepslot');
-    // 该开关只对"完全隐藏"有意义
-    keepSlotRow.style.display = settings.mode === 'hide' ? 'flex' : 'none';
-    keepSlotBtn.classList.toggle('is-on', settings.hideKeepSlot !== false);
-    keepSlotBtn.setAttribute('aria-checked', settings.hideKeepSlot !== false ? 'true' : 'false');
+        : '直接从页面移除，如同从未出现';
 
     shadow.querySelectorAll('#bf-theme button').forEach(function (b) {
       b.classList.toggle('is-active', b.dataset.value === settings.theme);
@@ -1660,8 +1629,7 @@
 
     // 完全隐藏模式下定期复核：占位项被真实内容填充后要能自动恢复。
     // 节流到 ~2.5s，避免每次轮询都重新计算（变更防抖回调里已经会即时复核）
-    // 只有"移除位置"模式才会把空占位块顶上来，这时才需要定期复核
-    if (settings.enabled && settings.mode === 'hide' && settings.hideKeepSlot === false) {
+    if (settings.enabled && settings.mode === 'hide') {
       var now = Date.now();
       if (now - lastPlaceholderCheck > 2500) {
         lastPlaceholderCheck = now;

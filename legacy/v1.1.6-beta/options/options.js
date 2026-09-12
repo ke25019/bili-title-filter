@@ -63,7 +63,6 @@
     $('mask-text').value = settings.maskText;
     $('type-mask-text').value = settings.typeMaskText;
     $('hover-reveal').checked = !!settings.revealOnHover;
-    $('hide-keep-slot').checked = settings.hideKeepSlot !== false;
 
     $('case-sensitive').checked = !!settings.caseSensitive;
     $('use-regex').checked = !!settings.useRegex;
@@ -233,10 +232,6 @@
     $('mask-text').addEventListener('change', function () { save({ maskText: $('mask-text').value }); });
     $('type-mask-text').addEventListener('change', function () { save({ typeMaskText: $('type-mask-text').value }); });
     $('hover-reveal').addEventListener('change', function () { save({ revealOnHover: $('hover-reveal').checked }, true); });
-    $('hide-keep-slot').addEventListener('change', function () {
-      save({ hideKeepSlot: $('hide-keep-slot').checked }, true);
-      toast($('hide-keep-slot').checked ? '完全隐藏时将保留原位置（页面不重排）' : '完全隐藏时卡片将整个移除');
-    });
     $('case-sensitive').addEventListener('change', function () { save({ caseSensitive: $('case-sensitive').checked }, true); });
     $('use-regex').addEventListener('change', function () { save({ useRegex: $('use-regex').checked }, true); });
     $('match-up').addEventListener('change', function () { save({ matchUpName: $('match-up').checked }, true); });

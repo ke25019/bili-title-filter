@@ -2,10 +2,10 @@
 
 > A browser extension that filters Bilibili videos by the title keywords you choose.
 
-[![version](https://img.shields.io/badge/version-1.1.7--beta-orange)](https://github.com/ke25019/bili-title-filter/releases)
+[![version](https://img.shields.io/badge/version-1.1.6--beta-orange)](https://github.com/ke25019/bili-title-filter/releases)
 [![manifest](https://img.shields.io/badge/Manifest-V3-blue)]()
 [![browser](https://img.shields.io/badge/Edge%20%7C%20Chrome-Chromium-00aeec)]()
-[![tests](https://img.shields.io/badge/tests-160%20passed-brightgreen)]()
+[![tests](https://img.shields.io/badge/tests-142%20passed-brightgreen)]()
 
 A Manifest V3 extension for **Microsoft Edge / Google Chrome and other Chromium browsers**.
 Block videos whose titles match your own keyword list: either **mask** them (cover and title merged into a single
@@ -16,13 +16,13 @@ live streams and anime, and can hide the home-page carousel banner on its own.
 
 ## ⚠️ Beta Notice
 
-The current release is **v1.1.7-beta**. It is feature-complete but still in testing — feedback is very welcome.
+The current release is **v1.1.6-beta**. It is feature-complete but still in testing — feedback is very welcome.
 
-- Automated checks: 88 for the core blocking logic, 52 for the settings UI, 20 for the background service — **160 in total, all passing**.
+- Automated checks: 80 for the core blocking logic, 42 for the settings UI, 20 for the background service — **142 in total, all passing**.
 - **Core principle of this release: rather skip than mis-block.** Whenever the extension cannot confidently identify a card, it skips that promo instead of risking a broken page.
 - Known limitation: if Bilibili redesigns its pages, a few card selectors may need updating (see the FAQ below).
 - Feedback: please open an [Issue](https://github.com/ke25019/bili-title-filter/issues) with the page URL and a screenshot if possible.
-- Older versions (v1.0.0-beta / v1.1.0-beta / v1.1.3-beta / v1.1.4-beta / v1.1.5-beta / v1.1.6-beta) are archived under [`legacy/`](legacy/) and can each be loaded as a standalone extension.
+- Older versions (v1.0.0-beta / v1.1.0-beta / v1.1.3-beta / v1.1.4-beta / v1.1.5-beta) are archived under [`legacy/`](legacy/) and can each be loaded as a standalone extension.
 
 ---
 
@@ -38,7 +38,7 @@ The current release is **v1.1.7-beta**. It is feature-complete but still in test
 | Style | Behaviour |
 | --- | --- |
 | **Mask** | The cover and title are merged into one block showing “根据您的屏蔽词已将此视频屏蔽”. The layout stays intact, and **hovering the mouse reveals the video**; moving the pointer away masks it again. |
-| **Hide** | The video stops being displayed. By default the **original slot is kept** (same as v1.0.0-beta): only the card content is hidden, so the page neither re-flows nor shrinks and Bilibili's empty skeleton placeholders are not pulled into the middle of the feed. Turn off “keep the original slot” in the panel to remove the card from the layout entirely instead. |
+| **Hide** | The card is removed from the page entirely (`display:none`) — **as if the video never existed**. The grid re-flows, and Bilibili’s empty placeholder blocks that get pulled up to fill the gap are collapsed too (see below). |
 
 - The mask text is customisable (Options → Blocking style → Mask text).
 - Hover-to-reveal can be turned off; when it is off, the mask intercepts clicks so you cannot open a blocked video by accident.
@@ -225,33 +225,9 @@ A: Bilibili is a single-page app: scrolling and navigation re-render cards, so t
 
 ## Version
 
-**v1.1.7-beta** · Requires Microsoft Edge (Chromium) 102+ (`minimum_chrome_version: 102`)
+**v1.1.6-beta** · Requires Microsoft Edge (Chromium) 102+ (`minimum_chrome_version: 102`)
 
 ### Changelog
-
-**v1.1.7-beta**
-
-> Following your hint, this release went back to v1.0.0-beta - **only its hide mode behaves the way you want**.
-> Running both versions against the same real DOM revealed the root cause.
-
-- **Root cause: the hiding target changed**
-
-  | Card kind | v1.0.0-beta.1 | from v1.1.0 |
-  | --- | --- | --- |
-  | Cards wrapped in `.feed-card` | hides `.feed-card` (the grid item) | same |
-  | **`.bili-feed-card` that is itself a grid item** | **hides only the inner `.bili-video-card`** - grid item stays, **no reflow** | **hides the `.bili-feed-card` grid item** - **the entire grid reflows** |
-
-  The difference came from adding `.bili-feed-card` to the card selector in v1.1.0. Reflow causes both symptoms you reported:
-  the freed cells get filled with Bilibili's **empty skeleton placeholders** from the end of the grid (grey blocks mid-content),
-  and the page becomes shorter overall (blank space at the bottom).
-
-- **New switch: "keep the original slot when hiding"** (on by default = v1.0.0 behaviour)
-  * **On (default)**: only the card content is hidden, the slot stays -> no reflow, no shrinking, no placeholders pulled up
-  * **Off**: the card is removed from the layout and later cards move up (reflow; the extension then collapses the pulled-up empty placeholders)
-
-  The switch only appears when Hide mode is selected (in the panel and the popup); it is also in the options page.
-- **Placeholder collapsing now only runs in "remove slot" mode** (with the slot kept there is no reflow, so nothing is pulled up)
-- Checks grew 142 -> 160, with 18 new assertions covering both hide behaviours, their CSS rules and the switch wiring
 
 **v1.1.6-beta**
 

@@ -112,21 +112,6 @@ async function testPopup() {
   check('切换为完全隐藏模式已保存', store.sync.bfSettings.mode === 'hide', store.sync.bfSettings.mode);
   check('模式切换同步激活态', doc.querySelector('#mode button[data-value="hide"]').classList.contains('is-active'));
 
-  // 完全隐藏：保留原位置开关
-  check('存在「隐藏时保留原位置」开关', !!doc.getElementById('keepslot'));
-  check('切到完全隐藏后该开关显示出来', doc.getElementById('keepslot-row').style.display === 'flex',
-    doc.getElementById('keepslot-row').style.display);
-  check('默认保留原位置（与 v1.0.0 行为一致）', store.sync.bfSettings.hideKeepSlot !== false);
-  check('开关回显为开启', doc.getElementById('keepslot').classList.contains('is-on'));
-  doc.getElementById('keepslot').click();
-  await sleep(60);
-  check('点击后关闭「保留原位置」', store.sync.bfSettings.hideKeepSlot === false);
-  doc.getElementById('keepslot').click();
-  await sleep(60);
-  check('再次点击恢复保留原位置', store.sync.bfSettings.hideKeepSlot === true);
-  check('提示文案随模式变化', /位置留空/.test(doc.getElementById('mode-hint').textContent),
-    doc.getElementById('mode-hint').textContent);
-
   // 分区屏蔽（卡片级）
   doc.querySelector('#types .type[data-key="live"]').click();
   await sleep(60);
@@ -231,20 +216,12 @@ async function testOptions() {
 
   // 悬停展示开关
   const hv = doc.getElementById('hover-reveal');
-  check('悬停展示默认开启', hv.checked === true);  hv.checked = false;
+  check('悬停展示默认开启', hv.checked === true);
+  hv.checked = false;
   hv.dispatchEvent(new win.Event('change', { bubbles: true }));
   await sleep(40);
   check('悬停展示开关已保存', store.sync.bfSettings.revealOnHover === false);
   check('关闭悬停后预览卡片同步取消可悬停', !doc.getElementById('preview-card').classList.contains('bf-hoverable'));
-
-  // 隐藏时保留原位置（设置页checkbox）
-  const keepSlot = doc.getElementById('hide-keep-slot');
-  check('设置页存在「完全隐藏时保留原位置」', !!keepSlot);
-  check('设置页默认勾选（保留原位置）', keepSlot.checked === true);
-  keepSlot.checked = false;
-  keepSlot.dispatchEvent(new win.Event('change', { bubbles: true }));
-  await sleep(60);
-  check('取消勾选后保存为不保留位置', store.sync.bfSettings.hideKeepSlot === false);
 
   // 重置悬浮按钮位置
   doc.getElementById('reset-pos').click();

@@ -244,27 +244,11 @@ async function main() {
   check('关闭悬停展示后移入不再展示', !$('c1').classList.contains('bf-revealed'));
   await pushSettings({ revealOnHover: true });
 
-  console.log('\n[5] 完全隐藏模式的两种行为');
-  // 默认：保留原位置（v1.0.0-beta 的行为）
-  await pushSettings({ mode: 'hide', hideKeepSlot: true });
-  check('默认保留原位置：卡片标记为 bf-hide-slot', $('c1').classList.contains('bf-hide-slot'), $('c1').className);
-  check('保留位置时不做 display:none（页面不重排）', !$('c1').classList.contains('bf-hide'));
-  check('保留位置时仍带 bf-blocked（内容由 CSS 隐藏）', $('c1').classList.contains('bf-blocked'));
-  const cssText = fs.readFileSync(path.join(ROOT, 'content', 'content.css'), 'utf8');
-  check('CSS 定义了保留位置时隐藏遮罩的规则',
-    /\.bf-blocked\.bf-hide-slot\s*>\s*\.bf-mask\s*\{[^}]*display:\s*none/.test(cssText));
-  check('CSS 定义了移除位置时的 display:none 规则',
-    /\.bf-blocked\.bf-hide\s*\{[^}]*display:\s*none/.test(cssText));
-
-  // 关闭保留位置：整卡移除
-  await pushSettings({ hideKeepSlot: false });
-  check('关闭保留位置后整卡隐藏 bf-hide', $('c1').classList.contains('bf-hide'));
-  check('此时不再带 bf-hide-slot', !$('c1').classList.contains('bf-hide-slot'));
-
-  await pushSettings({ mode: 'mask', hideKeepSlot: true });
-  check('切回遮蔽后两种隐藏类都被移除',
-    !$('c1').classList.contains('bf-hide') && !$('c1').classList.contains('bf-hide-slot'));
-  check('切回遮蔽后遮罩恢复显示', $('c1').classList.contains('bf-blocked') && !$('c1').classList.contains('bf-hide-slot'));
+  console.log('\n[5] 完全隐藏模式');
+  await pushSettings({ mode: 'hide' });
+  check('命中视频被完全隐藏 bf-hide', $('c1').classList.contains('bf-hide'));
+  await pushSettings({ mode: 'mask' });
+  check('切回遮蔽后 bf-hide 被移除', !$('c1').classList.contains('bf-hide'));
   await pushSettings({ keywords: [] });
 
   console.log('\n[6] 分区屏蔽 · 卡片级（真实直播楼层结构）');
@@ -312,10 +296,10 @@ async function main() {
   check('遮蔽模式不动占位项', doc.querySelectorAll('.bf-ph-collapsed, .bf-ph-muted').length === 0,
     doc.querySelectorAll('.bf-ph-collapsed, .bf-ph-muted').length);
 
-  await pushSettings({ mode: 'hide', hideKeepSlot: false, keywords: ['剧透'] });
-  check('完全隐藏（移除位置）下收敛空占位项（含骨架屏）', $('ph1').classList.contains('bf-ph-collapsed'),
+  await pushSettings({ mode: 'hide', keywords: ['剧透'] });
+  check('完全隐藏模式下收敛空占位项（含骨架屏）', $('ph1').classList.contains('bf-ph-collapsed'),
     $('ph1').className);
-  check('完全隐藏（移除位置）下收敛完全空白的占位项', $('ph2').classList.contains('bf-ph-collapsed'), $('ph2').className);
+  check('完全隐藏模式下收敛完全空白的占位项', $('ph2').classList.contains('bf-ph-collapsed'), $('ph2').className);
   check('加载哨兵只做隐身、保留布局盒（不影响继续加载）',
     $('anchor1').classList.contains('bf-ph-muted') && !$('anchor1').classList.contains('bf-ph-collapsed'),
     $('anchor1').className);
@@ -329,12 +313,8 @@ async function main() {
   await sleep(900);
   check('占位项被真实内容填充后自动恢复显示', !$('ph1').classList.contains('bf-ph-collapsed'), $('ph1').className);
 
-  await pushSettings({ mode: 'mask', keywords: [], hideKeepSlot: false });
+  await pushSettings({ mode: 'mask', keywords: [] });
   check('切回遮蔽模式后占位项标记被清除', doc.querySelectorAll('.bf-ph-collapsed, .bf-ph-muted').length === 0);
-  // 保留位置模式不应该去动占位项（页面不重排，没有被顶上来的东西）
-  await pushSettings({ mode: 'hide', hideKeepSlot: true, keywords: ['剧透'] });
-  check('保留位置模式下不触碰占位项', doc.querySelectorAll('.bf-ph-collapsed, .bf-ph-muted').length === 0);
-  await pushSettings({ mode: 'mask', keywords: [], hideKeepSlot: true });
 
   console.log('\n[11] 顶栏与横幅不被误伤');
   check('顶栏「直播」入口未被屏蔽', !doc.querySelector('.channel-link__right').classList.contains('bf-blocked'));
@@ -400,8 +380,8 @@ async function main() {
   // 模拟"有真实排版引擎"的环境：body 有非零尺寸
   doc.body.setAttribute('data-w', '1400');
   doc.body.setAttribute('data-h', '900');
-  await pushSettings({ mode: 'hide', hideKeepSlot: false, keywords: ['正常的一个视频'] });
-  check('完全隐藏（移除位置）下该卡片被隐藏', $('c2').classList.contains('bf-hide'), $('c2').className);
+  await pushSettings({ mode: 'hide', keywords: ['正常的一个视频'] });
+  check('完全隐藏模式下该卡片被隐藏', $('c2').classList.contains('bf-hide'), $('c2').className);
   // 模拟 display:none 之后尺寸变为 0
   $('c2').removeAttribute('data-w');
   $('c2').removeAttribute('data-h');

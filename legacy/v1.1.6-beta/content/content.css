@@ -39,13 +39,6 @@ html.bf-dark {
   display: none !important;
 }
 
-/* 完全隐藏 + 保留原位置：只隐藏卡片内容（子元素由上面的规则隐藏），
-   盒子尺寸不变 → 页面不重排、不变短，也不会把站点末尾的空骨架占位块顶到内容中间。
-   这就是 v1.0.0-beta 的实际行为，作为默认值。 */
-.bf-blocked.bf-hide-slot > .bf-mask {
-  display: none !important;
-}
-
 /* ---------- 遮蔽区域：标题 + 封面合成的一整块 ---------- */
 .bf-mask {
   position: absolute !important;
