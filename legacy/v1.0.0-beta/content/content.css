@@ -1,0 +1,152 @@
+/* ===========================================================
+   B站屏蔽助手 - 注入到 B 站页面的样式
+   所有类名统一使用 bf- 前缀，避免与 B 站自身样式冲突
+   =========================================================== */
+
+:root {
+  --bf-mask-bg: #eef0f3;
+  --bf-mask-bg-hover: #e6e9ee;
+  --bf-mask-border: #c9ccd0;
+  --bf-mask-fg: #61666d;
+  --bf-mask-fg-strong: #18191c;
+  --bf-mask-accent: #00aeec;
+}
+
+/* B 站深色模式（由内容脚本检测后打标） */
+html.bf-dark {
+  --bf-mask-bg: #2b2c2f;
+  --bf-mask-bg-hover: #323438;
+  --bf-mask-border: #45474b;
+  --bf-mask-fg: #a2a7ae;
+  --bf-mask-fg-strong: #e8eaed;
+  --bf-mask-accent: #24b3f0;
+}
+
+/* ---------- 被屏蔽卡片本体 ---------- */
+.bf-blocked {
+  position: relative !important;
+  overflow: hidden !important;
+  border-radius: 8px !important;
+}
+
+/* 隐藏卡片原有内容（保留占位高度，不会引起页面抖动） */
+.bf-blocked > *:not(.bf-mask):not(.bf-mask-chip) {
+  visibility: hidden !important;
+}
+
+/* 完全隐藏模式：就像这个视频没出现过一样 */
+.bf-blocked.bf-hide {
+  display: none !important;
+}
+
+/* ---------- 遮蔽区域：标题 + 封面合成的一整块 ---------- */
+.bf-mask {
+  position: absolute !important;
+  inset: 0 !important;
+  z-index: 20 !important;
+  display: flex !important;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  box-sizing: border-box;
+  padding: 10px 12px;
+  text-align: center;
+  font-size: 13px;
+  line-height: 1.5;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Microsoft YaHei", "PingFang SC", sans-serif;
+  color: var(--bf-mask-fg);
+  background: var(--bf-mask-bg);
+  border: 1px dashed var(--bf-mask-border);
+  border-radius: 8px;
+  cursor: default;
+  user-select: none;
+  transition: background-color .15s ease, opacity .15s ease;
+  /* 防止被卡片的 flex / grid 布局影响 */
+  margin: 0 !important;
+  float: none !important;
+}
+
+.bf-blocked.bf-clickable .bf-mask {
+  cursor: pointer;
+}
+
+.bf-blocked.bf-clickable .bf-mask:hover {
+  background: var(--bf-mask-bg-hover);
+}
+
+.bf-mask__icon {
+  display: block;
+  width: 26px;
+  height: 26px;
+  opacity: .85;
+  color: var(--bf-mask-fg);
+  flex: none;
+}
+
+.bf-mask__icon svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.bf-mask__text {
+  display: block;
+  max-width: 100%;
+  color: var(--bf-mask-fg-strong);
+  font-size: 13px;
+  font-weight: 500;
+  word-break: break-word;
+}
+
+.bf-mask__sub {
+  display: block;
+  font-size: 12px;
+  opacity: .75;
+  word-break: break-word;
+}
+
+.bf-mask__hint {
+  display: block;
+  font-size: 12px;
+  opacity: .6;
+}
+
+/* 卡片较矮时（如右侧推荐位）压缩内容 */
+.bf-blocked.bf-compact .bf-mask__icon { display: none; }
+.bf-blocked.bf-compact .bf-mask__hint { display: none; }
+
+/* ---------- 临时查看状态 ---------- */
+.bf-blocked.bf-revealed > *:not(.bf-mask):not(.bf-mask-chip) {
+  visibility: visible !important;
+}
+
+.bf-blocked.bf-revealed .bf-mask {
+  opacity: 0 !important;
+  pointer-events: none !important;
+}
+
+.bf-mask-chip {
+  position: absolute !important;
+  top: 6px !important;
+  left: 6px !important;
+  z-index: 30 !important;
+  display: none;
+  padding: 2px 8px;
+  font-size: 12px;
+  line-height: 18px;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Microsoft YaHei", "PingFang SC", sans-serif;
+  color: #fff;
+  background: rgba(24, 25, 28, .78);
+  border-radius: 6px;
+  cursor: pointer;
+  user-select: none;
+}
+
+.bf-blocked.bf-revealed .bf-mask-chip {
+  display: block;
+}
+
+.bf-mask-chip:hover {
+  background: var(--bf-mask-accent);
+}

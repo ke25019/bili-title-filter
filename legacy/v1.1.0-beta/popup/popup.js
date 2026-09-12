@@ -98,23 +98,9 @@
     });
 
     var secBtn = $('sections');
-    var allOn = TYPES.every(function (t) { return !settings.blockTypes[t.key] || settings.blockSections[t.key]; })
-      && TYPES.some(function (t) { return settings.blockTypes[t.key]; });
+    var allOn = TYPES.every(function (t) { return !!settings.blockSections[t.key]; });
     secBtn.classList.toggle('is-on', allOn);
     secBtn.setAttribute('aria-checked', allOn ? 'true' : 'false');
-  }
-
-  var sectionHintTimer = null;
-  function flashSectionHint(text) {
-    var el = $('sections-hint');
-    if (!el) return;
-    el.textContent = text;
-    el.classList.add('is-warn');
-    clearTimeout(sectionHintTimer);
-    sectionHintTimer = setTimeout(function () {
-      el.classList.remove('is-warn');
-      el.textContent = '开启后，已勾选分区所在的整行推广板块（含顶部轮播横幅）会一并隐藏';
-    }, 2600);
   }
 
   function addKeyword() {
@@ -163,16 +149,12 @@
       if (e.key === 'Enter') { e.preventDefault(); addKeyword(); }
     });
 
-    // 整行板块：只作用于"已勾选卡片级"的分区，避免在没有选择任何分区时误伤整页
+    // 整行板块：一次性作用于所有已勾选的分区
     $('sections').addEventListener('click', function () {
-      var enabledKeys = TYPES.filter(function (t) { return settings.blockTypes[t.key]; })
-                             .map(function (t) { return t.key; });
-      if (!enabledKeys.length) { flashSectionHint('请先在上方勾选至少一个分区'); return; }
-      var allOn = enabledKeys.every(function (k) { return settings.blockSections[k]; });
+      var allOn = TYPES.every(function (t) { return !!settings.blockSections[t.key]; });
       var next = Object.assign({}, settings.blockSections);
-      enabledKeys.forEach(function (k) { next[k] = !allOn; });
+      TYPES.forEach(function (t) { next[t.key] = !allOn; });
       save({ blockSections: next });
-      flashSectionHint(!allOn ? '已连同整行推广板块一起屏蔽' : '已恢复显示整行推广板块');
     });
 
     $('open-options').addEventListener('click', function () {

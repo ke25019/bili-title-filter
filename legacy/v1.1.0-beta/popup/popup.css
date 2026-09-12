@@ -62,7 +62,6 @@ body {
 .seg button.is-active { background: var(--bg); color: var(--accent); font-weight: 600; box-shadow: 0 1px 4px rgba(0, 0, 0, .12); }
 
 .hint { margin: 6px 0 0; font-size: 11px; color: var(--fg-weak); }
-.hint.is-warn { color: #f25d8e; font-weight: 600; }
 
 .input-row { display: flex; gap: 6px; }
 input[type="text"] {
@@ -95,7 +94,6 @@ input[type="text"]:focus { border-color: var(--accent); }
   height: 30px; border-radius: 8px; cursor: pointer; user-select: none;
   background: var(--soft); color: var(--fg-weak); font-size: 12px;
   border: 1px solid transparent; transition: all .15s ease;
-  padding: 0 6px; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 }
 .type:hover { background: var(--soft-hover); }
 .type.is-active { background: rgba(0, 174, 236, .12); border-color: var(--accent); color: var(--accent); font-weight: 600; }

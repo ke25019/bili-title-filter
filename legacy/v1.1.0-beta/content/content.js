@@ -338,142 +338,29 @@
     return n;
   }
 
-  /** 元素内部「最外层」的已知卡片数量（> 1 说明它是列表容器而不是卡片） */
-  function countTopCards(el) {
-    if (!el || !el.querySelectorAll) return 0;
-    var all = el.querySelectorAll(CARD_SELECTOR);
-    var n = 0;
-    for (var i = 0; i < all.length; i++) {
-      var parent = all[i].parentElement;
-      if (!parent || !parent.closest(CARD_SELECTOR)) n++;
-      if (n > 1) return n;
-    }
-    return n;
-  }
-
-  function hasTitleInside(el) {
-    for (var i = 0; i < TITLE_SELECTORS.length; i++) {
-      if (el.querySelector(TITLE_SELECTORS[i])) return true;
-    }
-    return false;
-  }
-
-  /** 判定元素是不是"列表 / 板块"而不是"一张卡片" */
-  function isListNode(el, hrefRe) {
-    if (!el || el === document.body || el === document.documentElement) return true;
-    if (countDistinctEntries(el, hrefRe) > 1) return true;
-    if (el.matches && el.matches(SECTION_HINT_SELECTOR)) return true;
-    if (countTopCards(el) > 1) return true;
-    return false;
-  }
-
-  /** 尺寸明显不可能是单张卡片（真实浏览器里才有效，jsdom 中 rect 为 0 会跳过） */
-  function isAbsurdSize(el, factor) {
-    if (!el || !el.getBoundingClientRect) return false;
-    var r = el.getBoundingClientRect();
-    if (!r || !r.width || !r.height) return false;
-    var vw = window.innerWidth || 1280;
-    var vh = window.innerHeight || 800;
-    var f = factor || 1;
-    if (r.height > vh * 1.5 * f) return true;
-    if (r.width > vw * 1.2 * f) return true;
-    return false;
-  }
-
-  /** B 站用 BEM 命名：bili-live-card__image--link 的块根是 bili-live-card */
-  function bemRootOf(el) {
-    var cls = typeof el.className === 'string' ? el.className : '';
-    var m = /(?:^|\s)([a-z0-9-]+?)__/i.exec(cls);
-    return m ? m[1] : null;
-  }
-
-  /** 遮蔽要覆盖「封面 + 标题」，只有封面时向上补到含标题的那一层 */
-  function expandToTitle(el, hrefRe) {
-    var cur = el;
-    for (var i = 0; i < 3 && cur && cur.parentElement && cur.parentElement !== document.body; i++) {
-      if (hasTitleInside(cur)) return cur;
-      var parent = cur.parentElement;
-      if (isListNode(parent, hrefRe) || isAbsurdSize(parent)) break;
-      cur = parent;
-    }
-    return cur || el;
-  }
-
-  /** 从命中的链接推断「该卡片」容器 —— 关键在于绝不把列表/整块区域当成卡片 */
-  function pickCardContainer(a, hrefRe) {
-    // 1) 已经在已知卡片选择器内：取最外层那一个卡片
-    var known = a.closest(CARD_SELECTOR);
-    if (known && !isListNode(known, hrefRe)) {
-      var outer = known;
-      while (outer.parentElement && outer.parentElement.matches &&
-             outer.parentElement.matches(CARD_SELECTOR) &&
-             !isListNode(outer.parentElement, hrefRe)) {
-        outer = outer.parentElement;
-      }
-      return expandToTitle(outer, hrefRe);
-    }
-
-    // 2) BEM 块根：bili-live-card__image--link -> .bili-live-card
-    var root = bemRootOf(a);
-    if (root) {
-      var byRoot = a.closest('.' + root);
-      if (byRoot && !isListNode(byRoot, hrefRe) && !isAbsurdSize(byRoot)) {
-        return expandToTitle(byRoot, hrefRe);
-      }
-    }
-
-    // 3) 通用向上推断：一遇到列表容器或过大容器立即停手
-    var el = a;
-    var best = null;
-    var last = null;
-    for (var d = 0; el && el !== document.body && el !== document.documentElement && d < 8; d++) {
-      if (isListNode(el, hrefRe) || isAbsurdSize(el)) break;
-      var cls = typeof el.className === 'string' ? el.className : '';
-      if (CARD_HINT_RE.test(cls)) best = el;
-      if (d <= 2) last = el;
-      el = el.parentElement;
-    }
-    return expandToTitle(best || last || a, hrefRe);
-  }
-
-  /** 该卡片命中的所有具体分区类型（不含 other 兜底） */
-  function matchSpecificTypes(card) {
+  /** 判定卡片属于哪个分区 / 类型 */
+  function detectType(card) {
     var hrefs = '';
     var anchors = card.querySelectorAll('a[href]');
     for (var i = 0; i < anchors.length && i < 20; i++) {
       hrefs += ' ' + (anchors[i].getAttribute('href') || '');
     }
-    var cls = typeof card.className === 'string' ? card.className : '';
-    var hits = [];
+
     for (var j = 0; j < TYPES.length; j++) {
       var t = TYPES[j];
-      if (t.key === 'other') continue;
-      if ((t.href && hrefs && t.href.test(hrefs)) || (t.cls && cls && t.cls.test(cls))) hits.push(t.key);
+      if (t.href && hrefs && t.href.test(hrefs)) return t.key;
     }
+
+    var cls = typeof card.className === 'string' ? card.className : '';
+    for (var k = 0; k < TYPES.length; k++) {
+      var tt = TYPES[k];
+      if (tt.cls && tt.cls.test(cls)) return tt.key;
+    }
+
     if (card.querySelector('.bili-video-card__stats--ad, .bili-video-card__info--ad, .ad-report, .video-card-ad-small')) {
-      if (hits.indexOf('ad') === -1) hits.push('ad');
+      return 'ad';
     }
-    return hits;
-  }
 
-  function anchorHrefsMatch(card, hrefRe) {
-    var anchors = card.querySelectorAll('a[href]');
-    for (var i = 0; i < anchors.length && i < 20; i++) {
-      if (hrefRe.test(anchors[i].getAttribute('href') || '')) return true;
-    }
-    return false;
-  }
-
-  /**
-   * 判定卡片属于哪个分区 / 类型。
-   * 「其他推广」只在该卡片没有命中任何具体分区时才生效，
-   * 这样关掉某个分区开关时不会又被兜底规则抓回来。
-   */
-  function detectType(card) {
-    var hits = matchSpecificTypes(card);
-    if (hits.length) return hits[0];
-    var other = getType('other');
-    if (other && other.href && anchorHrefsMatch(card, other.href)) return 'other';
     return 'video';
   }
 
@@ -481,12 +368,30 @@
     return !!(a.closest && a.closest(NAV_EXCLUDE));
   }
 
+  /** 从命中的链接向上推断卡片容器 */
+  function pickCardContainer(a, hrefRe) {
+    var el = a;
+    var best = null;   // 带卡片语义的祖先
+    var last = null;   // 兜底：最多向上 2 层，避免误判成巨大容器
+    for (var d = 0; el && el !== document.body && el !== document.documentElement && d < 8; d++) {
+      // 到了包含多个同类条目的容器，说明上一级才是"卡片"
+      if (countDistinctEntries(el, hrefRe) > 1) break;
+      // 遇到板块 / 横幅容器就停下，它们由"整行板块"开关负责
+      if (el !== a && el.matches && el.matches(SECTION_HINT_SELECTOR)) break;
+      var cls = typeof el.className === 'string' ? el.className : '';
+      if (CARD_HINT_RE.test(cls)) best = el;
+      if (d <= 2) last = el;
+      el = el.parentElement;
+    }
+    return best || last || a;
+  }
+
   /* ------------------------------------------------------------------
    * 板块（整行 / 推广位）解析
    * ------------------------------------------------------------------ */
 
   function isOversized(el, hrefRe) {
-    if (countDistinctEntries(el, hrefRe) > 12) return true;
+    if (countDistinctEntries(el, hrefRe) > 6) return true;
     if (!el.getBoundingClientRect) return false;
     var r = el.getBoundingClientRect();
     if (!r || !r.width || !r.height) return false;
@@ -497,30 +402,18 @@
     return false;
   }
 
-  /**
-   * 判定一个容器是不是"该分区的整行板块"。
-   * 关键防线：如果里面还夹着别的非本分区卡片（典型就是整个推荐流），
-   * 那就绝对不是"一行"，必须拒绝，否则会把整页藏掉。
-   */
-  function isSoundSection(el, type) {
-    if (!el || el === document.body || el === document.documentElement) return false;
-    var entries = countDistinctEntries(el, type.href);
-    if (entries < 2 || entries > 12) return false;
-    if (el.children && el.children.length > 40) return false;
-
-    var cards = el.querySelectorAll(CARD_SELECTOR);
-    var foreign = 0;
-    for (var i = 0; i < cards.length; i++) {
-      if (countDistinctEntries(cards[i], type.href) === 0) {
-        foreign++;
-        if (foreign > 2) return false;
-      }
+  /** 找到该链接所属的"整行板块"容器 */
+  function findSectionRoot(a, type) {
+    var el = a;
+    var candidate = null;
+    for (var d = 0; el && el !== document.body && d < 10; d++) {
+      if (countDistinctEntries(el, type.href) >= 2) { candidate = el; break; }
+      el = el.parentElement;
     }
-    return !isOversized(el, type.href);
-  }
+    if (candidate && !isOversized(candidate, type.href)) return candidate;
 
-  /** 语义板块容器：取最外层的那个（顶部轮播横幅等） */
-  function widestHint(a, type) {
+    // 单条目的推广位（顶部轮播横幅 / floor 推广位）走语义容器，
+    // 并且要取「最外层」的那个，否则只会藏掉横幅内部的一小块
     var hintSel = (type.block ? type.block + ', ' : '') + SECTION_HINT_SELECTOR;
     var hint = a.closest(hintSel);
     while (hint && hint.parentElement) {
@@ -528,20 +421,6 @@
       if (!outer || isOversized(outer, type.href)) break;
       hint = outer;
     }
-    return hint;
-  }
-
-  /** 找到该链接所属的"整行板块"容器；找不到就返回 null（宁可不屏蔽，也不乱屏蔽） */
-  function findSectionRoot(a, type) {
-    var el = a.parentElement;
-    for (var d = 0; el && el !== document.body && el !== document.documentElement && d < 12; d++) {
-      if (isSoundSection(el, type)) return el;                  // 取最内层的合格"一行"
-      if (countDistinctEntries(el, type.href) > 12) break;      // 已经扩到整页级别
-      el = el.parentElement;
-    }
-
-    // 单条目的推广位（顶部轮播横幅 / 楼层区块）走语义容器
-    var hint = widestHint(a, type);
     if (hint && !isOversized(hint, type.href)) return hint;
 
     return null;
@@ -637,12 +516,6 @@
   }
 
   function applyBlock(card, action) {
-    // 安全阀：尺寸显然不可能是单张卡片时，宁可不屏蔽，也绝不制造页面空白
-    if (isAbsurdSize(card)) {
-      log('跳过尺寸异常的容器（避免页面空白）：', card.className, action.key);
-      return;
-    }
-
     var already = card.dataset.bfState === 'blocked' && card.dataset.bfKey === action.key;
     if (already) {
       // 命中原因没变，但屏蔽方式 / 文案 / 悬停展示等设置可能变了，这里同步刷新
@@ -688,14 +561,10 @@
     if (mask) mask.remove();
   }
 
-  /** 卡片很矮时压缩提示内容（隐藏状态下无法测量，保持原状） */
+  /** 卡片很矮时压缩提示内容 */
   function updateCompact(card) {
     var h = card.getBoundingClientRect().height;
-    if (!h) {
-      card.classList.remove('bf-compact');
-      return;
-    }
-    if (h < 120) card.classList.add('bf-compact');
+    if (h && h < 120) card.classList.add('bf-compact');
     else card.classList.remove('bf-compact');
   }
 
@@ -1064,7 +933,6 @@
     '  display: flex; align-items: center; justify-content: center; gap: 4px;',
     '  height: 30px; border-radius: 8px; cursor: pointer; user-select: none;',
     '  background: #f1f2f3; color: #61666d; font-size: 12px; border: 1px solid transparent;',
-    '  padding: 0 6px; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;',
     '}',
     ':host([data-theme="dark"]) .bf-type { background: #2b2c2f; color: #a2a7ae; }',
     '.bf-type.is-active { background: rgba(0,174,236,.12); border-color: #00aeec; color: #00aeec; font-weight: 600; }',
@@ -1091,8 +959,7 @@
     '.bf-foot__actions { display: flex; align-items: center; gap: 10px; }',
     '.bf-link { border: 0; background: transparent; color: #00aeec; cursor: pointer; font-size: 12px; font-family: inherit; padding: 0; }',
     '.bf-link:hover { text-decoration: underline; }',
-    '.bf-hint { font-size: 11px; color: #9499a0; margin-top: 6px; }',
-    '.bf-hint.is-warn { color: #f25d8e; font-weight: 600; }'
+    '.bf-hint { font-size: 11px; color: #9499a0; margin-top: 6px; }'
   ].join('\n');
 
   var PANEL_HTML = [
@@ -1131,7 +998,7 @@
     '          <span>整行板块也一起屏蔽</span>',
     '          <button class="bf-switch bf-switch--sm" id="bf-sections" type="button" role="switch"></button>',
     '        </div>',
-    '        <div class="bf-hint" id="bf-sections-hint">开启后，已勾选分区所在的整行推广板块（含顶部轮播横幅）会一并隐藏</div>',
+    '        <div class="bf-hint">开启后，已勾选分区所在的整行推广板块（含顶部轮播横幅）会一并隐藏</div>',
     '      </div>',
     '      <div class="bf-row">',
     '        <div class="bf-label"><span>界面外观</span></div>',
@@ -1392,21 +1259,18 @@
       updateSettings({ blockTypes: next });
     });
 
-    // 整行板块：只作用于"已勾选卡片级"的分区，避免在没有选择任何分区时误伤整页
+    // 整行板块：一次性作用于所有已勾选的分区
     shadow.getElementById('bf-sections').addEventListener('click', function () {
-      var enabledKeys = TYPES.filter(function (t) { return settings.blockTypes[t.key]; })
-                             .map(function (t) { return t.key; });
-      if (!enabledKeys.length) {
-        flashSectionHint('请先在上方勾选至少一个分区');
-        return;
-      }
       var on = !allSectionsOn();
       var next = Object.assign({}, settings.blockSections);
-      enabledKeys.forEach(function (k) { next[k] = on; });
+      TYPES.forEach(function (t) {
+        if (settings.blockTypes[t.key]) next[t.key] = on;
+      });
+      if (!settings.blockTypes[Object.keys(settings.blockTypes)[0]]) {
+        // 一个分区都没勾选时，全量设置，方便先开板块再勾分区
+        TYPES.forEach(function (t) { next[t.key] = on; });
+      }
       updateSettings({ blockSections: next });
-      flashSectionHint(on
-        ? '已连同整行推广板块一起屏蔽'
-        : '已恢复显示整行推广板块');
     });
 
     shadow.getElementById('bf-reset-pos').addEventListener('click', resetButtonPos);
@@ -1419,30 +1283,13 @@
     });
   }
 
-  /** 整行板块开关是否处于"开"：只看已勾选卡片级的分区 */
   function allSectionsOn() {
     var any = false;
     for (var i = 0; i < TYPES.length; i++) {
-      var k = TYPES[i].key;
-      if (!settings.blockTypes[k]) continue;
-      any = true;
-      if (!settings.blockSections[k]) return false;
+      if (settings.blockSections[TYPES[i].key]) any = true;
+      else return false;
     }
     return any;
-  }
-
-  var sectionHintTimer = null;
-  function flashSectionHint(text) {
-    if (!shadow) return;
-    var el = shadow.getElementById('bf-sections-hint');
-    if (!el) return;
-    el.textContent = text;
-    el.classList.add('is-warn');
-    clearTimeout(sectionHintTimer);
-    sectionHintTimer = setTimeout(function () {
-      el.classList.remove('is-warn');
-      el.textContent = '开启后，已勾选分区所在的整行推广板块（含顶部轮播横幅）会一并隐藏';
-    }, 2600);
   }
 
   function addKeywordFromInput() {

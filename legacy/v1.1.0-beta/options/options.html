@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>B站屏蔽助手 · 设置</title>
+  <link rel="stylesheet" href="options.css" />
+</head>
+<body>
+  <div class="page">
+    <header class="hero">
+      <div class="hero__brand">
+        <span class="hero__logo">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94"/>
+            <path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19"/>
+            <path d="M14.12 14.12a3 3 0 1 1-4.24-4.24"/>
+            <line x1="1" y1="1" x2="23" y2="23"/>
+          </svg>
+        </span>
+        <div>
+          <h1>B站屏蔽助手</h1>
+          <p>按标题屏蔽词屏蔽 B 站视频，过滤不想看的分区推广，自动适配深色模式。</p>
+        </div>
+      </div>
+      <div class="hero__switch">
+        <span id="enabled-text">已启用</span>
+        <button class="switch" id="enabled" type="button" role="switch" aria-checked="true"></button>
+      </div>
+    </header>
+
+    <main class="grid">
+      <div class="col">
+        <!-- 屏蔽方式 -->
+        <section class="card">
+          <h2>屏蔽方式</h2>
+          <p class="desc">命中屏蔽词后，视频卡片会以以下方式处理。</p>
+          <div class="mode-list">
+            <label class="mode">
+              <input type="radio" name="mode" value="mask" />
+              <span class="mode__body">
+                <span class="mode__title">整体遮蔽</span>
+                <span class="mode__desc">把封面和标题合成一整块区域并显示提示文字，页面布局保持不变；鼠标悬停时自动展示该视频。</span>
+              </span>
+            </label>
+            <label class="mode">
+              <input type="radio" name="mode" value="hide" />
+              <span class="mode__body">
+                <span class="mode__title">完全隐藏</span>
+                <span class="mode__desc">直接把卡片从页面上移除，就像这个视频从未出现过。</span>
+              </span>
+            </label>
+          </div>
+
+          <div class="field">
+            <label for="mask-text">遮蔽区域文案</label>
+            <input type="text" id="mask-text" placeholder="根据您的屏蔽词已将此视频屏蔽" />
+          </div>
+          <div class="field">
+            <label for="type-mask-text">分区屏蔽文案（{type} 会替换成分区名）</label>
+            <input type="text" id="type-mask-text" placeholder="已按分区设置屏蔽此推广：{type}" />
+          </div>
+          <label class="check">
+            <input type="checkbox" id="hover-reveal" />
+            <span>鼠标悬停在遮蔽区域时自动展示该视频，移开鼠标后自动恢复屏蔽</span>
+          </label>
+        </section>
+
+        <!-- 屏蔽词 -->
+        <section class="card">
+          <h2>标题屏蔽词</h2>
+          <p class="desc">命中的视频会被屏蔽，多个屏蔽词之间是「或」的关系。</p>
+          <div class="input-row">
+            <input type="text" id="kw-input" placeholder="输入屏蔽词后回车或点击添加" />
+            <button class="btn-primary" id="kw-add" type="button">添加</button>
+          </div>
+          <div class="chips" id="chips"></div>
+
+          <div class="sub">
+            <div class="sub__title">批量编辑</div>
+            <textarea id="kw-bulk" rows="5" placeholder="每行一个屏蔽词，保存后会覆盖上面的列表"></textarea>
+            <div class="row-actions">
+              <button class="btn" id="kw-bulk-save" type="button">保存批量内容</button>
+              <button class="btn" id="kw-bulk-load" type="button">载入当前列表</button>
+            </div>
+          </div>
+
+          <div class="sub">
+            <div class="sub__title">匹配规则</div>
+            <label class="check"><input type="checkbox" id="case-sensitive" /><span>区分大小写</span></label>
+            <label class="check"><input type="checkbox" id="use-regex" /><span>使用正则表达式（每行一个正则）</span></label>
+            <label class="check"><input type="checkbox" id="match-up" /><span>同时匹配 UP 主名称</span></label>
+          </div>
+        </section>
+      </div>
+
+      <div class="col">
+        <!-- 预览 -->
+        <section class="card">
+          <h2>效果预览</h2>
+          <p class="desc">模拟 B 站视频卡片在两种屏蔽方式下的样子；下方遮蔽卡片可以直接把鼠标移上去体验「悬停查看」。</p>
+          <div class="preview" id="preview">
+            <div class="preview__card bf-blocked bf-hoverable" id="preview-card">
+              <div class="preview__cover"></div>
+              <div class="preview__info">
+                <div class="preview__title">这是一个会被屏蔽的视频标题</div>
+                <div class="preview__meta">某UP主 · 12.3万播放</div>
+              </div>
+              <div class="bf-mask">
+                <span class="bf-mask__icon">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94"/>
+                    <path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19"/>
+                    <path d="M14.12 14.12a3 3 0 1 1-4.24-4.24"/>
+                    <line x1="1" y1="1" x2="23" y2="23"/>
+                  </svg>
+                </span>
+                <span class="bf-mask__text" id="preview-text">根据您的屏蔽词已将此视频屏蔽</span>
+                <span class="bf-mask__hint">鼠标悬停可查看</span>
+              </div>
+            </div>
+            <div class="preview__card preview__card--plain">
+              <div class="preview__cover preview__cover--plain"></div>
+              <div class="preview__info">
+                <div class="preview__title">另一个正常显示的视频</div>
+                <div class="preview__meta">某UP主 · 4.5万播放</div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- 分区推广 -->
+        <section class="card">
+          <h2>屏蔽分区推广</h2>
+          <p class="desc">
+            两个粒度互相独立：<b>卡片</b> 只处理该分区的每一张卡片；
+            <b>整行板块</b> 会把该分区所在的整行推广位（含首页顶部轮播横幅）一起隐藏。
+          </p>
+          <div class="typetable" id="types"></div>
+          <div class="row-actions">
+            <button class="btn" id="types-all" type="button">卡片全选</button>
+            <button class="btn" id="sections-all" type="button">整行全选</button>
+            <button class="btn" id="types-none" type="button">全部取消</button>
+          </div>
+        </section>
+
+        <!-- 外观 -->
+        <section class="card">
+          <h2>外观与交互</h2>
+          <div class="field">
+            <label>注入界面外观</label>
+            <div class="seg" id="theme">
+              <button type="button" data-value="auto">跟随B站深色模式</button>
+              <button type="button" data-value="light">始终浅色</button>
+              <button type="button" data-value="dark">始终深色</button>
+            </div>
+          </div>
+          <label class="check"><input type="checkbox" id="show-btn" /><span>在 B 站标题栏附近显示快捷面板入口（按住按钮可拖动，位置会自动记住）</span></label>
+          <label class="check"><input type="checkbox" id="debug" /><span>输出调试日志到控制台</span></label>
+          <div class="row-actions">
+            <button class="btn" id="reset-pos" type="button">重置悬浮按钮位置</button>
+          </div>
+        </section>
+
+        <!-- 数据 -->
+        <section class="card">
+          <h2>数据与统计</h2>
+          <p class="desc" id="stats-text">今日屏蔽 0 个 · 累计 0 个</p>
+          <div class="row-actions">
+            <button class="btn" id="reset-stats" type="button">重置统计</button>
+            <button class="btn" id="export" type="button">导出配置</button>
+            <button class="btn" id="import" type="button">导入配置</button>
+            <button class="btn btn-danger" id="reset-all" type="button">恢复默认设置</button>
+          </div>
+          <input type="file" id="import-file" accept="application/json" hidden />
+        </section>
+      </div>
+    </main>
+
+    <footer class="foot">
+      <span>B站屏蔽助手 v1.0.0 · 适用于 Microsoft Edge (Chromium) 及 Chrome 系列浏览器</span>
+      <span id="toast" class="toast"></span>
+    </footer>
+  </div>
+
+  <script src="../shared/defaults.js"></script>
+  <script src="options.js"></script>
+</body>
+</html>

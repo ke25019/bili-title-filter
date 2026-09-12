@@ -7,62 +7,56 @@
   'use strict';
 
   /**
-   * 可屏蔽的"分区推广"类型（按实测的 B 站首页真实域名 / 路径整理）。
-   *
-   * label  : 面板 / 弹窗里的短标签（≤4 字，保证网格对齐）
-   * desc   : 设置页里的说明文字
-   * href   : 命中卡片内任意链接时判定为该类型
-   * cls    : 卡片 class 兜底判定
-   * block  : 板块级屏蔽时向上寻找的语义容器
-   *
-   * 注意：other 必须放在最后，它只在该卡片没有命中任何其它类型时才生效，
-   *       因此"关掉直播 + 打开其他推广"不会把直播卡片一起带走。
+   * 可屏蔽的"分区推广"类型。
+   * href   : 命中卡片内任意链接时判定为该类型（通用识别，不依赖 class）
+   * cls    : 卡片 class 兜底判定（使用 2025 年实测到的 B 站真实类名）
+   * block  : 语义板块容器选择器（板块级屏蔽时向上寻找的落点）
    */
   var BF_TYPES = [
     {
       key: 'live',
       label: '直播',
-      desc: '直播卡片与直播推广位（live.bilibili.com）',
+      desc: '首页 / 分区里的直播卡片与直播推广位',
       href: /(^|\/\/)live\.bilibili\.com|\/blanc\/|\/live\//,
       cls: /\bbili-live-card\b|\blive-card\b|\bis-live\b|\bcarousel-inner__live\b/i,
-      block: '.floor-card, [class*="live-floor"], [class*="floor-"]'
+      block: '.floor-card, .floor-single-card, [class*="live-floor"], [class*="floor-"]'
     },
     {
       key: 'bangumi',
       label: '番剧',
-      desc: '番剧、国创、动画剧集卡片（含顶部轮播与追番推广位）',
-      href: /\/bangumi\/(play|media)\/|\/anime\/|\/guochuang\//,
+      desc: '番剧、动画剧集卡片（含顶部轮播与追番推广位）',
+      href: /\/bangumi\/(play|media)\//,
       cls: /\bbili-bangumi-card\b|\bbangumi-card\b|\bpgc-card\b|\banime-list-item\b|\banime-entry\b/i,
-      block: '.carousel-area, .anime-list, .floor-card, [class*="floor-"]'
+      block: '.carousel-area, .carousel-container, .anime-list, .floor-card, [class*="floor-"]'
     },
     {
       key: 'movie',
       label: '影视',
-      desc: '电影、电视剧、纪录片、综艺（movie / tv / documentary / variety）',
-      href: /\/movie\/|\/film\/|\/tv\/|\/documentary\/|\/variety\/|bangumi\/media\/md/,
+      desc: '电影、电视剧、纪录片等影视卡片',
+      href: /\/movie\/|\/film\/|bilibili\.com\/bangumi\/media\/md/,
       cls: /\bbili-movie-card\b|\bmovie-card\b|\bbili-cinema-card\b/i,
       block: '.floor-card, [class*="floor-"]'
     },
     {
       key: 'cheese',
-      label: '课堂',
-      desc: '付费课程、课堂推广卡片（/cheese/）',
-      href: /\/cheese\//,
+      label: '课堂 / 课程',
+      desc: '付费课程、课堂推广卡片',
+      href: /\/cheese\/play\//,
       cls: /\bbili-cheese-card\b|\bcheese-card\b/i,
       block: '.floor-card, [class*="floor-"]'
     },
     {
       key: 'read',
-      label: '专栏',
-      desc: '专栏文章、图文类卡片（/read/）',
-      href: /\/read\//,
+      label: '专栏 / 图文',
+      desc: '专栏文章、图文类卡片',
+      href: /\/read\/(cv|cv\d)|\/read\/mobile|\/read\/home/,
       cls: /\bbili-article-card\b|\barticle-card\b/i,
       block: '.floor-card, [class*="floor-"]'
     },
     {
       key: 'opus',
-      label: '动态',
-      desc: '动态、视频号推广卡片（/opus/、t.bilibili.com）',
+      label: '动态 / 视频号',
+      desc: '动态、UP 主动态推广卡片',
       href: /\/opus\/|(^|\/\/)t\.bilibili\.com/,
       cls: /\bbili-dyn-card\b|\bbili-opus-card\b|\bdyn-card\b/i,
       block: '.floor-card, [class*="floor-"]'
@@ -70,66 +64,26 @@
     {
       key: 'manga',
       label: '漫画',
-      desc: '漫画卡片与漫画推广位（manga.bilibili.com）',
-      href: /\/\/manga\.bilibili\.com|\/manga\//,
+      desc: '漫画、漫画推广卡片',
+      href: /\/manga\//,
       cls: /\bbili-manga-card\b|\bmanga-card\b/i,
       block: '.floor-card, [class*="floor-"]'
     },
     {
-      key: 'game',
-      label: '游戏',
-      desc: '游戏中心、游戏推广与专区卡片（game.bilibili.com、/v/game）',
-      href: /\/\/game\.bilibili\.com|\/v\/game|\/game\//,
-      cls: /\bbili-game-card\b|\bgame-card\b/i,
-      block: '.floor-card, [class*="floor-"]'
-    },
-    {
-      key: 'music',
-      label: '音乐',
-      desc: '音频、音乐区推广卡片（music.bilibili.com、/audio/）',
-      href: /\/\/music\.bilibili\.com|\/audio\//,
-      cls: /\bbili-audio-card\b|\baudio-card\b/i,
-      block: '.floor-card, [class*="floor-"]'
-    },
-    {
-      key: 'match',
-      label: '赛事',
-      desc: '赛事、电竞赛程与直播预约推广（/match/、/esports/）',
-      href: /\/match\/|\/\/match\.bilibili\.com|\/esports\//,
-      cls: /\bmatch-card\b|\besports-card\b/i,
-      block: '.floor-card, [class*="floor-"]'
-    },
-    {
-      key: 'mall',
-      label: '会员购',
-      desc: '会员购、周边商城与演出票务推广（love / show / mall.bilibili.com）',
-      href: /\/\/(love|show|mall)\.bilibili\.com|\/mall\//,
-      cls: /\bmall-card\b|\bshop-card\b/i,
-      block: '.floor-card, [class*="floor-"]'
-    },
-    {
       key: 'activity',
-      label: '活动',
-      desc: '活动页、话题页、专题聚合推广位（/blackboard/、/festival/、/topic/）',
-      href: /\/blackboard\/|\/festival\/|\/topic\/|\/platform\//,
+      label: '活动 / 话题推广位',
+      desc: '活动页、话题页、专题聚合推广卡片',
+      href: /\/blackboard\/|\/festival\/|\/topic\/|\/match\//,
       cls: /\bbili-activity-card\b|\bactivity-card\b/i,
       block: '.floor-card, .floor-single-card, [class*="floor-"], [class*="banner"]'
     },
     {
       key: 'ad',
-      label: '广告',
-      desc: '带"广告"标识的商业推广卡片',
+      label: '商业广告',
+      desc: '带"广告"标识的推广卡片',
       href: /(^|\/\/)(cm|ad)\.bilibili\.com|[?&]from_spmid=.*ad/,
       cls: /\bad-card\b|\bad-item\b|\badvert|\bbili-video-card__stats--ad\b|\bad-report\b/i,
       block: '.floor-card, [class*="ad-"], [class*="banner"]'
-    },
-    {
-      key: 'other',
-      label: '其他推广',
-      desc: '兜底：跳往站内其它频道、客户端下载或站外链接的推广卡片（不含上面已分类的分区）',
-      href: /\/\/(?!www|space|i0|i1|i2|s1|s2|static|api|grpc)[a-z0-9-]+\.bilibili\.com|\/blackboard\/|\/festival\/|\/topic\/|\/platform\/|\/read\/|\/cheese\/|\/anime\/|\/guochuang\/|\/variety\/|\/documentary\/|\/movie\/|\/tv\/|\/bangumi\/|\/audio\/|\/manga\/|\/v\/[a-z]/i,
-      cls: '',
-      block: '.floor-card, .floor-single-card, [class*="floor-"], [class*="banner"]'
     }
   ];
 
@@ -157,16 +111,28 @@
 
     /** 分区推广屏蔽：卡片级（该分区的每一张卡片） */
     blockTypes: {
-      live: false, bangumi: false, movie: false, cheese: false, read: false, opus: false,
-      manga: false, game: false, music: false, match: false, mall: false, activity: false,
-      ad: false, other: false
+      live: false,
+      bangumi: false,
+      movie: false,
+      cheese: false,
+      read: false,
+      opus: false,
+      manga: false,
+      activity: false,
+      ad: false
     },
 
     /** 分区推广屏蔽：板块级（该分区所在的整行 / 整个推广位） */
     blockSections: {
-      live: false, bangumi: false, movie: false, cheese: false, read: false, opus: false,
-      manga: false, game: false, music: false, match: false, mall: false, activity: false,
-      ad: false, other: false
+      live: false,
+      bangumi: false,
+      movie: false,
+      cheese: false,
+      read: false,
+      opus: false,
+      manga: false,
+      activity: false,
+      ad: false
     },
 
     /** 注入界面的外观：auto = 跟随 B 站深色模式 */
@@ -177,6 +143,9 @@
 
     /** 是否在 B 站标题栏附近显示快捷面板入口 */
     showHeaderButton: true,
+
+    /** 悬浮按钮自定义位置（视口坐标，null = 自动停靠在标题栏右侧） */
+    buttonPos: null,
 
     /** 是否在控制台输出调试日志 */
     debug: false
@@ -219,6 +188,14 @@
         // 兼容 1.0.x 的 clickToReveal 设置
         if ('revealOnHover' in raw) out.revealOnHover = !!raw.revealOnHover;
         else if ('clickToReveal' in raw) out.revealOnHover = !!raw.clickToReveal;
+        return;
+      }
+      if (k === 'buttonPos') {
+        if (val && typeof val === 'object' && isFinite(val.left) && isFinite(val.top)) {
+          out.buttonPos = { left: Number(val.left), top: Number(val.top) };
+        } else {
+          out.buttonPos = null;
+        }
         return;
       }
       if (k === 'keywords') {

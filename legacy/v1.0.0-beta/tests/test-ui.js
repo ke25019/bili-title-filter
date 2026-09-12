@@ -76,7 +76,7 @@ async function testPopup() {
   await sleep(120);
 
   check('脚本执行无异常', errors.length === 0, errors.join(' | '));
-  check('渲染出 14 个分区选项', doc.querySelectorAll('#types .type').length === 14, doc.querySelectorAll('#types .type').length);
+  check('渲染出 9 个分区选项', doc.querySelectorAll('#types .type').length === 9, doc.querySelectorAll('#types .type').length);
   check('统计文案已加载', /今日屏蔽 3 个/.test(doc.getElementById('stats').textContent), doc.getElementById('stats').textContent);
   check('默认屏蔽方式为整体遮蔽', doc.querySelector('#mode button[data-value="mask"]').classList.contains('is-active'));
 
@@ -100,33 +100,10 @@ async function testPopup() {
   check('切换为完全隐藏模式已保存', store.sync.bfSettings.mode === 'hide', store.sync.bfSettings.mode);
   check('模式切换同步激活态', doc.querySelector('#mode button[data-value="hide"]').classList.contains('is-active'));
 
-  // 分区屏蔽（卡片级）
+  // 分区屏蔽
   doc.querySelector('#types .type[data-key="live"]').click();
   await sleep(60);
-  check('勾选屏蔽直播卡片已保存', store.sync.bfSettings.blockTypes.live === true);
-
-  // 整行板块开关（只作用于已勾选卡片级的分区）
-  check('存在「整行板块」开关', !!doc.getElementById('sections'));
-  doc.getElementById('sections').click();
-  await sleep(60);
-  check('整行板块开关只开启已勾选分区的板块',
-    store.sync.bfSettings.blockSections.live === true && store.sync.bfSettings.blockSections.bangumi !== true,
-    JSON.stringify(store.sync.bfSettings.blockSections));
-  check('整行板块开关回显为开启', doc.getElementById('sections').classList.contains('is-on'));
-  doc.getElementById('sections').click();
-  await sleep(60);
-  check('再次点击可关闭整行板块', store.sync.bfSettings.blockSections.live === false);
-
-  // 一个分区都没勾选时点击不应产生任何效果
-  doc.querySelector('#types .type[data-key="live"]').click();
-  await sleep(40);
-  doc.getElementById('sections').click();
-  await sleep(60);
-  check('未勾选任何分区时点击板块开关不会开启板块',
-    Object.values(store.sync.bfSettings.blockSections).every((v) => !v),
-    JSON.stringify(store.sync.bfSettings.blockSections));
-  check('此时会提示先勾选分区', /请先/.test(doc.getElementById('sections-hint').textContent),
-    doc.getElementById('sections-hint').textContent);
+  check('勾选屏蔽直播已保存', store.sync.bfSettings.blockTypes.live === true);
 
   // 总开关
   doc.getElementById('enabled').click();
@@ -143,9 +120,7 @@ async function testOptions() {
   await sleep(120);
 
   check('脚本执行无异常', errors.length === 0, errors.join(' | '));
-  check('分区表格渲染出 14 行', doc.querySelectorAll('#types .trow').length === 14, doc.querySelectorAll('#types .trow').length);
-  check('每个分区有「卡片 / 整行」两个开关', doc.querySelectorAll('#types input[data-scope="card"]').length === 14
-    && doc.querySelectorAll('#types input[data-scope="section"]').length === 14);
+  check('渲染出 9 个分区卡片', doc.querySelectorAll('#types .type').length === 9, doc.querySelectorAll('#types .type').length);
   check('默认选中「整体遮蔽」', doc.querySelector('input[name="mode"][value="mask"]').checked);
   check('遮蔽文案输入框已填充默认值',
     doc.getElementById('mask-text').value === '根据您的屏蔽词已将此视频屏蔽',
@@ -176,30 +151,16 @@ async function testOptions() {
     JSON.stringify(store.sync.bfSettings.keywords) === JSON.stringify(['剧透', '标题党', '营销号']),
     JSON.stringify(store.sync.bfSettings.keywords));
 
-  // 卡片全选 / 整行全选 / 全部取消
+  // 全选分区
   doc.getElementById('types-all').click();
   await sleep(60);
   const all = store.sync.bfSettings.blockTypes;
-  check('卡片全选后 14 个分区均开启', Object.keys(all).length === 14 && Object.values(all).every(Boolean), JSON.stringify(all));
+  check('全选后 9 个分区均开启', Object.keys(all).length === 9 && Object.values(all).every(Boolean), JSON.stringify(all));
 
-  doc.getElementById('sections-all').click();
-  await sleep(60);
-  const allSec = store.sync.bfSettings.blockSections;
-  check('整行全选后 14 个分区板块均开启', Object.keys(allSec).length === 14 && Object.values(allSec).every(Boolean), JSON.stringify(allSec));
-
-  // 单个分区的两个开关互相独立
-  const liveCard = doc.querySelector('#types input[data-scope="card"][data-key="live"]');
-  liveCard.checked = false;
-  liveCard.dispatchEvent(new win.Event('change', { bubbles: true }));
-  await sleep(60);
-  check('卡片开关可单独关闭', store.sync.bfSettings.blockTypes.live === false);
-  check('关闭卡片开关不影响整行板块开关', store.sync.bfSettings.blockSections.live === true);
-
+  // 全不选
   doc.getElementById('types-none').click();
   await sleep(60);
-  check('全部取消后卡片与板块均关闭',
-    Object.values(store.sync.bfSettings.blockTypes).every((v) => !v) &&
-    Object.values(store.sync.bfSettings.blockSections).every((v) => !v));
+  check('全不选后所有分区均关闭', Object.values(store.sync.bfSettings.blockTypes).every((v) => !v));
 
   // 正则 / 大小写 / UP 主开关
   const rx = doc.getElementById('use-regex');
@@ -213,20 +174,6 @@ async function testOptions() {
   up.dispatchEvent(new win.Event('change', { bubbles: true }));
   await sleep(40);
   check('UP 主匹配开关已保存', store.sync.bfSettings.matchUpName === true);
-
-  // 悬停展示开关
-  const hv = doc.getElementById('hover-reveal');
-  check('悬停展示默认开启', hv.checked === true);
-  hv.checked = false;
-  hv.dispatchEvent(new win.Event('change', { bubbles: true }));
-  await sleep(40);
-  check('悬停展示开关已保存', store.sync.bfSettings.revealOnHover === false);
-  check('关闭悬停后预览卡片同步取消可悬停', !doc.getElementById('preview-card').classList.contains('bf-hoverable'));
-
-  // 重置悬浮按钮位置
-  doc.getElementById('reset-pos').click();
-  await sleep(60);
-  check('重置位置清空本地坐标', store.local.bfButtonPos === null, JSON.stringify(store.local.bfButtonPos));
 
   // 主题
   doc.querySelector('#theme button[data-value="dark"]').click();
