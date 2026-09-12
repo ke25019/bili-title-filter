@@ -290,35 +290,17 @@
     return (el.textContent || '').replace(/\s+/g, ' ').trim();
   }
 
-  /**
-   * 分区徽标（封面左上角那个「番剧 / 直播」小标签）绝不能被当成视频标题。
-   *
-   * 实测证据（用户从首页「分区推荐」卡片 Copy outerHTML）：
-   *   <a href="//www.bilibili.com/bangumi/play/ep468949">
-   *     <div class="cover-shim">…封面…</div>
-   *     <div class="badge"><svg class="icon-title"/><span class="floor-title">番剧</span></div>
-   *   </a>
-   * 徽标里用的正是 .floor-title —— 与标题选择器同名，而且就在封面链接内部。
-   * 不排除它会导致两个真实 bug：
-   *   1) resolveCardTarget 会在**封面链接**上就找到"标题 + 封面"，把封面链接当成一整张卡片；
-   *   2) getTitle 会拿「番剧」两个字去比对屏蔽词，卡片真正的标题被彻底忽略。
-   */
-  function isBadgeLabel(el) {
-    if (!el || !el.closest) return false;
-    return !!el.closest('.badge, [class*="badge"], [class*="tag-label"]');
-  }
-
   function getTitle(card) {
     for (var i = 0; i < TITLE_SELECTORS.length; i++) {
       var el = card.querySelector(TITLE_SELECTORS[i]);
       if (!el) continue;
       var t = textOf(el);
-      if (t && !isBadgeLabel(el)) return t;
+      if (t) return t;
     }
     var anchor = card.querySelector('a[title]');
     if (anchor) {
       var at = anchor.getAttribute('title');
-      if (at && at.trim() && !isBadgeLabel(anchor)) return at.trim();
+      if (at && at.trim()) return at.trim();
     }
     var own = card.getAttribute('title');
     if (own && own.trim()) return own.trim();
@@ -366,25 +348,21 @@
     return n;
   }
 
-  /** 在作用域内找到"标题"元素（含自身）。分区徽标上的文字（「番剧」「直播」）不算标题。 */
+  /** 在作用域内找到"标题"元素（含自身） */
   function findTitleEl(scope) {
-    if (!scope) return null;
-    for (var i = 0; i < TITLE_SELECTORS.length; i++) {
-      var sel = TITLE_SELECTORS[i];
-      if (scope.matches && scope.matches(sel) && isTitleish(scope) && !isBadgeLabel(scope)) return scope;
-      if (!scope.querySelector) continue;
-      var el = scope.querySelector(sel);
-      if (!el) continue;
-      if (isBadgeLabel(el)) {
-        // 同一个选择器可能还匹配到真正的标题（.floor-title 既是徽标文案、也是楼层标题的类名）
-        var list = scope.querySelectorAll(sel);
-        el = null;
-        for (var k = 0; k < list.length; k++) {
-          if (!isBadgeLabel(list[k])) { el = list[k]; break; }
+    if (!scope || !scope.querySelector) {
+      // scope 可能是元素自身匹配的情况
+      if (scope && scope.matches) {
+        for (var k = 0; k < TITLE_SELECTORS.length; k++) {
+          if (scope.matches(TITLE_SELECTORS[k]) && isTitleish(scope)) return scope;
         }
-        if (!el) continue;
       }
-      if (isTitleish(el)) return el;
+      return null;
+    }
+    for (var i = 0; i < TITLE_SELECTORS.length; i++) {
+      if (scope.matches && scope.matches(TITLE_SELECTORS[i]) && isTitleish(scope)) return scope;
+      var el = scope.querySelector(TITLE_SELECTORS[i]);
+      if (el && isTitleish(el)) return el;
     }
     return null;
   }
@@ -980,20 +958,11 @@
   /**
    * 通用分区卡片扫描：不依赖 class，
    * 只要卡片里存在指向该分区的链接，就向上推断出卡片容器并处理。
-   *
-   * 注意候选筛选用的是**全部**已知分区链接特征，而不是只用在设置里打开的那几个开关：
-   * 屏蔽词要能作用到页面上任意一张推广卡片上（例如只开了「直播」开关时，
-   * 番剧推广卡片同样应该被屏蔽词命中）。是否真的屏蔽仍然由 processCard 决定。
-   * 一个开关都没开、也没有屏蔽词时直接退出，不做无谓的全页扫描。
    */
   function scanTypedCards() {
     if (!settings.enabled) return;
-    var hasType = false;
-    for (var t = 0; t < TYPES.length; t++) {
-      if (settings.blockTypes[TYPES[t].key]) { hasType = true; break; }
-    }
-    var hasKeywords = !!(settings.keywords && settings.keywords.length);
-    if (!hasType && !hasKeywords) return;
+    var enabled = TYPES.filter(function (t) { return settings.blockTypes[t.key]; });
+    if (!enabled.length) return;
 
     var anchors = document.querySelectorAll('a[href]');
     var handled = 0;
@@ -1003,8 +972,8 @@
       if (a.closest && a.closest(BANNER_EXCLUDE)) continue;   // 横幅交给板块级开关
       var href = a.getAttribute('href') || '';
       var hit = null;
-      for (var j = 0; j < TYPES.length; j++) {
-        if (TYPES[j].href && TYPES[j].href.test(href)) { hit = TYPES[j]; break; }
+      for (var j = 0; j < enabled.length; j++) {
+        if (enabled[j].href.test(href)) { hit = enabled[j]; break; }
       }
       if (!hit) continue;
 
@@ -1061,19 +1030,6 @@
     flushTimer = setTimeout(flush, 180);
   }
 
-  /** 节点内是否藏着"分区推广"链接：推广卡片不是 CARD_SELECTOR 那种结构，只能靠链接发现 */
-  function containsTypedAnchor(node) {
-    if (!node || !node.querySelectorAll) return false;
-    var anchors = node.querySelectorAll('a[href]');
-    for (var i = 0; i < anchors.length && i < 20; i++) {
-      var href = anchors[i].getAttribute('href') || '';
-      for (var j = 0; j < TYPES.length; j++) {
-        if (TYPES[j].href && TYPES[j].href.test(href)) return true;
-      }
-    }
-    return false;
-  }
-
   function markDirty(node) {
     if (!node || node.nodeType !== 1) return;
     if (node.classList && (node.classList.contains('bf-mask') || node.classList.contains('bf-banner-blocked'))) return;
@@ -1091,9 +1047,6 @@
       return;
     }
     if (node.querySelector && node.querySelector(CARD_SELECTOR)) pendingFullScan = true;
-    // 懒加载进来的推广卡片（.floor-card-inner 这类）不在 CARD_SELECTOR 里，
-    // 只能靠"里面有没有分区链接"来发现，否则要等到用户滚动才会被扫到
-    else if (containsTypedAnchor(node)) pendingFullScan = true;
   }
 
   function startObservers() {

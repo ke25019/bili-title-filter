@@ -4,9 +4,9 @@
 
 An extension I wrote for myself to filter Bilibili. Add a few keywords and the videos whose titles contain them disappear; it can also block whole categories of promoted content, like live streams and anime.
 
-![version](https://img.shields.io/badge/version-1.1.12--beta-orange)
+![version](https://img.shields.io/badge/version-1.1.11--beta-orange)
 ![browser](https://img.shields.io/badge/Edge%20%7C%20Chrome-Chromium-00aeec)
-![tests](https://img.shields.io/badge/tests-190%20passed-brightgreen)
+![tests](https://img.shields.io/badge/tests-175%20passed-brightgreen)
 
 ---
 
@@ -46,6 +46,6 @@ Details and the FAQ live in the two documents linked above.
 - A draggable panel inside the page
 - Follows Bilibili's dark mode
 
-纯原生 JavaScript，没有运行时依赖。测试用 jsdom 跑，一共 190 项。
+纯原生 JavaScript，没有运行时依赖。测试用 jsdom 跑，一共 175 项。
 
-Plain JavaScript, no runtime dependencies. The tests run on jsdom — 190 checks in total.
+Plain JavaScript, no runtime dependencies. The tests run on jsdom — 172 checks in total.

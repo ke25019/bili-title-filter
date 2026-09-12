@@ -4,9 +4,9 @@ An extension I wrote for myself to filter Bilibili. Add a few keywords and the v
 
 Manifest V3, works in Edge and Chrome, plain JavaScript with no runtime dependencies.
 
-![version](https://img.shields.io/badge/version-1.1.12--beta-orange)
+![version](https://img.shields.io/badge/version-1.1.11--beta-orange)
 ![browser](https://img.shields.io/badge/Edge%20%7C%20Chrome-Chromium-00aeec)
-![tests](https://img.shields.io/badge/tests-190%20passed-brightgreen)
+![tests](https://img.shields.io/badge/tests-175%20passed-brightgreen)
 
 ---
 
@@ -56,7 +56,7 @@ I didn't hard-code a single class for detecting promo cards. The order is:
 4. Otherwise it walks up to the first element that contains both a title and a cover
 5. The top navigation and a few areas that hide promo links are explicitly excluded
 
-When it can't tell, I'd rather skip than mess up the page, so there are safety valves: the container holds other cards, the size is over 1200×800 or 35% of the viewport, or the element has zero size — any of those and the block is skipped.
+When it can't tell, I'd rather skip than mess up the page, so there are safety valves: the container holds other cards, the size is over 1100×700 or 15% of the viewport, or the element has zero size — any of those and the block is skipped.
 
 ---
 
@@ -101,7 +101,7 @@ npm install
 npm test
 ```
 
-190 checks covering the blocking logic, category detection, both hiding behaviours, the settings pages and the background stats.
+175 checks covering the blocking logic, category detection, both hiding behaviours, the settings pages and the background stats.
 
 The mock DOM and its sizes were measured on the real site (utility-class structures like `.floor-card-inner > .cover-container + .pb-16.px-12 > p.title`, the `.vui_carousel` banner, the 0×0 hidden links inside `.palette-button-inner`, and so on).
 
@@ -131,14 +131,6 @@ Bilibili is a single-page app, so scrolling and navigating re-render cards. The 
 ## Changelog
 
 Newest first. This is what changed and why — including the parts I got wrong.
-
-### 1.1.12
-
-In the previous version I said the outer container gets hidden too. **That code never actually did anything.** The CSS was written as `.bf-blocked.bf-hide` and `.bf-blocked.bf-hide-slot`, while the outer container only ever receives `bf-hide` / `bf-hide-slot` and never `bf-blocked`. The class names were applied, but not a single rule matched - so the card's content disappeared while the bordered, shadowed white shell stayed on the page. That is the leftover placeholder I kept getting reports about. Those two rules are plain class selectors now, and **the way I verify this changed as well**: instead of checking whether a class name is present, the tests read the `display` / `visibility` the browser actually computes, and fail when the element is still visible. That is how this one got caught.
-
-The same card (a bangumi promo in the home-page recommend feed) exposed a second problem: the badge in the cover's top-left corner, `.badge > .floor-title` - its text is literally "番剧" - shares a class name with the title selectors and sits inside the cover link. Two consequences: card detection stopped right at the cover link and treated **one link as a whole card**, and the keyword matcher compared against the two characters "番剧" while the real title was ignored entirely. Badge text no longer counts as a title, the card is located on `.floor-card-inner`, and keywords match the real title again.
-
-I also fixed two discovery paths while I was in there: candidate cards are no longer filtered by whichever category switches happen to be on (with only "live" enabled, a bangumi promo card could never be found), and promo cards inserted by lazy loading now trigger a scan immediately instead of waiting for a scroll.
 
 ### 1.1.11
 

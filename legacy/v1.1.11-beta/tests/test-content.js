@@ -19,9 +19,8 @@ const { JSDOM } = require('jsdom');
 const ROOT = path.join(__dirname, '..');
 const DEFAULTS_SRC = fs.readFileSync(path.join(ROOT, 'shared', 'defaults.js'), 'utf8');
 const CONTENT_SRC = fs.readFileSync(path.join(ROOT, 'content', 'content.js'), 'utf8');
-const CONTENT_CSS = fs.readFileSync(path.join(ROOT, 'content', 'content.css'), 'utf8');
 
-const HTML = `<!DOCTYPE html><html><head><style id="bf-style">${CONTENT_CSS}</style></head><body>
+const HTML = `<!DOCTYPE html><html><head></head><body>
   <div class="bili-header">
     <div class="channel-items__right">
       <a class="channel-link__right" href="//live.bilibili.com">直播</a>
@@ -66,31 +65,6 @@ const HTML = `<!DOCTYPE html><html><head><style id="bf-style">${CONTENT_CSS}</st
     </div>
 
     <div class="container is-version8" id="feed-list" style="display:grid">
-      <!-- 用户反馈的那张首页「分区推荐」卡片，DOM 原样照抄自 Copy outerHTML：
-           封面链接里带着分区徽标 .badge > .floor-title（文案「番剧」），
-           卡片背后还垫着 .layer / .layer.tiny 两块灰色层（B 站真实的「叠卡片」效果）。
-           这里曾经踩过两个坑：
-             ① 徽标文案被当成标题 → 整张卡片识别不出来，只把封面链接当成一张卡片；
-             ② 外层带边框 + 阴影的盒子（.floor-card）其实根本没被隐藏 → 残留一块占位白框。 -->
-      <div class="floor-single-card" id="badgeHost" data-w="238" data-h="248">
-        <div class="single-card floor-card" id="badgeBox" data-w="238" data-h="248"
-             style="border:1px solid #e3e5e7;background:#fff;box-shadow:0 0 40px rgba(0,0,0,.03);border-radius:6px">
-          <div class="floor-card-inner" id="badgeInner" data-w="238" data-h="224">
-            <div class="cover-container" data-w="238" data-h="134">
-              <a id="badgeLink" href="//www.bilibili.com/bangumi/play/ep468949"
-                 data-mod="partition_recommend.content"><img src="episode.jpg"></a>
-              <div class="badge"><svg class="icon-title"></svg><span class="floor-title">番剧</span></div>
-            </div>
-            <div class="pb-16 px-12 flex flex-col items-start info-container" data-w="238" data-h="90">
-              <p class="title indent-initial" title="准备好了？我准备好了！">准备好了？我准备好了！</p>
-              <p class="sub-title indent-initial" title="海绵宝宝 登陆B站">海绵宝宝 登陆B站</p>
-            </div>
-            <div class="layer"></div>
-            <div class="layer tiny"></div>
-          </div>
-        </div>
-      </div>
-
       <div class="feed-card" id="c1" data-w="240" data-h="210">
         <div class="bili-feed-card">
           <div class="bili-video-card is-rcmd">
@@ -206,16 +180,6 @@ let fail = 0;
 function check(name, cond, extra) {
   if (cond) { pass++; console.log('  \u2713 ' + name); }
   else { fail++; console.log('  \u2717 ' + name + (extra !== undefined ? '  -> ' + extra : '')); }
-}
-
-/** 轮询等待条件成立，避免机器负载导致的时序抖动 */
-async function waitFor(fn, timeout = 3000) {
-  const t0 = Date.now();
-  while (Date.now() - t0 < timeout) {
-    if (fn()) return true;
-    await sleep(50);
-  }
-  return fn();
 }
 
 async function main() {
@@ -336,13 +300,13 @@ async function main() {
   check('默认保留原位置：卡片标记为 bf-hide-slot', $('c1').classList.contains('bf-hide-slot'), $('c1').className);
   check('保留位置时不做 display:none（页面不重排）', !$('c1').classList.contains('bf-hide'));
   check('保留位置时仍带 bf-blocked（内容由 CSS 隐藏）', $('c1').classList.contains('bf-blocked'));
-  const cssText = CONTENT_CSS.replace(/\/\*[\s\S]*?\*\//g, '');   // 先去掉注释，只看真正的规则
+  const cssText = fs.readFileSync(path.join(ROOT, 'content', 'content.css'), 'utf8');
   check('CSS 定义了保留位置时隐藏遮罩的规则',
-    /\.bf-hide-slot\s+\.bf-mask\s*\{[^}]*display:\s*none/.test(cssText));
-  check('【关键】保留位置时隐藏的是元素自身（含背景边框与外层盒子），避免留下白色空盒',
-    /(^|\})\s*\.bf-hide-slot\s*\{[^}]*visibility:\s*hidden/.test(cssText));
-  check('【关键】移除位置的 display:none 不能写成 .bf-blocked 复合选择器（外层容器没有 bf-blocked）',
-    /(^|\})\s*\.bf-hide\s*\{[^}]*display:\s*none/.test(cssText) && !/\.bf-blocked\.bf-hide\s*\{/.test(cssText));
+    /\.bf-blocked\.bf-hide-slot\s*>\s*\.bf-mask\s*\{[^}]*display:\s*none/.test(cssText));
+  check('【关键】保留位置时隐藏的是卡片自身（含背景边框），避免留下白色空盒',
+    /\.bf-blocked\.bf-hide-slot\s*\{[^}]*visibility:\s*hidden/.test(cssText));
+  check('CSS 定义了移除位置时的 display:none 规则',
+    /\.bf-blocked\.bf-hide\s*\{[^}]*display:\s*none/.test(cssText));
 
   // 关闭保留位置：整卡移除
   await pushSettings({ hideKeepSlot: false });
@@ -420,8 +384,8 @@ async function main() {
   // 占位项被真实内容填充后要自动恢复
   $('ph1').innerHTML = '<a href="//www.bilibili.com/video/BVnew"><img src="new.jpg"></a>' +
     '<h3 class="bili-video-card__info--tit" title="新加载的真实卡片">新加载的真实卡片</h3>';
-  check('占位项被真实内容填充后自动恢复显示',
-    await waitFor(() => !$('ph1').classList.contains('bf-ph-collapsed')), $('ph1').className);
+  await sleep(900);
+  check('占位项被真实内容填充后自动恢复显示', !$('ph1').classList.contains('bf-ph-collapsed'), $('ph1').className);
 
   console.log('\n[10b] 空占位识别的边界（对照真实页面上踩过的坑）');
   await pushSettings({ mode: 'hide', hideKeepSlot: false, keywords: ['剧透'] });
@@ -449,8 +413,8 @@ async function main() {
   // （改 naturalWidth 不会触发 DOM 变更，因此要等一次定时复核：tick 为 1.2s）
   const imgInPh3 = $('ph3').querySelector('img');
   Object.defineProperty(imgInPh3, 'naturalWidth', { value: 320, configurable: true });
-  check('占位项里的图片加载完成后不再被收敛',
-    await waitFor(() => !collapsedWithin('ph3'), 4500), $('ph3').className);
+  await sleep(2400);
+  check('占位项里的图片加载完成后不再被收敛', !collapsedWithin('ph3'), $('ph3').className);
 
   await pushSettings({ mode: 'mask', keywords: [], hideKeepSlot: false });
   check('切回遮蔽模式后占位项标记被清除', doc.querySelectorAll('.bf-ph-collapsed, .bf-ph-muted').length === 0);
@@ -487,84 +451,6 @@ async function main() {
     !$('frameHost').classList.contains('bf-hide') && !$('frameHost').classList.contains('bf-hide-slot'),
     $('frameHost').className);
 
-  console.log('\n[10d] 外层容器必须「真的」被隐藏（按浏览器算出来的样式判定，不看类名）');
-  console.log('      —— 回归：卡片没了、带边框的白色盒子还留在页面上（占位符没删干净）');
-  const cs = (el) => win.getComputedStyle(el);
-
-  // 1) 分区徽标 .badge > .floor-title（文案「番剧」）绝不能被当成视频标题
-  //    开启番剧分区开关 → 这张卡片会被通用识别扫到（真实页面同理），命中原因必须是「分区」而不是「关键词」
-  await pushSettings({ mode: 'mask', hideKeepSlot: true, keywords: ['番剧'], blockTypes: { bangumi: true } });
-  check('徽标文案「番剧」不会作为关键词命中（命中原因是分区而不是屏蔽词）',
-    blocked('badgeInner') && $('badgeInner').dataset.bfKind === 'type', $('badgeInner').dataset.bfKind);
-
-  // 2) 关掉分区开关后，靠真实标题（而不是徽标文案）命中整张卡片
-  await pushSettings({ keywords: ['我准备好了'], blockTypes: {} });
-  check('【关键】分区推荐卡片按真实标题命中，被屏蔽的是卡片本体 .floor-card-inner',
-    blocked('badgeInner') && $('badgeInner').dataset.bfKind === 'keyword',
-    $('badgeInner').className + ' / kind=' + $('badgeInner').dataset.bfKind);
-  check('封面链接不会被单独当成一张卡片（不带 data-bf-card、不带 bf-blocked）',
-    !$('badgeLink').dataset.bfCard && !$('badgeLink').classList.contains('bf-blocked'),
-    ($('badgeLink').getAttribute('class') || '(无 class)') + ' / bfCard=' + $('badgeLink').dataset.bfCard);
-  check('整卡只生成一个遮罩，且挂在卡片本体上',
-    $('badgeInner').querySelectorAll(':scope > .bf-mask').length === 1 &&
-    !$('badgeLink').querySelector('.bf-mask'));
-
-  // 3) 保留位置：外层盒子（边框 + 阴影）与背后的灰色垫层一起隐身，但布局盒留着
-  await pushSettings({ mode: 'hide', hideKeepSlot: true });
-  check('保留位置：卡片本体算出来是 visibility:hidden',
-    cs($('badgeInner')).visibility === 'hidden', cs($('badgeInner')).visibility);
-  check('【关键】保留位置：外层带边框 + 阴影的盒子 visibility:hidden（不再残留白色空框）',
-    cs($('badgeBox')).visibility === 'hidden', cs($('badgeBox')).visibility);
-  check('【关键】保留位置：网格项 visibility:hidden（.layer / .layer.tiny 两块灰条一起消失）',
-    cs($('badgeHost')).visibility === 'hidden', cs($('badgeHost')).visibility);
-  check('保留位置：布局盒仍然占位（display 不是 none，页面不重排）',
-    cs($('badgeHost')).display !== 'none', cs($('badgeHost')).display);
-
-  // 4) 移除位置：整个网格项 display:none，后面的内容前移补位
-  await pushSettings({ hideKeepSlot: false });
-  check('移除位置：卡片本体算出来是 display:none',
-    cs($('badgeInner')).display === 'none', cs($('badgeInner')).display);
-  check('【关键】移除位置：外层盒子不再占位（display:none，前移补位才成立）',
-    cs($('badgeHost')).display === 'none', cs($('badgeHost')).display);
-
-  // 5) 老 fixture（直播楼层）同样按算出来的样式复核一遍
-  await pushSettings({ mode: 'hide', hideKeepSlot: true, keywords: ['剧透警告的直播丁'], blockTypes: {} });
-  check('保留位置：直播楼层的外层 .floor-card 真的隐身',
-    cs($('frameHost')).visibility === 'hidden' && cs($('frameBox')).visibility === 'hidden',
-    cs($('frameHost')).visibility + ' / ' + cs($('frameBox')).visibility);
-  await pushSettings({ hideKeepSlot: false });
-  check('移除位置：直播楼层的外层 .floor-card 不再占位',
-    cs($('frameHost')).display === 'none', cs($('frameHost')).display);
-
-  // 6) 解除屏蔽后必须恢复可见
-  await pushSettings({ mode: 'mask', hideKeepSlot: true, keywords: [], blockTypes: {} });
-  check('解除屏蔽后外层盒子恢复可见',
-    cs($('badgeHost')).visibility === 'visible' && cs($('frameHost')).visibility === 'visible',
-    cs($('badgeHost')).visibility + ' / ' + cs($('frameHost')).visibility);
-
-  // 7) 懒加载插入的推广卡片：只配置屏蔽词、分区开关全关，也应该被自动扫到并屏蔽
-  await pushSettings({ mode: 'mask', hideKeepSlot: true, keywords: ['我准备好了'], blockTypes: {} });
-  const promo = doc.createElement('div');
-  promo.className = 'floor-single-card';
-  promo.setAttribute('data-w', '238');
-  promo.setAttribute('data-h', '248');
-  promo.innerHTML = '<div class="single-card floor-card" style="border:1px solid #e3e5e7;background:#fff">' +
-    '<div class="floor-card-inner" id="promoInner" data-w="238" data-h="224">' +
-    '<div class="cover-container" data-w="238" data-h="134">' +
-    '<a href="//www.bilibili.com/bangumi/play/ep999"><img src="p.jpg"></a>' +
-    '<div class="badge"><span class="floor-title">番剧</span></div>' +
-    '</div>' +
-    '<div class="info-container" data-w="238" data-h="90">' +
-    '<p class="title" title="我准备好了，随时可以出发">我准备好了，随时可以出发</p></div>' +
-    '</div></div>';
-  doc.querySelector('main').appendChild(promo);
-  check('懒加载插入的推广卡片能自动扫到并按标题屏蔽（分区开关全关也一样）',
-    await waitFor(() => !!$('promoInner') && $('promoInner').classList.contains('bf-blocked')),
-    $('promoInner') ? $('promoInner').className : '(未找到)');
-  check('该卡片被屏蔽的是卡片本体，徽标文案依然没被当成标题',
-    !!$('promoInner').querySelector(':scope > .bf-mask') &&
-    !$('promoInner').querySelector('.badge').classList.contains('bf-blocked'));
-
   console.log('\n[11] 顶栏与横幅不被误伤');
   check('顶栏「直播」入口未被屏蔽', !doc.querySelector('.channel-link__right').classList.contains('bf-blocked'));
   check('顶栏「番剧」入口未被屏蔽', !doc.querySelectorAll('.channel-link__right')[1].classList.contains('bf-blocked'));
@@ -598,8 +484,8 @@ async function main() {
     '<a class="bili-video-card__image--link" href="//www.bilibili.com/video/BV9zz"><img src="x.jpg"></a>' +
     '<h3 class="bili-video-card__info--tit" title="营销号又来了">营销号又来了</h3></div></div>';
   doc.querySelector('main').appendChild(extra);
-  check('新卡片被 MutationObserver 自动扫描并屏蔽',
-    await waitFor(() => $('c9').classList.contains('bf-blocked')), '未被屏蔽');
+  await sleep(500);
+  check('新卡片被 MutationObserver 自动扫描并屏蔽', $('c9').classList.contains('bf-blocked'), '未被屏蔽');
 
   console.log('\n[14] 总开关');
   await pushSettings({ enabled: false });
