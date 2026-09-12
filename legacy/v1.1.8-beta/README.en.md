@@ -2,10 +2,10 @@
 
 > A browser extension that filters Bilibili videos by the title keywords you choose.
 
-[![version](https://img.shields.io/badge/version-1.1.9--beta-orange)](https://github.com/ke25019/bili-title-filter/releases)
+[![version](https://img.shields.io/badge/version-1.1.8--beta-orange)](https://github.com/ke25019/bili-title-filter/releases)
 [![manifest](https://img.shields.io/badge/Manifest-V3-blue)]()
 [![browser](https://img.shields.io/badge/Edge%20%7C%20Chrome-Chromium-00aeec)]()
-[![tests](https://img.shields.io/badge/tests-166%20passed-brightgreen)]()
+[![tests](https://img.shields.io/badge/tests-165%20passed-brightgreen)]()
 
 A Manifest V3 extension for **Microsoft Edge / Google Chrome and other Chromium browsers**.
 Block videos whose titles match your own keyword list: either **mask** them (cover and title merged into a single
@@ -16,9 +16,9 @@ live streams and anime, and can hide the home-page carousel banner on its own.
 
 ## ⚠️ Beta Notice
 
-The current release is **v1.1.9-beta**. It is feature-complete but still in testing — feedback is very welcome.
+The current release is **v1.1.8-beta**. It is feature-complete but still in testing — feedback is very welcome.
 
-- Automated checks: 94 for the core blocking logic, 52 for the settings UI, 20 for the background service — **166 in total, all passing**.
+- Automated checks: 93 for the core blocking logic, 52 for the settings UI, 20 for the background service — **165 in total, all passing**.
 - **Core principle of this release: rather skip than mis-block.** Whenever the extension cannot confidently identify a card, it skips that promo instead of risking a broken page.
 - Known limitation: if Bilibili redesigns its pages, a few card selectors may need updating (see the FAQ below).
 - Feedback: please open an [Issue](https://github.com/ke25019/bili-title-filter/issues) with the page URL and a screenshot if possible.
@@ -225,24 +225,10 @@ A: Bilibili is a single-page app: scrolling and navigation re-render cards, so t
 
 ## Version
 
-**v1.1.9-beta** · Requires Microsoft Edge (Chromium) 102+ (`minimum_chrome_version: 102`)
+**v1.1.8-beta** · Requires Microsoft Edge (Chromium) 102+ (`minimum_chrome_version: 102`)
 
 ### Changelog
 
-**v1.1.9-beta**
-
-> Key fix: the "white empty box" left behind in keep-slot mode.
-
-- **Fixed: keep-slot mode left an empty white box**
-  The old implementation hid the card's **children**, so the card's **own background and border stayed visible**,
-  which looks like an empty white box. v1.0.0-beta looked more natural because it hid the inner card and the outer
-  grid item has **no background**, so that spot showed the page background instead.
-  Now `visibility: hidden` is applied to the **card itself**:
-  * the layout box still holds its place -> no reflow, no shrinking, and Bilibili's trailing empty skeleton
-    placeholders are not pulled into the middle of the feed
-  * the card disappears together with its background and border -> the spot shows the page background,
-    **matching v1.0.0-beta visually**
-- Checks 165 -> 166, with an assertion guarding this CSS rule
 **v1.1.8-beta**
 
 > This release audits the whole "remove the slot" (cards move up) path line by line and fixes five real defects.

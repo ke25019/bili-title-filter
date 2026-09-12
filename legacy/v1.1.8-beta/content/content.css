@@ -39,15 +39,9 @@ html.bf-dark {
   display: none !important;
 }
 
-/* 完全隐藏 + 保留原位置：
-   用「卡片自身的 visibility」而不是「隐藏子元素」——
-   前者会把卡片自己的背景/边框一起隐掉，那个位置显示的是页面底色（看起来只是"空着"，
-   与 v1.0.0-beta 的观感一致）；后者会留下一个空的白色盒子（用户反馈的"白色空块"）。
-   布局盒依然占位 → 页面不重排、不变短，也不会把站点末尾的空骨架占位块顶到内容中间。 */
-.bf-blocked.bf-hide-slot {
-  visibility: hidden !important;
-}
-
+/* 完全隐藏 + 保留原位置：只隐藏卡片内容（子元素由上面的规则隐藏），
+   盒子尺寸不变 → 页面不重排、不变短，也不会把站点末尾的空骨架占位块顶到内容中间。
+   这就是 v1.0.0-beta 的实际行为，作为默认值。 */
 .bf-blocked.bf-hide-slot > .bf-mask {
   display: none !important;
 }

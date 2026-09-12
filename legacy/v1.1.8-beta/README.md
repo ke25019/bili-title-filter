@@ -54,7 +54,7 @@ Full instructions are available in the language-specific documents linked above.
 ```bash
 cd tests
 npm install
-npm test        # 166 项校验全部通过 / 166 checks, all passing
+npm test        # 165 项校验全部通过 / 165 checks, all passing
 ```
 
 本扩展的代码是纯原生 JavaScript、零运行时依赖。

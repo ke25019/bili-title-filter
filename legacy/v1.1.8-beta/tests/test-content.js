@@ -275,8 +275,6 @@ async function main() {
   const cssText = fs.readFileSync(path.join(ROOT, 'content', 'content.css'), 'utf8');
   check('CSS 定义了保留位置时隐藏遮罩的规则',
     /\.bf-blocked\.bf-hide-slot\s*>\s*\.bf-mask\s*\{[^}]*display:\s*none/.test(cssText));
-  check('【关键】保留位置时隐藏的是卡片自身（含背景边框），避免留下白色空盒',
-    /\.bf-blocked\.bf-hide-slot\s*\{[^}]*visibility:\s*hidden/.test(cssText));
   check('CSS 定义了移除位置时的 display:none 规则',
     /\.bf-blocked\.bf-hide\s*\{[^}]*display:\s*none/.test(cssText));
 

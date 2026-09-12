@@ -2,10 +2,10 @@
 
 > B站视频标题屏蔽助手 —— 一个按标题屏蔽词过滤 B 站视频的浏览器扩展。
 
-[![version](https://img.shields.io/badge/version-1.1.9--beta-orange)](https://github.com/ke25019/bili-title-filter/releases)
+[![version](https://img.shields.io/badge/version-1.1.8--beta-orange)](https://github.com/ke25019/bili-title-filter/releases)
 [![manifest](https://img.shields.io/badge/Manifest-V3-blue)]()
 [![browser](https://img.shields.io/badge/Edge%20%7C%20Chrome-Chromium-00aeec)]()
-[![tests](https://img.shields.io/badge/tests-166%20passed-brightgreen)]()
+[![tests](https://img.shields.io/badge/tests-165%20passed-brightgreen)]()
 
 一个适用于 **Microsoft Edge / Chrome 等 Chromium 浏览器** 的 B 站网页端扩展（Manifest V3）。
 按你自己添加的**视频标题屏蔽词**屏蔽视频：可以整体遮蔽（封面与标题合并成一块提示区域，鼠标悬停即可查看），
@@ -15,9 +15,9 @@
 
 ## ⚠️ Beta 说明
 
-当前版本为 **v1.1.9-beta**，功能完整可用，但仍处于测试阶段，欢迎反馈问题。
+当前版本为 **v1.1.8-beta**，功能完整可用，但仍处于测试阶段，欢迎反馈问题。
 
-- 自动化校验：核心屏蔽逻辑 94 项、设置界面 52 项、后台服务 20 项，**共 166 项全部通过**。
+- 自动化校验：核心屏蔽逻辑 93 项、设置界面 52 项、后台服务 20 项，**共 165 项全部通过**。
 - **本版的核心原则：宁可不屏蔽，也绝不乱遮**。任何一步无法确认是一张卡片时，扩展会直接跳过该推广，不影响页面其它内容。
 - 已知限制：B 站页面结构改版后，个别卡片的识别可能需要调整（见文末「常见问题」）。
 - 反馈渠道：请在 [Issues](https://github.com/ke25019/bili-title-filter/issues) 中提交，附上页面地址与截图更好定位。
@@ -182,7 +182,7 @@ bili-title-filter/
 ```bash
 cd tests
 npm install      # 仅测试需要 jsdom
-npm test         # 166 项行为校验
+npm test         # 165 项行为校验
 ```
 
 验证覆盖：屏蔽逻辑与两种屏蔽方式、悬停展示、**真实直播楼层结构下的封面+标题合并遮蔽**、14 类分区与兜底规则、
@@ -229,21 +229,10 @@ A：B 站是单页应用，列表滚动与切换会让卡片重新渲染，统�
 
 ## 版本
 
-**v1.1.9-beta** · 适用于 Microsoft Edge (Chromium) 102+（`minimum_chrome_version: 102`）
+**v1.1.8-beta** · 适用于 Microsoft Edge (Chromium) 102+（`minimum_chrome_version: 102`）
 
 ### 更新日志
 
-**v1.1.9-beta**
-
-> 关键修复：**「保留原位置」模式下那个"白色空块"**。
-
-- **修复：保留原位置时留下一个空的白色盒子**
-  之前的做法是隐藏卡片的**子元素**，卡片**自身的背景 / 边框仍然可见** → 那个位置看起来像一个"空的白盒子"。
-  v1.0.0-beta 之所以观感更自然，是因为它隐藏的是内部卡片、外层网格项**没有背景**，所以那个位置显示的是页面底色。
-  现在改为对**卡片自身**用 `visibility: hidden`：
-  * 布局盒依然占位 → 页面**不重排、不变短**，不会把 B 站末尾的空骨架占位块顶到内容中间
-  * 卡片连同背景与边框一起消失 → 那个位置显示页面底色，**观感与 v1.0.0-beta 一致**
-- 校验项 165 → 166，新增一条断言确保这条 CSS 规则存在（防止以后被误删）
 **v1.1.8-beta**
 
 > 本版按你的要求**把「前移补位」（移除位置）这条路径逐行审了一遍**，修掉了 5 个真实缺陷。
