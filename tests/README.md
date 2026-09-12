@@ -19,6 +19,29 @@ node test-ui.js           # 扩展弹窗与完整设置页的交互
 node test-background.js   # 后台 Service Worker：统计、徽标、默认配置
 ```
 
+## 真实浏览器调试（`browser-harness/`）
+
+有些问题（B 站真实 DOM 结构、布局回流、占位块被顶上来等）jsdom 测不出来，需要把扩展装进真实浏览器实测。
+`browser-harness/` 提供这套流程，**第一原则是绝不能影响使用者日常使用的浏览器**：
+
+```powershell
+cd browser-harness
+.\safe-edge.ps1 -Action start -ExtensionPath "H:\path\to\bili-title-filter"   # 启动独立无头实例
+node probe.js <表达式文件>     # 取页面数据
+node shot.js out.png [full]   # 截图（full = 整页；用完 node shot.js x.png reset 还原视口）
+.\safe-edge.ps1 -Action stop  # 只关自己的实例
+```
+
+安全规则（详见 `browser-harness/README.md`）：
+
+1. **绝不按进程名杀进程**——`Stop-Process -Name msedge` 会连带杀掉使用者正在用的所有 Edge 窗口；
+   这里只结束命令行里带专属 profile `%TEMP%\bf-test-edge` 的进程
+2. 独立 `--user-data-dir` + 独立调试端口（9223），与默认 profile 完全隔离
+3. **必须带 `--disable-sync`**——否则使用者的扩展配置会被同步进测试实例，测试里的改动也可能同步回其账号
+4. `probe.js` / `shot.js` 只在 `.test-instance.json` 标记文件存在时才连接，避免误连到使用者的浏览器
+
+---
+
 ## 覆盖内容
 
 | 脚本 | 校验点 |
