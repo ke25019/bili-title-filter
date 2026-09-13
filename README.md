@@ -49,3 +49,7 @@ Details and the FAQ live in the two documents linked above.
 纯原生 JavaScript，没有运行时依赖。测试用 jsdom 跑，一共 192 项。
 
 Plain JavaScript, no runtime dependencies. The tests run on jsdom — 192 checks in total.
+
+此项目包含AI生成
+
+This project includes AI-generated content
