@@ -80,16 +80,20 @@ This project is licensed under the [PolyForm Noncommercial License 1.0.0](LICENS
 
 You may use, modify, and distribute this software for noncommercial purposes only, provided you retain the original copyright notice.
 
+Copyright (c) 2026 ke25019
+
 ---
 
 ## 免责声明 / Disclaimer
 
 1. **非官方工具**：本项目为个人开源项目，与哔哩哔哩（B站）官方无任何关联，未获得 B站的官方授权或认可。
-2. **使用风险**：本工具通过注入脚本修改 B站页面内容，可能违反 B站《用户使用协议》中关于禁止使用自动化脚本获取或干预平台内容的相关条款。用户应自行评估使用风险。
-3. **数据安全**：本扩展仅读取页面本地数据用于过滤操作，不收集、不上传任何用户个人信息至外部服务器。
-4. **责任限制**：本软件按“原样”提供，不提供任何明示或暗示的担保。作者不对因使用本工具导致的账号封禁、数据丢失或其他损失承担责任。
+   **Unofficial Tool**: This is a personal open-source project and is not affiliated with, authorized, or endorsed by Bilibili.
 
-1. **Unofficial Tool**: This is a personal open-source project and is not affiliated with, authorized, or endorsed by Bilibili.
-2. **Usage Risk**: This tool modifies Bilibili's page content via script injection, which may violate Bilibili's Terms of Service regarding automated scripts. Users should evaluate the risks themselves.
-3. **Data Security**: This extension only reads local page data for filtering and does not collect or upload any personal information.
-4. **Limitation of Liability**: This software is provided "as is" without any warranties. The author is not liable for any account bans, data loss, or other damages resulting from the use of this tool.
+2. **使用风险**：本工具通过注入脚本修改 B站页面内容，可能违反 B站《用户使用协议》中关于禁止使用自动化脚本获取或干预平台内容的相关条款。用户应自行评估使用风险。
+   **Usage Risk**: This tool modifies Bilibili's page content via script injection, which may violate Bilibili's Terms of Service regarding automated scripts. Users should evaluate the risks themselves.
+
+3. **数据安全**：本扩展仅读取页面本地数据用于过滤操作，不收集、不上传任何用户个人信息至外部服务器。
+   **Data Security**: This extension only reads local page data for filtering and does not collect or upload any personal information.
+
+4. **责任限制**：本软件按“原样”提供，不提供任何明示或暗示的担保。作者不对因使用本工具导致的账号封禁、数据丢失或其他损失承担责任。
+   **Limitation of Liability**: This software is provided "as is" without any warranties. The author is not liable for any account bans, data loss, or other damages resulting from the use of this tool.
