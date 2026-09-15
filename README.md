@@ -1,12 +1,13 @@
 # B站屏蔽助手 · BiliTitleFilter
 
-一个 B 站网页端扩展：给不想看的视频标题加几个关键词，它们就从页面上消失；也能按分区屏蔽直播、番剧这类推广内容。
-
-A Bilibili web extension: add a few keywords to filter out video titles you don’t want to see, and they disappear from the page; it can also block promoted content by category, such as live streams and anime.
-
+[![License: PolyForm Noncommercial](https://img.shields.io/badge/License-PolyForm_Noncommercial-orange.svg)](https://polyformproject.org/licenses/noncommercial/1.0.0/)
 ![version](https://img.shields.io/badge/version-1.2.0-orange)
 ![browser](https://img.shields.io/badge/Edge%20%7C%20Chrome-Chromium-00aeec)
 ![tests](https://img.shields.io/badge/tests-192%20passed-brightgreen)
+
+一个 B 站网页端扩展：给不想看的视频标题加几个关键词，它们就从页面上消失；也能按分区屏蔽直播、番剧这类推广内容。
+
+A Bilibili web extension: add a few keywords to filter out video titles you don’t want to see, and they disappear from the page; it can also block promoted content by category, such as live streams and anime.
 
 ---
 
@@ -21,20 +22,23 @@ A Bilibili web extension: add a few keywords to filter out video titles you don�
 
 ## 安装 / Install
 
-   到 [Releases](https://github.com/ke25019/bili-title-filter/releases) 下载最新的 zip，解压到一个固定目录
-   Edge 打开 `edge://extensions/`，左下角打开「开发人员模式」，点「加载解压缩的扩展」，选到含 `manifest.json` 的那一层
+**中文：**
+1. 到 [Releases](https://github.com/ke25019/bili-title-filter/releases) 下载最新的 zip，解压到一个固定目录。
+2. Edge 打开 `edge://extensions/`，左下角打开「开发人员模式」，点「加载解压缩的扩展」，选到含 `manifest.json` 的那一层。
 
-   Download the latest zip from [Releases](https://github.com/ke25019/bili-title-filter/releases) and extract it somewhere permanent
-   Open `edge://extensions/`, turn on **Developer mode**, click **Load unpacked**, pick the folder containing `manifest.json`
+**English:**
+1. Download the latest zip from [Releases](https://github.com/ke25019/bili-title-filter/releases) and extract it somewhere permanent.
+2. Open `edge://extensions/`, turn on **Developer mode**, click **Load unpacked**, pick the folder containing `manifest.json`.
 
 详细说明和常见问题都在上面那两个文档里。
 Details and the FAQ live in the two documents linked above.
 
-此项目已发布在Microsoft Edge加载项商店
-相关链接：https://microsoftedge.microsoft.com/addons/detail/b%E7%AB%99%E5%B1%8F%E8%94%BD%E5%8A%A9%E6%89%8B-%E8%A7%86%E9%A2%91%E5%B1%8F%E8%94%BD-%E5%88%86%E5%8C%BA%E6%8E%A8%E5%B9%BF%E8%BF%87%E6%BB%A4/mnedaofgbbcdgpoobimgbceabkchkaif
+此项目已发布在 Microsoft Edge 加载项商店：
+相关链接：https://microsoftedge.microsoft.com/addons/detail/mnedaofgbbcdgpoobimgbceabkchkaif
 
-This item has been released in the Microsoft Edge Add-ons Store
-Related links：https://microsoftedge.microsoft.com/addons/detail/b%E7%AB%99%E5%B1%8F%E8%94%BD%E5%8A%A9%E6%89%8B-%E8%A7%86%E9%A2%91%E5%B1%8F%E8%94%BD-%E5%88%86%E5%8C%BA%E6%8E%A8%E5%B9%BF%E8%BF%87%E6%BB%A4/mnedaofgbbcdgpoobimgbceabkchkaif
+This item has been released in the Microsoft Edge Add-ons Store:
+Related links: https://microsoftedge.microsoft.com/addons/detail/mnedaofgbbcdgpoobimgbceabkchkaif
+
 ---
 
 ## 简单说说 / In short
@@ -55,6 +59,37 @@ Related links：https://microsoftedge.microsoft.com/addons/detail/b%E7%AB%99%E5%
 
 Plain JavaScript, no runtime dependencies. The tests run on jsdom — 192 checks in total.
 
-此项目包含AI生成
+---
 
-This project includes AI-generated content
+## 声明 / Notice
+
+- 此项目包含AI生成内容。
+- This project includes AI-generated content.
+
+---
+
+## 许可证 / License
+
+本项目基于 [PolyForm Noncommercial License 1.0.0](LICENSE) 发布。
+
+你可以为非商业目的自由使用、修改和分发本软件，但必须保留原始版权声明，且不得用于任何商业用途。
+
+Copyright (c) 2026 ke25019
+
+This project is licensed under the [PolyForm Noncommercial License 1.0.0](LICENSE).
+
+You may use, modify, and distribute this software for noncommercial purposes only, provided you retain the original copyright notice.
+
+---
+
+## 免责声明 / Disclaimer
+
+1. **非官方工具**：本项目为个人开源项目，与哔哩哔哩（B站）官方无任何关联，未获得 B站的官方授权或认可。
+2. **使用风险**：本工具通过注入脚本修改 B站页面内容，可能违反 B站《用户使用协议》中关于禁止使用自动化脚本获取或干预平台内容的相关条款。用户应自行评估使用风险。
+3. **数据安全**：本扩展仅读取页面本地数据用于过滤操作，不收集、不上传任何用户个人信息至外部服务器。
+4. **责任限制**：本软件按“原样”提供，不提供任何明示或暗示的担保。作者不对因使用本工具导致的账号封禁、数据丢失或其他损失承担责任。
+
+1. **Unofficial Tool**: This is a personal open-source project and is not affiliated with, authorized, or endorsed by Bilibili.
+2. **Usage Risk**: This tool modifies Bilibili's page content via script injection, which may violate Bilibili's Terms of Service regarding automated scripts. Users should evaluate the risks themselves.
+3. **Data Security**: This extension only reads local page data for filtering and does not collect or upload any personal information.
+4. **Limitation of Liability**: This software is provided "as is" without any warranties. The author is not liable for any account bans, data loss, or other damages resulting from the use of this tool.
