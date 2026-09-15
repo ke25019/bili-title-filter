@@ -197,4 +197,17 @@ First version: block by title keyword, two blocking styles, nine promo categorie
 
 ## License
 
-There's no license file yet. If you want to use this somewhere else, open an issue first.
+This project is licensed under the PolyForm Noncommercial License 1.0.0.
+
+You may use, modify, and distribute this software for noncommercial purposes only, provided you retain the original copyright notice. Commercial use is not permitted.
+
+Copyright (c) 2026 ke25019
+
+---
+
+## Disclaimer
+
+1. Unofficial Tool: This is a personal open-source project and is not affiliated with, authorized, or endorsed by Bilibili.
+2. Usage Risk: This tool modifies Bilibili's page content via script injection, which may violate Bilibili's Terms of Service regarding the prohibition of using automated scripts to access or interfere with platform content. Users should evaluate the risks themselves.
+3. Data Security: This extension only reads local page data for filtering and does not collect or upload any personal information to external servers.
+4. Limitation of Liability: This software is provided "as is" without any express or implied warranties. The author is not liable for any account bans, data loss, or other damages resulting from the use of this tool.
