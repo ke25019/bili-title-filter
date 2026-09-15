@@ -30,6 +30,11 @@ A Bilibili web extension: add a few keywords to filter out video titles you don�
 详细说明和常见问题都在上面那两个文档里。
 Details and the FAQ live in the two documents linked above.
 
+此项目已发布在Microsoft Edge加载项商店
+相关链接：https://microsoftedge.microsoft.com/addons/detail/b%E7%AB%99%E5%B1%8F%E8%94%BD%E5%8A%A9%E6%89%8B-%E8%A7%86%E9%A2%91%E5%B1%8F%E8%94%BD-%E5%88%86%E5%8C%BA%E6%8E%A8%E5%B9%BF%E8%BF%87%E6%BB%A4/mnedaofgbbcdgpoobimgbceabkchkaif
+
+This item has been released in the Microsoft Edge Add-ons Store
+Related links：https://microsoftedge.microsoft.com/addons/detail/b%E7%AB%99%E5%B1%8F%E8%94%BD%E5%8A%A9%E6%89%8B-%E8%A7%86%E9%A2%91%E5%B1%8F%E8%94%BD-%E5%88%86%E5%8C%BA%E6%8E%A8%E5%B9%BF%E8%BF%87%E6%BB%A4/mnedaofgbbcdgpoobimgbceabkchkaif
 ---
 
 ## 简单说说 / In short
