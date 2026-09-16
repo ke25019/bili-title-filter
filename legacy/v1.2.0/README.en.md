@@ -4,9 +4,9 @@ An extension I wrote for myself to filter Bilibili. Add a few keywords and the v
 
 Manifest V3, works in Edge and Chrome, plain JavaScript with no runtime dependencies.
 
-![version](https://img.shields.io/badge/version-1.3.0--beta-orange)
+![version](https://img.shields.io/badge/version-1.2.0-orange)
 ![browser](https://img.shields.io/badge/Edge%20%7C%20Chrome-Chromium-00aeec)
-![tests](https://img.shields.io/badge/tests-209%20passed-brightgreen)
+![tests](https://img.shields.io/badge/tests-192%20passed-brightgreen)
 
 ---
 
@@ -42,9 +42,7 @@ If you'd rather have things compact, turn off "keep the original slot" in the pa
 
 ## Blocking promoted content
 
-Besides title keywords, you can block whole categories: live streams, anime, Chinese animation, movies, TV series, documentaries, variety shows, courses, articles, dynamics, manga, games, music, esports, merch store, events, ads.
-
-Anime, Chinese animation, variety shows and movies are separate switches, so you can block just one of them.
+Besides title keywords, you can block whole categories: live streams, anime, movies, courses, articles, dynamics, manga, games, music, esports, merch store, events, ads.
 
 There's also an "other promos" catch-all for promo cards that don't fall into any of those (app download prompts, other channel promos, and so on). It only applies when a card matches none of the specific categories — so turning "Live" off doesn't get silently re-blocked by the catch-all.
 
@@ -52,14 +50,11 @@ The big carousel at the top of the home page has its own switch. It only affects
 
 I didn't hard-code a single class for detecting promo cards. The order is:
 
-1. The category badge in the cover's top-left corner: Bilibili labels every promo card with its own category ("番剧 / 国创 / 综艺 / 电影 / 赛事…"), which is the most reliable signal
-2. Without a badge, where the links inside the card point (`live.bilibili.com`, `/bangumi/play/`, `/cheese/play/`, …)
-3. Known card class names (`.feed-card`, `.bili-video-card`, …)
-4. Some areas use BEM naming, so elements like `bili-live-card__image--link` are resolved back to the card root
-5. Otherwise it walks up to the first element that contains both a title and a cover
-6. The top navigation and a few areas that hide promo links are explicitly excluded
-
-Why the badge comes first: anime, Chinese animation, variety and movie promo cards all link to `//www.bilibili.com/bangumi/play/epXXXX` — the link alone can't tell them apart, and esports cards are usually live-stream reservations pointing at a live room. Judging by links alone meant switching "Anime" on also blocked Chinese animation, variety and movies, while the "Esports" switch did nothing at all.
+1. Where the links inside the card point (`live.bilibili.com`, `/bangumi/play/`, `/cheese/play/`, …)
+2. Known card class names (`.feed-card`, `.bili-video-card`, …)
+3. Some areas use BEM naming, so elements like `bili-live-card__image--link` are resolved back to the card root
+4. Otherwise it walks up to the first element that contains both a title and a cover
+5. The top navigation and a few areas that hide promo links are explicitly excluded
 
 When it can't tell, I'd rather skip than mess up the page, so there are safety valves: the container holds other cards, the size is over 1200×800 or 35% of the viewport, or the element has zero size — any of those and the block is skipped.
 
@@ -106,7 +101,7 @@ npm install
 npm test
 ```
 
-209 checks covering the blocking logic, category detection, both hiding behaviours, the settings pages and the background stats.
+192 checks covering the blocking logic, category detection, both hiding behaviours, the settings pages and the background stats.
 
 The mock DOM and its sizes were measured on the real site (utility-class structures like `.floor-card-inner > .cover-container + .pb-16.px-12 > p.title`, the `.vui_carousel` banner, the 0×0 hidden links inside `.palette-button-inner`, and so on).
 
@@ -136,14 +131,6 @@ Bilibili is a single-page app, so scrolling and navigating re-render cards. The 
 ## Changelog
 
 Newest first. This is what changed and why — including the parts I got wrong.
-
-### 1.3.0
-
-**Promo categories are now classified by the badge in the cover's top-left corner.** They used to be judged by the links inside the card, but two cards with identical links can belong to different categories: anime, Chinese animation, variety and movie promo cards all link to `//www.bilibili.com/bangumi/play/epXXXX`, and esports cards are usually live-stream reservations pointing at a live room. The result was that the "Anime" switch also blocked Chinese animation, variety and movies, while the "Esports" switch did nothing at all. The category name Bilibili prints on the cover now decides, and the link/class checks are the fallback.
-
-**"Movies & TV" is now four switches, plus a new "Chinese animation" one.** The category list went from 14 to 18: live streams, anime, Chinese animation, movies, TV series, documentaries, variety shows, courses, articles, dynamics, manga, games, music, esports, merch store, events, ads, plus the "other promos" catch-all. Previously "Anime" also covered Chinese animation, variety and movies, and "Movies & TV" also covered TV series, documentaries and variety shows; each one is now its own switch.
-
-Note: an existing "Movies & TV" setting maps to the new "Movies" only. "Anime" no longer includes Chinese animation, and TV series, documentaries and variety shows default to off — turn on the ones you want.
 
 ### 1.2.0
 
@@ -210,17 +197,4 @@ First version: block by title keyword, two blocking styles, nine promo categorie
 
 ## License
 
-This project is licensed under the PolyForm Noncommercial License 1.0.0.
-
-You may use, modify, and distribute this software for noncommercial purposes only, provided you retain the original copyright notice. Commercial use is not permitted.
-
-Copyright (c) 2026 ke25019
-
----
-
-## Disclaimer
-
-1. Unofficial Tool: This is a personal open-source project and is not affiliated with, authorized, or endorsed by Bilibili.
-2. Usage Risk: This tool modifies Bilibili's page content via script injection, which may violate Bilibili's Terms of Service regarding the prohibition of using automated scripts to access or interfere with platform content. Users should evaluate the risks themselves.
-3. Data Security: This extension only reads local page data for filtering and does not collect or upload any personal information to external servers.
-4. Limitation of Liability: This software is provided "as is" without any express or implied warranties. The author is not liable for any account bans, data loss, or other damages resulting from the use of this tool.
+There's no license file yet. If you want to use this somewhere else, open an issue first.
