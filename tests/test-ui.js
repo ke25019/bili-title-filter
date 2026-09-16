@@ -212,6 +212,38 @@ async function testOptions() {
     JSON.stringify(store.sync.bfSettings.keywords) === JSON.stringify(['剧透', '标题党', '营销号']),
     JSON.stringify(store.sync.bfSettings.keywords));
 
+  console.log('\n[B2] UP 白名单（设置页）');
+  check('设置页有 UP 白名单区域',
+    !!doc.getElementById('wl-input') && !!doc.getElementById('wl-chips') && !!doc.getElementById('wl-bulk'));
+  check('白名单为空时给出提示', !!doc.querySelector('#wl-chips .empty'),
+    doc.getElementById('wl-chips').textContent.trim());
+
+  doc.getElementById('wl-input').value = '某UP主, 12345';
+  doc.getElementById('wl-add').click();
+  await sleep(60);
+  check('逗号分隔批量添加白名单',
+    JSON.stringify(store.sync.bfSettings.whitelist) === JSON.stringify(['某UP主', '12345']),
+    JSON.stringify(store.sync.bfSettings.whitelist));
+  check('白名单以 chip 形式渲染', doc.querySelectorAll('#wl-chips .chip').length === 2,
+    String(doc.querySelectorAll('#wl-chips .chip').length));
+
+  doc.querySelector('#wl-chips .chip__del').click();
+  await sleep(60);
+  check('删除白名单项生效', JSON.stringify(store.sync.bfSettings.whitelist) === JSON.stringify(['12345']),
+    JSON.stringify(store.sync.bfSettings.whitelist));
+
+  doc.getElementById('wl-bulk').value = '甲UP\n\n乙UP\n甲UP';
+  doc.getElementById('wl-bulk-save').click();
+  await sleep(60);
+  check('白名单批量保存去重并忽略空行',
+    JSON.stringify(store.sync.bfSettings.whitelist) === JSON.stringify(['甲UP', '乙UP']),
+    JSON.stringify(store.sync.bfSettings.whitelist));
+  doc.getElementById('wl-bulk-load').click();
+  await sleep(60);
+  check('白名单「载入当前列表」把现有内容填进文本框',
+    doc.getElementById('wl-bulk').value === '甲UP\n乙UP', JSON.stringify(doc.getElementById('wl-bulk').value));
+  doc.getElementById('wl-bulk').value = '';
+
   // 卡片全选 / 整行全选 / 全部取消
   doc.getElementById('types-all').click();
   await sleep(60);

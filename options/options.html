@@ -94,6 +94,26 @@
             <label class="check"><input type="checkbox" id="match-up" /><span>同时匹配 UP 主名称</span></label>
           </div>
         </section>
+
+        <!-- UP 白名单 -->
+        <section class="card">
+          <h2>UP 白名单</h2>
+          <p class="desc">名单里的 UP 不会被屏蔽，屏蔽词和分区开关都对它无效。填 UP 名字（要和卡片上显示的完全一致）或者 UID 数字。</p>
+          <div class="input-row">
+            <input type="text" id="wl-input" placeholder="UP 名或 UID，回车或点击添加" />
+            <button class="btn-primary" id="wl-add" type="button">添加</button>
+          </div>
+          <div class="chips" id="wl-chips"></div>
+
+          <div class="sub">
+            <div class="sub__title">批量编辑</div>
+            <textarea id="wl-bulk" rows="5" placeholder="每行一个 UP 名或 UID，保存后会覆盖上面的列表"></textarea>
+            <div class="row-actions">
+              <button class="btn" id="wl-bulk-save" type="button">保存批量内容</button>
+              <button class="btn" id="wl-bulk-load" type="button">载入当前列表</button>
+            </div>
+          </div>
+        </section>
       </div>
 
       <div class="col">

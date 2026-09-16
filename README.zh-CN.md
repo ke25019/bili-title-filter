@@ -4,9 +4,9 @@
 
 Manifest V3，Edge 和 Chrome 都能装，纯 JavaScript，没有运行时依赖。
 
-![version](https://img.shields.io/badge/version-1.3.0--beta-orange)
+![version](https://img.shields.io/badge/version-1.3.1-orange)
 ![browser](https://img.shields.io/badge/Edge%20%7C%20Chrome-Chromium-00aeec)
-![tests](https://img.shields.io/badge/tests-209%20passed-brightgreen)
+![tests](https://img.shields.io/badge/tests-237%20passed-brightgreen)
 
 ---
 
@@ -27,6 +27,19 @@ Chrome 用 `chrome://extensions/`，步骤一样。
 点浏览器工具栏的图标，或者点 B 站页面上那个「屏蔽助手」按钮，都能打开设置。最常用的就一个输入框：把不想看的词打进去、回车。也支持一次贴多个，用逗号或空格分开。
 
 匹配方式可以调：区分大小写、按正则匹配、是否连 UP 主名字一起匹配。改动立刻生效，已经打开的 B 站页面会自动重新扫一遍。
+
+---
+
+## UP 白名单
+
+有些 UP 的视频不管标题写成什么样都想留着，那就把 TA 加进白名单。
+
+名单里可以填两种东西：
+
+- **UP 名字**：要和卡片上显示的完全一致（不分大小写），比如 `某某UP主`
+- **UID**：TA 主页链接 `space.bilibili.com/` 后面那串数字，比如 `12345`
+
+名单里的 UP **不会被屏蔽** —— 关键词和分区开关都对 TA 无效，已经屏蔽过的也会立刻恢复显示。设置页和页面内面板里都能加，面板里是一行输入框 + 回车。
 
 ---
 
@@ -106,7 +119,7 @@ npm install
 npm test
 ```
 
-一共 209 项校验，覆盖屏蔽逻辑、分区识别、两种隐藏行为、设置页交互和后台统计。
+一共 237 项校验，覆盖屏蔽逻辑、分区识别、两种隐藏行为、设置页交互和后台统计。
 
 测试里的模拟 DOM 和尺寸都是从真实页面上量出来的（`.floor-card-inner > .cover-container + .pb-16.px-12 > p.title` 这种工具类结构、`.vui_carousel` 包裹的轮播、`.palette-button-inner` 里 0×0 的隐藏链接等等）。
 
@@ -136,6 +149,12 @@ B 站是单页应用，滚动和切页会让卡片重新渲染，所以统计的
 ## 更新记录
 
 按时间倒序。这里记的是每次改了什么、为什么改，包括我自己搞错的地方。
+
+### 1.3.1
+
+**新增 UP 白名单。** 名单里的 UP 不会被屏蔽 —— 关键词和分区开关都对 TA 无效，已经屏蔽过的也会立刻恢复。名单项可以填 UP 名字（要和卡片上显示的完全一致，不分大小写）或者 UID 数字。设置页有词条列表 + 批量编辑，页面内面板里也加了一行，和屏蔽词一样回车就能加。
+
+顺手把面板里那句多余的提示删了：遮蔽模式下它也跟着显示（「开启：视频不显示但位置留空……」），可那个开关只对完全隐藏有意义，看着莫名其妙。
 
 ### 1.3.0
 

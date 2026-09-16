@@ -77,6 +77,7 @@
     });
 
     renderKeywords();
+    renderWhitelist();
     renderTypes();
     renderPreview();
     applyPageTheme();
@@ -108,6 +109,41 @@
         var list = settings.keywords.slice();
         list.splice(i, 1);
         save({ keywords: list });
+      });
+      chip.appendChild(t);
+      chip.appendChild(del);
+      chips.appendChild(chip);
+    });
+  }
+
+  /** 白名单词条（与屏蔽词一样的交互） */
+  function renderWhitelist() {
+    var chips = $('wl-chips');
+    chips.innerHTML = '';
+    var list = settings.whitelist || [];
+    if (!list.length) {
+      var empty = document.createElement('div');
+      empty.className = 'empty';
+      empty.textContent = '还没有白名单。加进来的 UP 不会被屏蔽。';
+      chips.appendChild(empty);
+      return;
+    }
+    list.forEach(function (name, i) {
+      var chip = document.createElement('span');
+      chip.className = 'chip';
+      var t = document.createElement('span');
+      t.className = 'chip__text';
+      t.textContent = name;
+      t.title = name;
+      var del = document.createElement('button');
+      del.className = 'chip__del';
+      del.type = 'button';
+      del.textContent = '✕';
+      del.title = '删除';
+      del.addEventListener('click', function () {
+        var next = settings.whitelist.slice();
+        next.splice(i, 1);
+        save({ whitelist: next });
       });
       chip.appendChild(t);
       chip.appendChild(del);
@@ -202,6 +238,22 @@
 
   /* ---------------- 事件 ---------------- */
 
+  /** 白名单添加：逗号 / 空格 / 换行都能分隔，重复项自动跳过 */
+  function addWhitelistFromInput() {
+    var input = $('wl-input');
+    var raw = (input.value || '').trim();
+    if (!raw) return;
+    var list = (settings.whitelist || []).slice();
+    var added = 0;
+    raw.split(/[,，、;；\s]+/).forEach(function (p) {
+      var v = p.trim();
+      if (v && list.indexOf(v) === -1) { list.push(v); added++; }
+    });
+    input.value = '';
+    if (added) save({ whitelist: list }, true);
+    toast(added ? '已添加 ' + added + ' 个白名单 UP' : '这些 UP 已经在白名单里了');
+  }
+
   function addKeywordFromInput() {
     var input = $('kw-input');
     var raw = (input.value || '').trim();
@@ -218,8 +270,7 @@
     toast(added ? '已添加 ' + added + ' 个屏蔽词' : '这些屏蔽词已存在');
   }
 
-  function bind() {
-    $('enabled').addEventListener('click', function () {
+  function bind() {    $('enabled').addEventListener('click', function () {
       save({ enabled: !settings.enabled }, true);
       toast(settings.enabled ? '已启用屏蔽' : '已停用屏蔽');
     });
@@ -261,6 +312,27 @@
       save({ keywords: uniq }, true);
       $('kw-bulk').value = '';
       toast('已保存 ' + uniq.length + ' 个屏蔽词');
+    });
+
+    // UP 白名单
+    $('wl-add').addEventListener('click', addWhitelistFromInput);
+    $('wl-input').addEventListener('keydown', function (e) {
+      if (e.key === 'Enter') { e.preventDefault(); addWhitelistFromInput(); }
+    });
+
+    $('wl-bulk-load').addEventListener('click', function () {
+      $('wl-bulk').value = (settings.whitelist || []).join('\n');
+      toast('已载入当前列表');
+    });
+
+    $('wl-bulk-save').addEventListener('click', function () {
+      var raw = $('wl-bulk').value || '';
+      var list = raw.split(/\r?\n/).map(function (s) { return s.trim(); }).filter(Boolean);
+      var uniq = [];
+      list.forEach(function (v) { if (uniq.indexOf(v) === -1) uniq.push(v); });
+      save({ whitelist: uniq }, true);
+      $('wl-bulk').value = '';
+      toast('已保存 ' + uniq.length + ' 个白名单 UP');
     });
 
     $('types-all').addEventListener('click', function () {

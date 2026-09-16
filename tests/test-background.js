@@ -95,6 +95,9 @@ async function main() {
     Object.keys(store.sync.bfSettings.blockTypes).length === 18 &&
     Object.values(store.sync.bfSettings.blockTypes).every((v) => v === false));
   check('默认不屏蔽首页顶部轮播横幅', store.sync.bfSettings.blockBanner === false);
+  check('默认 UP 白名单为空',
+    Array.isArray(store.sync.bfSettings.whitelist) && store.sync.bfSettings.whitelist.length === 0,
+    JSON.stringify(store.sync.bfSettings.whitelist));
   check('已移除旧的「整行板块」配置项', !('blockSections' in store.sync.bfSettings));
   check('统计数据已初始化', !!store.local.bfStats, JSON.stringify(store.local.bfStats));
 
