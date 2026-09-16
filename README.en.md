@@ -210,9 +210,9 @@ First version: block by title keyword, two blocking styles, nine promo categorie
 
 ## License
 
-This project is licensed under the PolyForm Noncommercial License 1.0.0.
+This project is licensed under the [Apache License 2.0](LICENSE).
 
-You may use, modify, and distribute this software for noncommercial purposes only, provided you retain the original copyright notice. Commercial use is not permitted.
+You may use, modify and distribute this software freely, including for commercial purposes, as long as you keep the original copyright notice and the license file.
 
 Copyright (c) 2026 ke25019
 

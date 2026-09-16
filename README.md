@@ -1,6 +1,6 @@
 # B站屏蔽助手 · BiliTitleFilter
 
-[![License: PolyForm Noncommercial](https://img.shields.io/badge/License-PolyForm_Noncommercial-orange.svg)](https://polyformproject.org/licenses/noncommercial/1.0.0/)
+[![License: Apache 2.0](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](https://www.apache.org/licenses/LICENSE-2.0)
 ![version](https://img.shields.io/badge/version-1.3.0--beta-orange)
 ![browser](https://img.shields.io/badge/Edge%20%7C%20Chrome-Chromium-00aeec)
 ![tests](https://img.shields.io/badge/tests-209%20passed-brightgreen)
@@ -70,15 +70,15 @@ Plain JavaScript, no runtime dependencies. The tests run on jsdom — 209 checks
 
 ## 许可证 / License
 
-本项目基于 [PolyForm Noncommercial License 1.0.0](LICENSE) 发布。
+本项目基于 [Apache License 2.0](LICENSE) 发布。
 
-你可以为非商业目的自由使用、修改和分发本软件，但必须保留原始版权声明，且不得用于任何商业用途。
+你可以自由使用、修改和分发本软件（包括商业用途），需要保留原始版权声明与许可证文件。
 
 Copyright (c) 2026 ke25019
 
-This project is licensed under the [PolyForm Noncommercial License 1.0.0](LICENSE).
+This project is licensed under the [Apache License 2.0](LICENSE).
 
-You may use, modify, and distribute this software for noncommercial purposes only, provided you retain the original copyright notice.
+You may use, modify and distribute this software freely, including for commercial purposes, as long as you keep the original copyright notice and the license file.
 
 Copyright (c) 2026 ke25019
 
