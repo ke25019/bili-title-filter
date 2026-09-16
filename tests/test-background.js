@@ -91,8 +91,8 @@ async function main() {
   console.log('\n[后台 Service Worker]');
   check('默认配置已写入 storage.sync', !!store.sync.bfSettings, JSON.stringify(store.sync.bfSettings));
   check('默认屏蔽方式为 mask', store.sync.bfSettings.mode === 'mask');
-  check('默认 14 个分区开关均为关闭',
-    Object.keys(store.sync.bfSettings.blockTypes).length === 14 &&
+  check('默认 18 个分区开关均为关闭',
+    Object.keys(store.sync.bfSettings.blockTypes).length === 18 &&
     Object.values(store.sync.bfSettings.blockTypes).every((v) => v === false));
   check('默认不屏蔽首页顶部轮播横幅', store.sync.bfSettings.blockBanner === false);
   check('已移除旧的「整行板块」配置项', !('blockSections' in store.sync.bfSettings));

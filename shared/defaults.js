@@ -21,6 +21,7 @@
     {
       key: 'live',
       label: '直播',
+      badge: '直播',
       desc: '直播卡片与直播推广位（live.bilibili.com）',
       href: /(^|\/\/)live\.bilibili\.com|\/blanc\/|\/live\//,
       cls: /\bbili-live-card\b|\blive-card\b|\bis-live\b|\bcarousel-inner__live\b/i
@@ -28,20 +29,55 @@
     {
       key: 'bangumi',
       label: '番剧',
-      desc: '番剧、国创、动画剧集卡片（/bangumi/、/anime/、/guochuang/）',
-      href: /\/bangumi\/(play|media)\/|\/anime\/|\/guochuang\//,
+      badge: '番剧',
+      desc: '番剧卡片（/bangumi/、/anime/）',
+      href: /\/bangumi\/(play|media)\/|\/anime\//,
       cls: /\bbili-bangumi-card\b|\bbangumi-card\b|\bpgc-card\b|\banime-list-item\b|\banime-entry\b/i
     },
     {
+      key: 'guochuang',
+      label: '国创',
+      badge: '国创',
+      desc: '国创动画卡片（/guochuang/；推广位上的链接和番剧一样是 /bangumi/，靠封面徽标区分）',
+      href: /\/guochuang\//,
+      cls: ''
+    },
+    {
       key: 'movie',
-      label: '影视',
-      desc: '电影、电视剧、纪录片、综艺（movie / tv / documentary / variety）',
-      href: /\/movie\/|\/film\/|\/tv\/|\/documentary\/|\/variety\/|bangumi\/media\/md/,
+      label: '电影',
+      badge: '电影',
+      desc: '电影、影视卡片（/movie/、/film/）',
+      href: /\/movie\/|\/film\/|bangumi\/media\/md/,
       cls: /\bbili-movie-card\b|\bmovie-card\b|\bbili-cinema-card\b/i
+    },
+    {
+      key: 'tv',
+      label: '电视剧',
+      badge: '电视剧',
+      desc: '电视剧卡片（/tv/；推广位上的链接同样可能是 /bangumi/，靠封面徽标区分）',
+      href: /\/tv\//,
+      cls: ''
+    },
+    {
+      key: 'documentary',
+      label: '纪录片',
+      badge: '纪录片',
+      desc: '纪录片卡片（/documentary/；推广位上的链接同样可能是 /bangumi/，靠封面徽标区分）',
+      href: /\/documentary\//,
+      cls: ''
+    },
+    {
+      key: 'variety',
+      label: '综艺',
+      badge: '综艺',
+      desc: '综艺卡片（/variety/；推广位上的链接同样可能是 /bangumi/，靠封面徽标区分）',
+      href: /\/variety\//,
+      cls: ''
     },
     {
       key: 'cheese',
       label: '课堂',
+      badge: '课堂',
       desc: '付费课程、课堂推广卡片（/cheese/）',
       href: /\/cheese\//,
       cls: /\bbili-cheese-card\b|\bcheese-card\b/i
@@ -49,6 +85,7 @@
     {
       key: 'read',
       label: '专栏',
+      badge: '专栏',
       desc: '专栏文章、图文类卡片（/read/）',
       href: /\/read\//,
       cls: /\bbili-article-card\b|\barticle-card\b/i
@@ -56,6 +93,7 @@
     {
       key: 'opus',
       label: '动态',
+      badge: '动态',
       desc: '动态、视频号推广卡片（/opus/、t.bilibili.com）',
       href: /\/opus\/|(^|\/\/)t\.bilibili\.com/,
       cls: /\bbili-dyn-card\b|\bbili-opus-card\b|\bdyn-card\b/i
@@ -63,6 +101,7 @@
     {
       key: 'manga',
       label: '漫画',
+      badge: '漫画',
       desc: '漫画卡片与漫画推广位（manga.bilibili.com）',
       href: /\/\/manga\.bilibili\.com|\/manga\//,
       cls: /\bbili-manga-card\b|\bmanga-card\b/i
@@ -70,6 +109,7 @@
     {
       key: 'game',
       label: '游戏',
+      badge: '游戏',
       desc: '游戏中心、游戏推广与专区卡片（game.bilibili.com、/v/game）',
       href: /\/\/game\.bilibili\.com|\/v\/game|\/game\//,
       cls: /\bbili-game-card\b|\bgame-card\b/i
@@ -77,6 +117,7 @@
     {
       key: 'music',
       label: '音乐',
+      badge: '音乐',
       desc: '音频、音乐区推广卡片（music.bilibili.com、/audio/）',
       href: /\/\/music\.bilibili\.com|\/audio\//,
       cls: /\bbili-audio-card\b|\baudio-card\b/i
@@ -84,6 +125,7 @@
     {
       key: 'match',
       label: '赛事',
+      badge: '赛事',
       desc: '赛事、电竞赛程与直播预约推广（/match/、/esports/）',
       href: /\/match\/|\/\/match\.bilibili\.com|\/esports\//,
       cls: /\bmatch-card\b|\besports-card\b/i
@@ -91,6 +133,7 @@
     {
       key: 'mall',
       label: '会员购',
+      badge: '会员购',
       desc: '会员购、周边商城与演出票务推广（love / show / mall.bilibili.com）',
       href: /\/\/(love|show|mall)\.bilibili\.com|\/mall\//,
       cls: /\bmall-card\b|\bshop-card\b/i
@@ -98,6 +141,7 @@
     {
       key: 'activity',
       label: '活动',
+      badge: '活动',
       desc: '活动页、话题页、专题聚合推广位（/blackboard/、/festival/、/topic/）',
       href: /\/blackboard\/|\/festival\/|\/topic\/|\/platform\//,
       cls: /\bbili-activity-card\b|\bactivity-card\b/i
@@ -105,6 +149,7 @@
     {
       key: 'ad',
       label: '广告',
+      badge: '广告',
       desc: '带"广告"标识的商业推广卡片',
       href: /(^|\/\/)(cm|ad)\.bilibili\.com|[?&]from_spmid=.*ad/,
       cls: /\bad-card\b|\bad-item\b|\badvert|\bbili-video-card__stats--ad\b|\bad-report\b/i
@@ -112,6 +157,7 @@
     {
       key: 'other',
       label: '其他推广',
+      badge: '',
       desc: '兜底：跳往站内其它频道、客户端下载或站外链接的推广卡片（不含上面已分类的分区）',
       href: /\/\/(?!www|space|i0|i1|i2|s1|s2|static|api|grpc)[a-z0-9-]+\.bilibili\.com|\/blackboard\/|\/festival\/|\/topic\/|\/platform\/|\/read\/|\/cheese\/|\/anime\/|\/guochuang\/|\/variety\/|\/documentary\/|\/movie\/|\/tv\/|\/bangumi\/|\/audio\/|\/manga\/|\/v\/[a-z]/i,
       cls: ''
@@ -140,11 +186,16 @@
     /** 是否同时匹配 UP 主名称 */
     matchUpName: false,
 
-    /** 分区推广屏蔽：卡片级（该分区的每一张卡片） */
+    /**
+     * 分区推广屏蔽：卡片级（该分区的每一张卡片）
+     * 注意：1.3.0 起「影视」拆成了 电影 / 电视剧 / 纪录片 / 综艺，「番剧」也不再连带国创。
+     * 老配置里只开过 movie 的，升级后只有「电影」是开的，其余几类需要单独打开。
+     */
     blockTypes: {
-      live: false, bangumi: false, movie: false, cheese: false, read: false, opus: false,
-      manga: false, game: false, music: false, match: false, mall: false, activity: false,
-      ad: false, other: false
+      live: false, bangumi: false, guochuang: false, movie: false, tv: false,
+      documentary: false, variety: false, cheese: false, read: false, opus: false,
+      manga: false, game: false, music: false, match: false, mall: false,
+      activity: false, ad: false, other: false
     },
 
     /**

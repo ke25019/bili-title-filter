@@ -111,6 +111,65 @@ const HTML = `<!DOCTYPE html><html><head><style id="bf-style">${CONTENT_CSS}</st
         </div>
       </div>
 
+      <!-- 分区推广卡片的分类回归：真实页面上这些卡片的链接**全都是** /bangumi/play/epXXXX，
+           光看链接谁也分不出是番剧还是国创/综艺/电影，只有封面左上角的徽标能区分；
+           赛事卡片则是「直播预约」，链接落在直播间（所以以前开「赛事」没反应）。 -->
+      <div class="floor-single-card" data-w="238" data-h="248">
+        <div class="single-card floor-card" data-w="238" data-h="248">
+          <div class="floor-card-inner" id="tBangumi" data-w="238" data-h="224">
+            <div class="cover-container" data-w="238" data-h="134">
+              <a href="//www.bilibili.com/bangumi/play/ep100001"><img src="bg1.jpg"></a>
+              <div class="badge"><span class="floor-title">番剧</span></div>
+            </div>
+            <div class="info-container" data-w="238" data-h="90"><p class="title" title="番剧推广卡片">番剧推广卡片</p></div>
+          </div>
+        </div>
+      </div>
+      <div class="floor-single-card" data-w="238" data-h="248">
+        <div class="single-card floor-card" data-w="238" data-h="248">
+          <div class="floor-card-inner" id="tGuochuang" data-w="238" data-h="224">
+            <div class="cover-container" data-w="238" data-h="134">
+              <a href="//www.bilibili.com/bangumi/play/ep100002"><img src="bg2.jpg"></a>
+              <div class="badge"><span class="floor-title">国创</span></div>
+            </div>
+            <div class="info-container" data-w="238" data-h="90"><p class="title" title="国创推广卡片">国创推广卡片</p></div>
+          </div>
+        </div>
+      </div>
+      <div class="floor-single-card" data-w="238" data-h="248">
+        <div class="single-card floor-card" data-w="238" data-h="248">
+          <div class="floor-card-inner" id="tVariety" data-w="238" data-h="224">
+            <div class="cover-container" data-w="238" data-h="134">
+              <a href="//www.bilibili.com/bangumi/play/ep100003"><img src="bg3.jpg"></a>
+              <div class="badge"><span class="floor-title">综艺</span></div>
+            </div>
+            <div class="info-container" data-w="238" data-h="90"><p class="title" title="综艺推广卡片">综艺推广卡片</p></div>
+          </div>
+        </div>
+      </div>
+      <div class="floor-single-card" data-w="238" data-h="248">
+        <div class="single-card floor-card" data-w="238" data-h="248">
+          <div class="floor-card-inner" id="tMovie" data-w="238" data-h="224">
+            <div class="cover-container" data-w="238" data-h="134">
+              <a href="//www.bilibili.com/bangumi/play/ep100004"><img src="bg4.jpg"></a>
+              <div class="badge"><span class="floor-title">电影</span></div>
+            </div>
+            <div class="info-container" data-w="238" data-h="90"><p class="title" title="电影推广卡片">电影推广卡片</p></div>
+          </div>
+        </div>
+      </div>
+      <div class="floor-single-card" data-w="238" data-h="248">
+        <div class="single-card floor-card" data-w="238" data-h="248">
+          <div class="floor-card-inner" id="tMatch" data-w="238" data-h="224">
+            <div class="cover-container" data-w="238" data-h="134">
+              <a href="//live.bilibili.com/22637261"><img src="bg5.jpg"></a>
+              <div class="badge"><span class="floor-title">赛事</span></div>
+            </div>
+            <div class="info-container" data-w="238" data-h="90"><p class="title" title="赛事直播预约">赛事直播预约</p></div>
+          </div>
+        </div>
+      </div>
+
       <div class="feed-card" id="c1" data-w="240" data-h="210">
         <div class="bili-feed-card">
           <div class="bili-video-card is-rcmd">
@@ -338,7 +397,7 @@ async function main() {
   const shadow = host && host.shadowRoot;
   check('悬浮面板已挂载到页面', !!host);
   check('面板使用 Shadow DOM 隔离', !!shadow);
-  check('面板包含 14 种分区选项', !!(shadow && shadow.querySelectorAll('.bf-type').length === 14),
+  check('面板包含 18 种分区选项', !!(shadow && shadow.querySelectorAll('.bf-type').length === 18),
     shadow ? shadow.querySelectorAll('.bf-type').length : 'n/a');
   check('面板包含「屏蔽首页顶部轮播横幅」开关', !!(shadow && shadow.getElementById('bf-banner')));
   check('面板不再包含「整行板块」开关', !(shadow && shadow.getElementById('bf-sections')));
@@ -592,6 +651,41 @@ async function main() {
     $('liveTagInner').className + ' / type=' + $('liveTagInner').dataset.bfType);
   check('直播卡片的封面链接没有被当成一张卡片',
     !$('liveTagLink').dataset.bfCard && !$('liveTagLink').classList.contains('bf-blocked'));
+
+  // 9) 分区推广按封面徽标分类：番剧 / 国创 / 综艺 / 电影 各自独立，赛事开关真的有效
+  console.log('\n[10e] 分区推广按封面徽标分类（回归：番剧连带屏蔽、赛事点了没反应）');
+  const promoIds = ['tBangumi', 'tGuochuang', 'tVariety', 'tMovie', 'tMatch'];
+  const blockedList = () => promoIds.filter((id) => blocked(id)).join(',') || '(无)';
+
+  await pushSettings({ mode: 'mask', hideKeepSlot: true, keywords: [], blockTypes: { bangumi: true } });
+  check('开「番剧」只屏蔽番剧卡片（链接同样是 /bangumi/ 的国创/综艺/电影不受影响）',
+    blocked('tBangumi') && !blocked('tGuochuang') && !blocked('tVariety') && !blocked('tMovie') && !blocked('tMatch'),
+    blockedList());
+  check('番剧卡片的类型标记为 bangumi', $('tBangumi').dataset.bfType === 'bangumi', $('tBangumi').dataset.bfType);
+  check('番剧卡片的遮蔽文案带上分区名「番剧」', maskText($('tBangumi')).indexOf('番剧') !== -1, maskText($('tBangumi')));
+
+  await pushSettings({ blockTypes: { bangumi: false, guochuang: true } });
+  check('开「国创」只屏蔽国创卡片', blocked('tGuochuang') && blockedList() === 'tGuochuang', blockedList());
+  check('国创卡片的类型标记为 guochuang', $('tGuochuang').dataset.bfType === 'guochuang', $('tGuochuang').dataset.bfType);
+
+  await pushSettings({ blockTypes: { guochuang: false, variety: true } });
+  check('开「综艺」只屏蔽综艺卡片', blocked('tVariety') && blockedList() === 'tVariety', blockedList());
+
+  await pushSettings({ blockTypes: { variety: false, movie: true } });
+  check('开「电影」只屏蔽电影卡片', blocked('tMovie') && blockedList() === 'tMovie', blockedList());
+
+  await pushSettings({ blockTypes: { movie: false, live: true } });
+  check('开「直播」不会连带屏蔽带赛事徽标的卡片（按徽标分类，不看链接）',
+    !blocked('tMatch') && blockedList() === '(无)', blockedList());
+
+  await pushSettings({ blockTypes: { live: false, match: true } });
+  check('【回归】开「赛事」能屏蔽赛事卡片（它的链接是直播间）',
+    blocked('tMatch') && blockedList() === 'tMatch', blockedList());
+  check('赛事卡片的类型标记为 match（不是 live）', $('tMatch').dataset.bfType === 'match', $('tMatch').dataset.bfType);
+  check('赛事卡片的遮蔽文案带上分区名「赛事」', maskText($('tMatch')).indexOf('赛事') !== -1, maskText($('tMatch')));
+
+  await pushSettings({ blockTypes: {} });
+  check('全部关掉后都恢复显示', blockedList() === '(无)', blockedList());
 
   // 7) 懒加载插入的推广卡片：只配置屏蔽词、分区开关全关，也应该被自动扫到并屏蔽
   await pushSettings({ mode: 'mask', hideKeepSlot: true, keywords: ['我准备好了'], blockTypes: {} });

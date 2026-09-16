@@ -88,7 +88,7 @@ async function testPopup() {
   await sleep(120);
 
   check('脚本执行无异常', errors.length === 0, errors.join(' | '));
-  check('渲染出 14 个分区选项', doc.querySelectorAll('#types .type').length === 14, doc.querySelectorAll('#types .type').length);
+  check('渲染出 18 个分区选项', doc.querySelectorAll('#types .type').length === 18, doc.querySelectorAll('#types .type').length);
   // 统计文案是通过 runtime 消息异步回调写入的，这里轮询等待，避免定时抖动
   const statsOk = await waitFor(() => /今日屏蔽 3 个/.test(doc.getElementById('stats').textContent));
   check('统计已加载', statsOk, doc.getElementById('stats').textContent);
@@ -160,8 +160,8 @@ async function testOptions() {
   await sleep(120);
 
   check('脚本执行无异常', errors.length === 0, errors.join(' | '));
-  check('分区表格渲染出 14 行', doc.querySelectorAll('#types .trow').length === 14, doc.querySelectorAll('#types .trow').length);
-  check('每个分区一个「屏蔽」开关', doc.querySelectorAll('#types input[data-key]').length === 14,
+  check('分区表格渲染出 18 行', doc.querySelectorAll('#types .trow').length === 18, doc.querySelectorAll('#types .trow').length);
+  check('每个分区一个「屏蔽」开关', doc.querySelectorAll('#types input[data-key]').length === 18,
     doc.querySelectorAll('#types input[data-key]').length);
   check('设置页包含「屏蔽首页顶部轮播横幅」', !!doc.getElementById('block-banner'));
   check('默认选中「整体遮蔽」', doc.querySelector('input[name="mode"][value="mask"]').checked);
@@ -216,7 +216,7 @@ async function testOptions() {
   doc.getElementById('types-all').click();
   await sleep(60);
   const all = store.sync.bfSettings.blockTypes;
-  check('全选后 14 个分区均开启', Object.keys(all).length === 14 && Object.values(all).every(Boolean), JSON.stringify(all));
+  check('全选后 18 个分区均开启', Object.keys(all).length === 18 && Object.values(all).every(Boolean), JSON.stringify(all));
 
   // 单个分区开关
   const liveCard = doc.querySelector('#types input[data-key="live"]');

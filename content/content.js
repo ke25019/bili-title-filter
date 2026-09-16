@@ -543,11 +543,37 @@
   }
 
   /**
+   * 卡片封面左上角的分区徽标文字。
+   *
+   * B 站把「这张推广属于哪个分区」直接标在封面上（实测文案：番剧、国创、综艺、电影、
+   * 课堂、直播、赛事…），这是最可靠的判据 —— 光看链接分不出来：
+   *   - 番剧 / 国创 / 综艺 / 电影的推广卡片，链接全都是 //www.bilibili.com/bangumi/play/epXXXX
+   *   - 赛事卡片多半是「直播预约」，链接是 live.bilibili.com 的直播间
+   * 按链接判定就会出现「开番剧把国创、综艺、电影一起屏蔽」「赛事开关点了没反应」。
+   */
+  var BADGE_SELECTOR = '.badge, [class*="badge"]';
+
+  function getBadgeText(card) {
+    var box = card.querySelector(BADGE_SELECTOR);
+    if (!box) return '';
+    var el = box.querySelector('.floor-title') || box;
+    return (el.textContent || '').replace(/\s+/g, '').trim();
+  }
+
+  /**
    * 判定卡片属于哪个分区 / 类型。
+   * 先看封面徽标（最可靠），认不出来再退回「链接 + class」判定；
    * 「其他推广」只在该卡片没有命中任何具体分区时才生效，
    * 这样关掉某个分区开关时不会又被兜底规则抓回来。
    */
   function detectType(card) {
+    var badge = getBadgeText(card);
+    if (badge) {
+      for (var b = 0; b < TYPES.length; b++) {
+        var bt = TYPES[b];
+        if (bt.badge && badge.indexOf(bt.badge) !== -1) return bt.key;
+      }
+    }
     var hits = matchSpecificTypes(card);
     if (hits.length) return hits[0];
     var other = getType('other');
