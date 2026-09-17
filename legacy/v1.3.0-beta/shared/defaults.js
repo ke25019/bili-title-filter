@@ -180,12 +180,6 @@
     /** 标题屏蔽词列表 */
     keywords: [],
 
-    /**
-     * UP 白名单：名单里的 UP 永远不会被屏蔽（关键词和分区开关都不作用于它）
-     * 每一项填 UP 名字，要和卡片上显示的完全一致（忽略大小写）
-     */
-    whitelist: [],
-
     /** 匹配选项 */
     useRegex: false,
     caseSensitive: false,
@@ -263,15 +257,6 @@
           ? val.map(function (s) { return String(s == null ? '' : s); })
               .map(function (s) { return s.trim(); })
               .filter(function (s) { return s.length > 0; })
-          : [];
-        return;
-      }
-      if (k === 'whitelist') {
-        // 白名单：去掉空白项与重复项（同一项只留一个）
-        out.whitelist = Array.isArray(val)
-          ? val.map(function (s) { return String(s == null ? '' : s); })
-              .map(function (s) { return s.trim(); })
-              .filter(function (s, i, arr) { return s.length > 0 && arr.indexOf(s) === i; })
           : [];
         return;
       }

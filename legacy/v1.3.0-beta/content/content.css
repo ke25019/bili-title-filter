@@ -145,15 +145,9 @@ html.bf-dark {
   opacity: 0 !important;
 }
 
-/* ---------- 首页顶部轮播横幅（独立开关，只作用于首页那一块） ----------
-   .bf-banner-blocked 只是"这块被开关接管了"的标记，具体怎么处理由屏蔽方式决定：
-     完全隐藏 → 加上 .bf-hide（display:none，连外层 .carousel-container / .carousel
-                的空壳一起收起，页面不留空白）
-     整体遮蔽 → 加上 .bf-blocked + .bf-mask，跟卡片一样盖一块说明，
-                讲清楚这块为什么不见了
-   注意别再给 .bf-banner-blocked 写 display:none —— 那样遮蔽模式下就没法显示说明了。 */
+/* ---------- 首页顶部轮播横幅（独立开关，只作用于首页那一块） ---------- */
 .bf-banner-blocked {
-  border-radius: 8px;
+  display: none !important;
 }
 
 /* ---------- 完全隐藏模式下被"顶上来"的空骨架占位项 ----------

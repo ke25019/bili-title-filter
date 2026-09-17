@@ -31,31 +31,19 @@ const HTML = `<!DOCTYPE html><html><head><style id="bf-style">${CONTENT_CSS}</st
     <div id="nav-searchform"></div>
   </div>
   <main>
-    <!-- 顶部轮播横幅：层级与真实页面一致（.carousel > .carousel-container > .vui_carousel，
-         三层都是 height:100%）。只隐藏最里面那层会留下一个空白框，所以开关必须
-         一路处理到 .carousel 这一层，并且不能碰同层的其它楼层。 -->
-    <div class="recommended-container" id="bannerHost">
-      <div class="carousel" id="bannerCarousel" data-w="500" data-h="365">
-        <div class="carousel-container" id="bannerBox" data-w="500" data-h="365">
-          <div class="vui_carousel vui_carousel--bottom" id="banner" data-w="500" data-h="365">
-            <div class="vui_carousel__slides">
-              <div class="vui_carousel__slide vui_carousel__slide--current">
-                <div class="carousel-area" data-index="0" data-w="500" data-h="281">
-                  <div class="carousel-footer">
-                    <div class="carousel-footer-title">
-                      <a href="https://www.bilibili.com/bangumi/play/ep5137676">新番推广横幅</a>
-                    </div>
-                  </div>
-                </div>
-              </div>
-              <div class="vui_carousel__slide">
-                <div class="carousel-area" data-index="1" data-w="500" data-h="281"></div>
+    <!-- 顶部轮播横幅 -->
+    <div class="vui_carousel vui_carousel--bottom" id="banner" data-w="500" data-h="365">
+      <div class="vui_carousel__slides">
+        <div class="vui_carousel__slide">
+          <div class="carousel-area" data-w="500" data-h="281">
+            <div class="carousel-footer">
+              <div class="carousel-footer-title">
+                <a href="https://www.bilibili.com/bangumi/play/ep5137676">新番推广横幅</a>
               </div>
             </div>
           </div>
         </div>
       </div>
-      <div class="floor-other" id="bannerSibling">同一层的别的楼层，不该被横幅开关动到</div>
     </div>
 
     <!-- 隐藏的侧边推广位：实测 0×0，曾被误判成卡片导致整页空白 -->
@@ -118,8 +106,6 @@ const HTML = `<!DOCTYPE html><html><head><style id="bf-style">${CONTENT_CSS}</st
               <!-- 标题里的「直播中」角标用 DOM API 拼（见下面的 buildLiveTagTitle）：
                    HTML 解析规则不允许 <p> 里嵌 <div>，而真实页面是 Vue 用 DOM API 建出来的 -->
               <p class="title indent-initial" id="liveTagTitle" title="乖乖女装的好累"></p>
-              <span class="bili-video-card__info--author">某主播</span>
-              <a class="bili-video-card__info--owner" href="//space.bilibili.com/1888542250">某主播</a>
             </div>
           </div>
         </div>
@@ -190,7 +176,6 @@ const HTML = `<!DOCTYPE html><html><head><style id="bf-style">${CONTENT_CSS}</st
             <a class="bili-video-card__image--link" href="//www.bilibili.com/video/BV1aa"><img src="cover1.jpg"></a>
             <h3 class="bili-video-card__info--tit" title="【剧透警告】新番结局深度解析">【剧透警告】新番结局深度解析</h3>
             <span class="bili-video-card__info--author">某UP主</span>
-            <a class="bili-video-card__info--owner" href="//space.bilibili.com/12345">某UP主</a>
           </div>
         </div>
       </div>
@@ -509,35 +494,12 @@ async function main() {
   await pushSettings({ blockTypes: { other: false } });
   check('关闭兜底后恢复', !blocked('c8'));
 
-  console.log('\n[9] 首页顶部轮播横幅（独立开关，跟随屏蔽方式）');
+  console.log('\n[9] 首页顶部轮播横幅（独立开关）');
   check('默认不屏蔽横幅', doc.querySelectorAll('.bf-banner-blocked').length === 0);
-
-  await pushSettings({ mode: 'mask', blockBanner: true });
-  check('遮蔽模式：横幅被标记为已接管', $('bannerCarousel').classList.contains('bf-banner-blocked'));
-  check('【关键】遮蔽模式：横幅不只是消失，而是盖了一块说明（不再无声无息）',
-    $('bannerCarousel').classList.contains('bf-blocked') && !!$('bannerCarousel').querySelector(':scope > .bf-mask'),
-    $('bannerCarousel').className);
-  check('说明挂在最外层轮播容器上（含 .carousel-container 那一层空壳）',
-    $('bannerCarousel').id === 'bannerCarousel' && !!$('bannerCarousel').querySelector(':scope > .bf-mask'));
-  check('说明文案讲清了原因', /轮播横幅/.test(maskText($('bannerCarousel'))), maskText($('bannerCarousel')));
-  check('遮蔽模式：外层的 carousel 子层也一起被隐藏',
-    win.getComputedStyle($('bannerBox')).visibility === 'hidden' && win.getComputedStyle($('banner')).visibility === 'hidden',
-    win.getComputedStyle($('bannerBox')).visibility + '/' + win.getComputedStyle($('banner')).visibility);
-
-  await pushSettings({ mode: 'hide' });
-  check('【关键】完全隐藏：连外层 .carousel 一起收起，整块真的没了',
-    $('bannerCarousel').classList.contains('bf-hide') && win.getComputedStyle($('bannerCarousel')).display === 'none',
-    win.getComputedStyle($('bannerCarousel')).display);
-  check('完全隐藏：不再残留说明遮罩', !$('bannerCarousel').querySelector(':scope > .bf-mask'));
-  check('完全隐藏：不会把同层的其它楼层一起藏掉',
-    win.getComputedStyle($('bannerSibling')).display !== 'none', win.getComputedStyle($('bannerSibling')).display);
-
+  await pushSettings({ blockBanner: true });
+  check('开启后横幅容器被标记', $('banner').classList.contains('bf-banner-blocked'));
   await pushSettings({ blockBanner: false });
-  check('关闭开关后横幅恢复显示',
-    !$('bannerCarousel').classList.contains('bf-banner-blocked') &&
-    win.getComputedStyle($('bannerCarousel')).display !== 'none' &&
-    !$('bannerCarousel').querySelector(':scope > .bf-mask'));
-  await pushSettings({ mode: 'mask' });
+  check('关闭后横幅恢复', !$('banner').classList.contains('bf-banner-blocked'));
   check('横幅开关与分区开关互不影响', !blocked('c4') && !blocked('c8'));
 
   console.log('\n[10] 完全隐藏模式：收敛被顶上来填空的"空占位项"');
@@ -682,7 +644,7 @@ async function main() {
     cs($('badgeHost')).visibility === 'visible' && cs($('frameHost')).visibility === 'visible',
     cs($('badgeHost')).visibility + ' / ' + cs($('frameHost')).visibility);
 
-  // [10e] 直播推广卡片的标题里带「直播中」角标（实测 8 个后代元素），不能因此识别不出来
+  // 8) 直播推广卡片的标题里带「直播中」角标（实测 8 个后代元素），不能因此识别不出来
   await pushSettings({ mode: 'mask', hideKeepSlot: true, keywords: [], blockTypes: { live: true } });
   check('【关键】带「直播中」角标的直播卡片能被识别并屏蔽（标题元素多也不影响）',
     blocked('liveTagInner') && $('liveTagInner').dataset.bfType === 'live',
@@ -690,68 +652,8 @@ async function main() {
   check('直播卡片的封面链接没有被当成一张卡片',
     !$('liveTagLink').dataset.bfCard && !$('liveTagLink').classList.contains('bf-blocked'));
 
-  console.log('\n[10f] UP 白名单：名单里的 UP 不会被屏蔽');
-  await pushSettings({ mode: 'mask', hideKeepSlot: true, keywords: ['剧透'], blockTypes: {}, whitelist: [] });
-  check('没加白名单时，命中屏蔽词的卡片被屏蔽', blocked('c1'), $('c1').className);
-
-  await pushSettings({ whitelist: ['某UP主'] });
-  check('按 UP 名加白名单后，该 UP 的卡片不再被屏蔽',
-    !blocked('c1') && !$('c1').querySelector(':scope > .bf-mask'), $('c1').className);
-  check('白名单会解除已经打上的屏蔽（状态被清掉）', $('c1').dataset.bfState === undefined, String($('c1').dataset.bfState));
-  check('白名单只作用于名单里的 UP，别的卡片照旧', !blocked('c2'));
-
-  await pushSettings({ whitelist: ['12345'] });
-  check('按 UID 加白名单也生效（space.bilibili.com/12345）', !blocked('c1'), $('c1').className);
-  await pushSettings({ whitelist: ['99999'] });
-  check('UID 对不上时不生效', blocked('c1'), $('c1').className);
-
-  await pushSettings({ whitelist: ['某up主'] });
-  check('UP 名忽略大小写', !blocked('c1'), $('c1').className);
-  await pushSettings({ whitelist: ['某UP'] });
-  check('UP 名要求完全一致（部分匹配不算）', blocked('c1'), $('c1').className);
-
-  // 白名单优先于分区开关
-  await pushSettings({ whitelist: [], keywords: [], blockTypes: { live: true } });
-  check('开着直播分区开关时，直播推广卡片被屏蔽', blocked('liveTagInner'), $('liveTagInner').className);
-  await pushSettings({ whitelist: ['某主播'] });
-  check('白名单优先于分区开关：名单里的 UP 不被分区屏蔽', !blocked('liveTagInner'), $('liveTagInner').className);
-  check('同一分区里其它卡片照旧屏蔽', blocked('c4'), $('c4').className);
-  await pushSettings({ whitelist: ['1888542250'] });
-  check('白名单里填直播卡片的 UID 同样生效', !blocked('liveTagInner'), $('liveTagInner').className);
-
-  // 面板里的白名单界面
-  const wlChips = shadow.getElementById('bf-wl-chips');
-  check('面板里有 UP 白名单区域', !!shadow.getElementById('bf-wl-input') && !!wlChips);
-  await pushSettings({ whitelist: [] });
-  check('白名单为空时给出提示', !!wlChips.querySelector('.bf-empty'), wlChips.textContent.trim());
-  await pushSettings({ whitelist: ['某UP主', '12345'] });
-  check('面板渲染出白名单词条', wlChips.querySelectorAll('.bf-chip').length === 2,
-    String(wlChips.querySelectorAll('.bf-chip').length));
-  wlChips.querySelector('.bf-chip__del').click();
-  check('面板里点 ✕ 能删除白名单项',
-    await waitFor(() => (store.sync.bfSettings.whitelist || []).length === 1),
-    JSON.stringify(store.sync.bfSettings.whitelist));
-  const wlInput = shadow.getElementById('bf-wl-input');
-  wlInput.value = '某某UP, 67890';
-  shadow.getElementById('bf-wl-add').click();
-  check('面板里能添加白名单项（逗号分隔多个）',
-    await waitFor(() => (store.sync.bfSettings.whitelist || []).indexOf('67890') !== -1),
-    JSON.stringify(store.sync.bfSettings.whitelist));
-
-  await pushSettings({ whitelist: [], keywords: [], blockTypes: {} });
-  check('复位后没有残留屏蔽', doc.querySelectorAll('.bf-blocked').length === 0,
-    String(doc.querySelectorAll('.bf-blocked').length));
-
-  // 配置规范化
-  const normWl = win.bfNormalize({ whitelist: [' 甲 ', '', '甲', '乙', '乙'] }).whitelist;
-  check('白名单规范化：去空项、去重、去首尾空格',
-    JSON.stringify(normWl) === JSON.stringify(['甲', '乙']), JSON.stringify(normWl));
-  check('老配置里没有 whitelist 时补成空数组',
-    JSON.stringify(win.bfNormalize({ keywords: ['剧透'] }).whitelist) === '[]',
-    JSON.stringify(win.bfNormalize({ keywords: ['剧透'] }).whitelist));
-
-  // [10g] 分区推广按封面徽标分类：番剧 / 国创 / 综艺 / 电影 各自独立，赛事开关真的有效
-  console.log('\n[10g] 分区推广按封面徽标分类（回归：番剧连带屏蔽、赛事点了没反应）');
+  // 9) 分区推广按封面徽标分类：番剧 / 国创 / 综艺 / 电影 各自独立，赛事开关真的有效
+  console.log('\n[10e] 分区推广按封面徽标分类（回归：番剧连带屏蔽、赛事点了没反应）');
   const promoIds = ['tBangumi', 'tGuochuang', 'tVariety', 'tMovie', 'tMatch'];
   const blockedList = () => promoIds.filter((id) => blocked(id)).join(',') || '(无)';
 
@@ -785,7 +687,7 @@ async function main() {
   await pushSettings({ blockTypes: {} });
   check('全部关掉后都恢复显示', blockedList() === '(无)', blockedList());
 
-  // [10h] 懒加载插入的推广卡片：只配置屏蔽词、分区开关全关，也应该被自动扫到并屏蔽
+  // 7) 懒加载插入的推广卡片：只配置屏蔽词、分区开关全关，也应该被自动扫到并屏蔽
   await pushSettings({ mode: 'mask', hideKeepSlot: true, keywords: ['我准备好了'], blockTypes: {} });
   const promo = doc.createElement('div');
   promo.className = 'floor-single-card';

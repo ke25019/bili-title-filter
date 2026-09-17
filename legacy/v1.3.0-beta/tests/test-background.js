@@ -11,16 +11,6 @@ const DEFAULTS_SRC = fs.readFileSync(path.join(ROOT, 'shared', 'defaults.js'), '
 const BACKGROUND_SRC = fs.readFileSync(path.join(ROOT, 'background.js'), 'utf8');
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
-/** 轮询等待条件成立，避免机器负载导致的时序抖动 */
-async function waitFor(fn, timeout = 3000) {
-  const t0 = Date.now();
-  while (Date.now() - t0 < timeout) {
-    if (fn()) return true;
-    await sleep(30);
-  }
-  return fn();
-}
-
 let pass = 0;
 let fail = 0;
 function check(name, cond, extra) {
@@ -105,9 +95,6 @@ async function main() {
     Object.keys(store.sync.bfSettings.blockTypes).length === 18 &&
     Object.values(store.sync.bfSettings.blockTypes).every((v) => v === false));
   check('默认不屏蔽首页顶部轮播横幅', store.sync.bfSettings.blockBanner === false);
-  check('默认 UP 白名单为空',
-    Array.isArray(store.sync.bfSettings.whitelist) && store.sync.bfSettings.whitelist.length === 0,
-    JSON.stringify(store.sync.bfSettings.whitelist));
   check('已移除旧的「整行板块」配置项', !('blockSections' in store.sync.bfSettings));
   check('统计数据已初始化', !!store.local.bfStats, JSON.stringify(store.local.bfStats));
 
@@ -119,12 +106,12 @@ async function main() {
   });
 
   await send({ type: 'BF_STATS', delta: 3 });
-  check('累加屏蔽数量到 total', await waitFor(() => store.local.bfStats.total === 3), store.local.bfStats.total);
-  check('今日屏蔽数量正确', await waitFor(() => store.local.bfStats.today === 3), store.local.bfStats.today);
-  // 徽标是通过 storage 变更回调异步更新的，轮询等待，避免机器负载下的时序抖动
-  check('徽标显示今日数量', await waitFor(() => badge.text === '3'), JSON.stringify(badge.text));
+  await sleep(80);
+  check('累加屏蔽数量到 total', store.local.bfStats.total === 3, store.local.bfStats.total);
+  check('今日屏蔽数量正确', store.local.bfStats.today === 3, store.local.bfStats.today);
+  check('徽标显示今日数量', badge.text === '3', badge.text);
   check('徽标颜色为 B 站蓝', badge.color === '#00aeec', badge.color);
-  check('图标悬浮提示包含数量', await waitFor(() => /今日已屏蔽 3 个/.test(badge.title || '')), JSON.stringify(badge.title));
+  check('图标悬浮提示包含数量', /今日已屏蔽 3 个/.test(badge.title || ''), badge.title);
 
   await send({ type: 'BF_STATS', delta: 5 });
   await sleep(80);

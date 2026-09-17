@@ -1,0 +1,38 @@
+{
+  "manifest_version": 3,
+  "name": "B站屏蔽助手 - 视频屏蔽 / 分区推广过滤",
+  "version": "1.3.0",
+  "description": "按自定义标题屏蔽词屏蔽 B 站视频：可整体遮蔽（封面+标题合成一块提示区域，鼠标悬停可查看）或完全隐藏；另可屏蔽直播、番剧、国创、综艺、电影等 18 类分区推广，并可单独屏蔽首页顶部轮播横幅。",
+  "minimum_chrome_version": "102",
+  "permissions": ["storage"],
+  "host_permissions": ["*://*.bilibili.com/*"],
+  "background": {
+    "service_worker": "background.js"
+  },
+  "action": {
+    "default_title": "B站屏蔽助手",
+    "default_popup": "popup/popup.html",
+    "default_icon": {
+      "16": "icons/icon16.png",
+      "32": "icons/icon32.png",
+      "48": "icons/icon48.png",
+      "128": "icons/icon128.png"
+    }
+  },
+  "icons": {
+    "16": "icons/icon16.png",
+    "32": "icons/icon32.png",
+    "48": "icons/icon48.png",
+    "128": "icons/icon128.png"
+  },
+  "options_page": "options/options.html",
+  "content_scripts": [
+    {
+      "matches": ["*://*.bilibili.com/*"],
+      "js": ["shared/defaults.js", "content/content.js"],
+      "css": ["content/content.css"],
+      "run_at": "document_start",
+      "all_frames": false
+    }
+  ]
+}

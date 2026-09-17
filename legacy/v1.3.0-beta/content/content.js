@@ -336,33 +336,6 @@
     return '';
   }
 
-  /** UP 主主页链接里的那串数字 ID（卡片里指向 space.bilibili.com/<id> 的链接） */
-  function getUpUid(card) {
-    var a = card.querySelector('a[href*="space.bilibili.com/"]');
-    if (!a) return '';
-    var m = /space\.bilibili\.com\/(\d+)/.exec(a.getAttribute('href') || '');
-    return m ? m[1] : '';
-  }
-
-  /**
-   * 白名单命中判定。
-   * 名单项与 UP 名字比对（忽略大小写）；纯数字的项则与这个 UP 的主页数字 ID 比对。
-   * 命中之后关键词和分区开关都不再作用于这张卡片 —— 白名单就是"这个 UP 永远别屏蔽"。
-   */
-  function isWhitelisted(card) {
-    var list = settings.whitelist || [];
-    if (!list.length) return false;
-    var name = getUpName(card);
-    var uid = getUpUid(card);
-    for (var i = 0; i < list.length; i++) {
-      var w = String(list[i] == null ? '' : list[i]).trim();
-      if (!w) continue;
-      if (uid && w === uid) return true;
-      if (name && name.toLowerCase() === w.toLowerCase()) return true;
-    }
-    return false;
-  }
-
   /** 统计元素内「多少个不同的」该类型链接（同一张卡片的封面+标题链接算 1 个） */
   function countDistinctEntries(el, hrefRe) {
     if (!el || !el.querySelectorAll) return 0;
@@ -633,61 +606,21 @@
       if (!r.width || !r.height) continue;   // 拿不到尺寸（隐藏幻灯片）就跳过
       if (r.width < 300 || r.height < 150) continue;
       if (r.top > 600) continue;             // 必须在页面顶部
-      return outermostBannerBox(root);
+      return root;
     }
     return null;
   }
 
-  /** 外层的轮播容器（实测层级：.carousel > .carousel-container > .vui_carousel） */
-  function isBannerWrapper(el) {
-    var cls = typeof el.className === 'string' ? el.className : '';
-    return /(^|\s)(carousel|carousel-container|carousel-wrap|banner|banner-container)(\s|$)/.test(cls);
-  }
-
-  /**
-   * 往上取到"只装着这个轮播"的最外层容器。
-   *
-   * 为什么必须这样：实测 B 站这里三层都是 height:100%（.carousel / .carousel-container /
-   * .vui_carousel 全是），只把里层 .vui_carousel 隐藏掉的话，外层会留下一个空白框
-   * —— 就是「不能被完全隐藏」。往上走到 .carousel 这一层，整块才会真的收起来。
-   */
-  function outermostBannerBox(root) {
-    var el = root;
-    for (var i = 0; i < 4; i++) {
-      var parent = el.parentElement;
-      if (!parent || !isBannerWrapper(parent)) break;
-      el = parent;
-    }
-    return el;
-  }
-
-  /**
-   * 顶部轮播横幅：独立开关，只作用于首页那一块。
-   * 按当前的屏蔽方式处理：
-   *   mask → 跟卡片一样盖一块说明，讲清楚这块为什么不见了（保留原来的高度）
-   *   hide → 整个移除（连外层的空壳一起），页面不留空白
-   */
+  /** 顶部轮播横幅：独立开关，只作用于首页那一块 */
   function applyBannerBlock() {
     var marked = document.querySelectorAll('.bf-banner-blocked');
-    for (var i = 0; i < marked.length; i++) {
-      var old = marked[i];
-      old.classList.remove('bf-banner-blocked', 'bf-blocked', 'bf-hide', 'bf-hide-slot');
-      var oldMask = old.querySelector(':scope > .bf-mask');
-      if (oldMask) oldMask.remove();
-    }
+    for (var i = 0; i < marked.length; i++) marked[i].classList.remove('bf-banner-blocked');
 
     if (!settings.enabled || !settings.blockBanner) return;
     var banner = findHomeBanner();
-    if (!banner) return;
-
-    banner.classList.add('bf-banner-blocked');
-    if (settings.mode === 'mask') {
-      banner.classList.add('bf-blocked');
-      ensureMask(banner, { key: 'banner', kind: 'banner' });
-      log('已遮蔽首页顶部轮播横幅');
-    } else {
-      banner.classList.add('bf-hide');
-      log('已隐藏首页顶部轮播横幅');
+    if (banner) {
+      banner.classList.add('bf-banner-blocked');
+      log('已屏蔽首页顶部轮播横幅');
     }
   }
 
@@ -819,12 +752,6 @@
    * ------------------------------------------------------------------ */
 
   function buildMaskText(action) {
-    if (action.kind === 'banner') {
-      return {
-        main: '已按开关屏蔽首页顶部轮播横幅',
-        sub: '关掉「屏蔽首页顶部轮播横幅」即可恢复'
-      };
-    }
     if (action.kind === 'keyword') {
       return {
         main: settings.maskText || DEFAULTS.maskText,
@@ -1054,13 +981,6 @@
     if (isNestedCard(card)) return;
 
     if (!settings.enabled) {
-      clearBlock(card);
-      return;
-    }
-
-    // 白名单优先：名单里的 UP 直接放行，关键词和分区开关都不再作用于它
-    if (isWhitelisted(card)) {
-      if (card.dataset.bfState === 'blocked') log('白名单放行：', getUpName(card) || getUpUid(card));
       clearBlock(card);
       return;
     }
@@ -1475,6 +1395,7 @@
     '          <span>隐藏时保留原位置</span>',
     '          <button class="bf-switch bf-switch--sm" id="bf-keepslot" type="button" role="switch"></button>',
     '        </div>',
+    '        <div class="bf-hint" id="bf-keepslot-hint">开启：视频不显示但位置留空，页面不重排（更稳定）；关闭：卡片整个移除，后面内容前移补位</div>',
     '      </div>',
     '      <div class="bf-row">',
     '        <div class="bf-label"><span>标题屏蔽词</span></div>',
@@ -1483,15 +1404,6 @@
     '          <button class="bf-btn-primary" id="bf-kw-add" type="button">添加</button>',
     '        </div>',
     '        <div class="bf-chips" id="bf-chips"></div>',
-    '      </div>',
-    '      <div class="bf-row">',
-    '        <div class="bf-label"><span>UP 白名单</span></div>',
-    '        <div class="bf-input-row">',
-    '          <input class="bf-input" id="bf-wl-input" type="text" placeholder="UP 名（要和卡片上显示的完全一致），回车添加" />',
-    '          <button class="bf-btn-primary" id="bf-wl-add" type="button">添加</button>',
-    '        </div>',
-    '        <div class="bf-chips" id="bf-wl-chips"></div>',
-    '        <div class="bf-hint">名单里的 UP 不会被屏蔽，关键词和分区开关都对它无效</div>',
     '      </div>',
     '      <div class="bf-row">',
     '        <div class="bf-label"><span>屏蔽分区推广（卡片）</span></div>',
@@ -1757,22 +1669,6 @@
       updateSettings({ keywords: list });
     });
 
-    // UP 白名单：和屏蔽词一样是"词条 + 回车添加"
-    var wlInput = shadow.getElementById('bf-wl-input');
-    shadow.getElementById('bf-wl-add').addEventListener('click', addWhitelistFromInput);
-    wlInput.addEventListener('keydown', function (e) {
-      if (e.key === 'Enter') { e.preventDefault(); addWhitelistFromInput(); }
-    });
-
-    shadow.getElementById('bf-wl-chips').addEventListener('click', function (e) {
-      var del = e.target.closest('.bf-chip__del');
-      if (!del) return;
-      var idx = parseInt(del.dataset.index, 10);
-      var list = (settings.whitelist || []).slice();
-      list.splice(idx, 1);
-      updateSettings({ whitelist: list });
-    });
-
     shadow.getElementById('bf-types').addEventListener('click', function (e) {
       var el = e.target.closest('.bf-type');
       if (!el) return;
@@ -1811,50 +1707,6 @@
     updateSettings({ keywords: list });
   }
 
-  /** 白名单添加：逗号 / 空格 / 换行都能分隔，重复项自动跳过 */
-  function addWhitelistFromInput() {
-    var input = shadow.getElementById('bf-wl-input');
-    var raw = (input.value || '').trim();
-    if (!raw) return;
-    var list = (settings.whitelist || []).slice();
-    raw.split(/[,，、;；\n\r\t]+/).forEach(function (p) {
-      var v = p.trim();
-      if (v && list.indexOf(v) === -1) list.push(v);
-    });
-    input.value = '';
-    updateSettings({ whitelist: list });
-  }
-
-  /** 渲染一组词条（屏蔽词与 UP 白名单共用同样的外观） */
-  function renderChips(box, list, emptyText) {
-    if (!box) return;
-    box.innerHTML = '';
-    if (!list.length) {
-      var empty = document.createElement('div');
-      empty.className = 'bf-empty';
-      empty.textContent = emptyText;
-      box.appendChild(empty);
-      return;
-    }
-    list.forEach(function (text, i) {
-      var chip = document.createElement('span');
-      chip.className = 'bf-chip';
-      var t = document.createElement('span');
-      t.className = 'bf-chip__text';
-      t.textContent = text;
-      t.title = text;
-      var del = document.createElement('button');
-      del.className = 'bf-chip__del';
-      del.type = 'button';
-      del.dataset.index = String(i);
-      del.textContent = '✕';
-      del.title = '删除';
-      chip.appendChild(t);
-      chip.appendChild(del);
-      box.appendChild(chip);
-    });
-  }
-
   function renderUI() {
     if (!shadow) return;
 
@@ -1890,10 +1742,32 @@
       b.classList.toggle('is-active', b.dataset.value === settings.theme);
     });
 
-    renderChips(shadow.getElementById('bf-chips'), settings.keywords,
-      '还没有屏蔽词，添加后立即生效');
-    renderChips(shadow.getElementById('bf-wl-chips'), settings.whitelist || [],
-      '还没有白名单，添加后这些 UP 就不会被屏蔽');
+    var chips = shadow.getElementById('bf-chips');
+    chips.innerHTML = '';
+    if (!settings.keywords.length) {
+      var empty = document.createElement('div');
+      empty.className = 'bf-empty';
+      empty.textContent = '还没有屏蔽词，添加后立即生效';
+      chips.appendChild(empty);
+    } else {
+      settings.keywords.forEach(function (kw, i) {
+        var chip = document.createElement('span');
+        chip.className = 'bf-chip';
+        var t = document.createElement('span');
+        t.className = 'bf-chip__text';
+        t.textContent = kw;
+        t.title = kw;
+        var del = document.createElement('button');
+        del.className = 'bf-chip__del';
+        del.type = 'button';
+        del.dataset.index = String(i);
+        del.textContent = '✕';
+        del.title = '删除';
+        chip.appendChild(t);
+        chip.appendChild(del);
+        chips.appendChild(chip);
+      });
+    }
 
     var typesBox = shadow.getElementById('bf-types');
     if (!typesBox.dataset.built) {

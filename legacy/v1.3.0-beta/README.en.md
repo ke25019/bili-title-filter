@@ -4,9 +4,9 @@ An extension I wrote for myself to filter Bilibili. Add a few keywords and the v
 
 Manifest V3, works in Edge and Chrome, plain JavaScript with no runtime dependencies.
 
-![version](https://img.shields.io/badge/version-1.3.1-orange)
+![version](https://img.shields.io/badge/version-1.3.0--beta-orange)
 ![browser](https://img.shields.io/badge/Edge%20%7C%20Chrome-Chromium-00aeec)
-![tests](https://img.shields.io/badge/tests-244%20passed-brightgreen)
+![tests](https://img.shields.io/badge/tests-209%20passed-brightgreen)
 
 ---
 
@@ -27,16 +27,6 @@ Once it's installed, a "屏蔽助手" button shows up near Bilibili's top bar. Y
 Click the extension icon in the toolbar, or the button on the Bilibili page — both open the settings. Most of the time you only need one field: type the words you don't want to see and hit Enter. You can paste several at once, separated by commas or spaces.
 
 There are a few matching options: case sensitivity, regular expressions, and whether the uploader's name should be matched too. Changes apply immediately — any open Bilibili tab is rescanned.
-
----
-
-## Uploader whitelist
-
-Some uploaders you want to keep no matter what their titles say — put them on the whitelist.
-
-An entry is **the uploader's name**, exactly as the card shows it (case-insensitive), for example `某某UP主`.
-
-Uploaders on the list are **never blocked** — keywords and category switches have no effect on them, and anything already blocked comes back immediately. You can edit the list on the settings page or straight from the in-page panel.
 
 ---
 
@@ -116,7 +106,7 @@ npm install
 npm test
 ```
 
-244 checks covering the blocking logic, category detection, both hiding behaviours, the settings pages and the background stats.
+209 checks covering the blocking logic, category detection, both hiding behaviours, the settings pages and the background stats.
 
 The mock DOM and its sizes were measured on the real site (utility-class structures like `.floor-card-inner > .cover-container + .pb-16.px-12 > p.title`, the `.vui_carousel` banner, the 0×0 hidden links inside `.palette-button-inner`, and so on).
 
@@ -146,14 +136,6 @@ Bilibili is a single-page app, so scrolling and navigating re-render cards. The 
 ## Changelog
 
 Newest first. This is what changed and why — including the parts I got wrong.
-
-### 1.3.1
-
-**An uploader whitelist.** Uploaders on the list are never blocked — keywords and category switches have no effect on them, and anything already blocked comes back right away. An entry is the uploader's name, exactly as shown and case-insensitive. The settings page has a list plus bulk editing, and the in-page panel got its own row where you add entries with Enter, just like keywords.
-
-I also removed a stray hint from the panel: it stayed visible in mask mode ("video hidden but the slot kept..."), even though that switch only means anything for the hide mode.
-
-**The home-page carousel now follows the blocking mode.** Before, that switch did one thing: add `display:none` to `.vui_carousel`. But on the real page `.carousel`, `.carousel-container` and `.vui_carousel` are all `height:100%`, so hiding only the innermost one left an empty box behind - and it vanished without any explanation. Now **hide** mode walks up and removes the outer `.carousel` as well, so nothing is left behind, while **mask** mode covers it with an explanation: the carousel was blocked by the switch, and how to bring it back.
 
 ### 1.3.0
 
