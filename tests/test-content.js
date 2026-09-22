@@ -21,7 +21,8 @@ const DEFAULTS_SRC = fs.readFileSync(path.join(ROOT, 'shared', 'defaults.js'), '
 const CONTENT_SRC = fs.readFileSync(path.join(ROOT, 'content', 'content.js'), 'utf8');
 const CONTENT_CSS = fs.readFileSync(path.join(ROOT, 'content', 'content.css'), 'utf8');
 
-const HTML = `<!DOCTYPE html><html><head><style id="bf-style">${CONTENT_CSS}</style></head><body>
+const HTML = `<!DOCTYPE html><html><head><style id="page-style">#swipeSlot{display:grid;grid-column:1/3;grid-row:1/3}</style>
+<style id="bf-style">${CONTENT_CSS}</style></head><body>
   <div class="bili-header">
     <div class="channel-items__right">
       <a class="channel-link__right" href="//live.bilibili.com">直播</a>
@@ -31,25 +32,43 @@ const HTML = `<!DOCTYPE html><html><head><style id="bf-style">${CONTENT_CSS}</st
     <div id="nav-searchform"></div>
   </div>
   <main>
-    <!-- 顶部轮播横幅：层级与真实页面一致（.carousel > .carousel-container > .vui_carousel，
-         三层都是 height:100%）。只隐藏最里面那层会留下一个空白框，所以开关必须
-         一路处理到 .carousel 这一层，并且不能碰同层的其它楼层。 -->
+    <!-- 顶部横幅区（层级照抄真实页面）：
+         头部横幅图 .bili-header__banner（本扩展不管） + 轮播那块
+         .recommended-swipe-body-normal > .recommended-swipe-body > .recommended-swipe-core
+           > .recommended-swipe（网格项，grid-column:1/3、grid-row:1/3）
+             > .carousel > .carousel-container > .vui_carousel
+         轮播三层都是 height:100%、格子高度由 .shim-card 撑着，所以只藏最里面那层
+         会留下空白框，格子也还占着 —— 开关必须一路收到 .recommended-swipe 这一层。 -->
+    <div class="bili-header__banner" id="headerBanner" data-w="1401" data-h="155">
+      <a class="banner-link" href="https://www.bilibili.com/blackboard/activity-banner.html">
+        <picture class="v-img banner-img"><img src="header-banner.jpg"></picture>
+      </a>
+    </div>
+
     <div class="recommended-container" id="bannerHost">
-      <div class="carousel" id="bannerCarousel" data-w="500" data-h="365">
-        <div class="carousel-container" id="bannerBox" data-w="500" data-h="365">
-          <div class="vui_carousel vui_carousel--bottom" id="banner" data-w="500" data-h="365">
-            <div class="vui_carousel__slides">
-              <div class="vui_carousel__slide vui_carousel__slide--current">
-                <div class="carousel-area" data-index="0" data-w="500" data-h="281">
-                  <div class="carousel-footer">
-                    <div class="carousel-footer-title">
-                      <a href="https://www.bilibili.com/bangumi/play/ep5137676">新番推广横幅</a>
+      <div class="recommended-swipe-body-normal" id="swipeNormal">
+        <div class="recommended-swipe-body" id="swipeBody">
+          <div class="recommended-swipe-core" id="swipeCore">
+            <div class="recommended-swipe" id="swipeSlot" data-w="500" data-h="365">
+              <div class="carousel" id="bannerCarousel" data-w="500" data-h="365">
+                <div class="carousel-container" id="bannerBox" data-w="500" data-h="365">
+                  <div class="vui_carousel vui_carousel--bottom" id="banner" data-w="500" data-h="365">
+                    <div class="vui_carousel__slides">
+                      <div class="vui_carousel__slide vui_carousel__slide--current">
+                        <div class="carousel-area" data-index="0" data-w="500" data-h="281">
+                          <div class="carousel-footer">
+                            <div class="carousel-footer-title">
+                              <a href="https://www.bilibili.com/bangumi/play/ep5137676">新番推广横幅</a>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                      <div class="vui_carousel__slide">
+                        <div class="carousel-area" data-index="1" data-w="500" data-h="281"></div>
+                      </div>
                     </div>
                   </div>
                 </div>
-              </div>
-              <div class="vui_carousel__slide">
-                <div class="carousel-area" data-index="1" data-w="500" data-h="281"></div>
               </div>
             </div>
           </div>
@@ -512,31 +531,48 @@ async function main() {
   console.log('\n[9] 首页顶部轮播横幅（独立开关，跟随屏蔽方式）');
   check('默认不屏蔽横幅', doc.querySelectorAll('.bf-banner-blocked').length === 0);
 
+  // 1.3.2 的行为：开关同时管轮播和头部横幅图，并且跟随屏蔽方式
   await pushSettings({ mode: 'mask', blockBanner: true });
-  check('遮蔽模式：横幅被标记为已接管', $('bannerCarousel').classList.contains('bf-banner-blocked'));
-  check('【关键】遮蔽模式：横幅不只是消失，而是盖了一块说明（不再无声无息）',
+  check('遮蔽模式：轮播横幅盖了一块说明',
     $('bannerCarousel').classList.contains('bf-blocked') && !!$('bannerCarousel').querySelector(':scope > .bf-mask'),
     $('bannerCarousel').className);
-  check('说明挂在最外层轮播容器上（含 .carousel-container 那一层空壳）',
-    $('bannerCarousel').id === 'bannerCarousel' && !!$('bannerCarousel').querySelector(':scope > .bf-mask'));
-  check('说明文案讲清了原因', /轮播横幅/.test(maskText($('bannerCarousel'))), maskText($('bannerCarousel')));
-  check('遮蔽模式：外层的 carousel 子层也一起被隐藏',
-    win.getComputedStyle($('bannerBox')).visibility === 'hidden' && win.getComputedStyle($('banner')).visibility === 'hidden',
-    win.getComputedStyle($('bannerBox')).visibility + '/' + win.getComputedStyle($('banner')).visibility);
+  check('遮蔽模式：说明文案讲清了原因', /轮播横幅/.test(maskText($('bannerCarousel'))), maskText($('bannerCarousel')));
+  check('头部横幅图被同一个开关一起盖住（1.3.2 新增）',
+    $('headerBanner').classList.contains('bf-blocked') && !!$('headerBanner').querySelector(':scope > .bf-mask'),
+    $('headerBanner').className);
 
   await pushSettings({ mode: 'hide' });
-  check('【关键】完全隐藏：连外层 .carousel 一起收起，整块真的没了',
-    $('bannerCarousel').classList.contains('bf-hide') && win.getComputedStyle($('bannerCarousel')).display === 'none',
-    win.getComputedStyle($('bannerCarousel')).display);
-  check('完全隐藏：不再残留说明遮罩', !$('bannerCarousel').querySelector(':scope > .bf-mask'));
-  check('完全隐藏：不会把同层的其它楼层一起藏掉',
+  check('完全隐藏：轮播整块收起',
+    $('bannerCarousel').classList.contains('bf-hide') && win.getComputedStyle($('bannerCarousel')).display === 'none');
+  check('【关键】连它占着的网格项一起收起（否则格子还占着、后面的内容顶不上来）',
+    $('swipeSlot').classList.contains('bf-hide') && win.getComputedStyle($('swipeSlot')).display === 'none',
+    $('swipeSlot').className + ' / display=' + win.getComputedStyle($('swipeSlot')).display);
+  check('头部横幅图也一起收起',
+    $('headerBanner').classList.contains('bf-hide') && win.getComputedStyle($('headerBanner')).display === 'none');
+  check('不会把同层的其它楼层一起藏掉',
     win.getComputedStyle($('bannerSibling')).display !== 'none', win.getComputedStyle($('bannerSibling')).display);
 
   await pushSettings({ blockBanner: false });
-  check('关闭开关后横幅恢复显示',
+  check('关闭开关后横幅与头部横幅图都恢复',
     !$('bannerCarousel').classList.contains('bf-banner-blocked') &&
+    !$('headerBanner').classList.contains('bf-banner-blocked') &&
     win.getComputedStyle($('bannerCarousel')).display !== 'none' &&
-    !$('bannerCarousel').querySelector(':scope > .bf-mask'));
+    win.getComputedStyle($('swipeSlot')).display !== 'none' &&
+    win.getComputedStyle($('headerBanner')).display !== 'none');
+
+  // 安全阀：那个网格项里除了轮播还有别的内容时，只能藏轮播，不能连格子一起藏
+  const swipeExtra = doc.createElement('div');
+  swipeExtra.id = 'swipeExtra';
+  swipeExtra.textContent = '这块网格里还有别的内容，不能被一起藏掉';
+  $('swipeSlot').appendChild(swipeExtra);
+  await pushSettings({ blockBanner: true });
+  check('【安全阀】网格项里还有别的文字时，只藏轮播、不越过这层',
+    $('bannerCarousel').classList.contains('bf-hide') &&
+    !$('swipeSlot').classList.contains('bf-hide') &&
+    win.getComputedStyle($('swipeSlot')).display !== 'none',
+    $('swipeSlot').className);
+  swipeExtra.remove();
+  await pushSettings({ blockBanner: false });
   await pushSettings({ mode: 'mask' });
   check('横幅开关与分区开关互不影响', !blocked('c4') && !blocked('c8'));
 

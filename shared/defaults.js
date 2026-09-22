@@ -213,7 +213,10 @@
      */
     hideKeepSlot: true,
 
-    /** 屏蔽首页顶部的大轮播横幅（独立开关，只作用于首页那一块） */
+    /**
+     * 屏蔽首页顶部的推广位（独立开关，只作用于首页那一块）：
+     *   轮播横幅（.vui_carousel）+ 顶部横幅广告（.bili-header__banner）
+     */
     blockBanner: false,
 
     /** 注入界面的外观：auto = 跟随 B 站深色模式 */

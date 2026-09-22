@@ -1,7 +1,7 @@
 # B站屏蔽助手 · BiliTitleFilter
 
 [![License: Apache 2.0](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](https://www.apache.org/licenses/LICENSE-2.0)
-![version](https://img.shields.io/badge/version-1.3.1-orange)
+![version](https://img.shields.io/badge/version-1.3.2-orange)
 ![browser](https://img.shields.io/badge/Edge%20%7C%20Chrome-Chromium-00aeec)
 ![tests](https://img.shields.io/badge/tests-244%20passed-brightgreen)
 
@@ -46,14 +46,14 @@ Related links: https://microsoftedge.microsoft.com/addons/detail/mnedaofgbbcdgpo
 - 按标题关键词屏蔽视频，支持正则、区分大小写、匹配 UP 主名字
 - 两种效果：整体遮蔽（封面标题合成一块，鼠标悬停能看）和完全隐藏（默认保留原位置，页面不重排）
 - UP 白名单：名单里的 UP 不会被屏蔽（按 UP 名字）
-- 18 类分区推广可以整类屏蔽（番剧、国创、综艺、电影这些是分开的），另有「其他推广」兜底和单独的首页轮播横幅开关
+- 18 类分区推广可以整类屏蔽（番剧、国创、综艺、电影这些是分开的），另有「其他推广」兜底，以及一个单独的开关用来屏蔽首页顶部的轮播横幅与横幅广告
 - B 站页面里有一个可以拖着走的悬浮面板
 - 跟随 B 站深色模式
 
 - Block by title keyword, with regex, case sensitivity and uploader matching
 - Two styles: mask (cover and title merged into one block, reveals on hover) and hide (keeps the slot by default, so the page doesn't reflow)
 - An uploader whitelist: uploaders on it are never blocked (by name)
-- Eighteen promo categories, each with its own switch (anime, Chinese animation, variety shows and movies are separate), an "other promos" catch-all, and a switch for the home-page banner
+- Eighteen promo categories, each with its own switch (anime, Chinese animation, variety shows and movies are separate), an "other promos" catch-all, and a separate switch that blocks the home-page carousel banner and the top banner ad
 - A draggable panel inside the page
 - Follows Bilibili's dark mode
 

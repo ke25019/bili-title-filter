@@ -162,7 +162,7 @@
       if (e.key === 'Enter') { e.preventDefault(); addKeyword(); }
     });
 
-    // 首页顶部轮播横幅：独立开关
+    // 首页顶部轮播横幅 / 顶部横幅广告：同一个开关
     $('banner').addEventListener('click', function () {
       save({ blockBanner: !settings.blockBanner });
     });
