@@ -128,3 +128,5 @@ input[type="text"]:focus { border-color: var(--accent); }
 .switch--sm { width: 34px; height: 19px; }
 .switch--sm::after { width: 15px; height: 15px; }
 .switch--sm.is-on::after { transform: translateX(15px); }
+
+.copyright { margin: 6px 0 0; text-align: center; font-size: 10.5px; color: var(--fg-weak); opacity: .75; }

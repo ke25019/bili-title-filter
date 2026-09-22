@@ -101,6 +101,7 @@ async function testPopup() {
   check('逗号分隔批量添加屏蔽词', JSON.stringify(store.sync.bfSettings.keywords) === JSON.stringify(['剧透', '营销号']),
     JSON.stringify(store.sync.bfSettings.keywords));
   check('屏蔽词以 chip 形式渲染', doc.querySelectorAll('#chips .chip').length === 2);
+  check('弹窗里有版权行', /Copyright \(c\) 2026 ke25019/.test(doc.querySelector('.copyright') ? doc.querySelector('.copyright').textContent : ''), doc.querySelector('.copyright') ? doc.querySelector('.copyright').textContent : '(没有)');
 
   // 删除
   doc.querySelector('#chips .chip__del').click();
@@ -201,6 +202,11 @@ async function testOptions() {
     footLinks.map((a) => a.getAttribute('target') + '/' + a.getAttribute('rel')).join(' | '));
   check('链接文案能看懂是什么', /GitHub/.test(ghLink.textContent) && /商店/.test(storeLink.textContent),
     (ghLink.textContent + ' / ' + storeLink.textContent).trim());
+  check('页脚有版权行', /Copyright \(c\) 2026 ke25019/.test(footText), footText.trim());
+  check('页脚写明协议且注明禁止商用',
+    /PolyForm Noncommercial 1\.0\.0/.test(footText) && /禁止商用/.test(footText));
+  check('设置页里说明了站内搜索不保证', /站内搜索/.test(doc.body.textContent));
+  check('协议不再是 Apache', !/Apache/i.test(doc.body.textContent));
 
   // 切换为完全隐藏 → 预览卡片应加上 bf-hide
   const hideRadio = doc.querySelector('input[name="mode"][value="hide"]');

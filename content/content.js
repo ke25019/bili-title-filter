@@ -346,19 +346,26 @@
 
   /**
    * 白名单命中判定。
-   * 名单项与 UP 名字比对（忽略大小写）；纯数字的项则与这个 UP 的主页数字 ID 比对。
+   *
+   * 名单项与 UP 名字比对，**按"包含"匹配**（忽略大小写，双向都算）：
+   * 屏蔽词本身就是按包含匹配的，如果白名单要求完全一致，就会出现
+   * 「关键词填「某UP」、白名单填「某UP主」→ 还是被屏蔽」这种绕不过去的情况
+   * （站内搜索结果页尤其容易撞上，因为卡片上的名字写法和首页不一定完全一样）。
+   * 纯数字的项仍按主页数字 ID 精确比对。
    * 命中之后关键词和分区开关都不再作用于这张卡片 —— 白名单就是"这个 UP 永远别屏蔽"。
    */
   function isWhitelisted(card) {
     var list = settings.whitelist || [];
     if (!list.length) return false;
-    var name = getUpName(card);
+    var name = getUpName(card).trim().toLowerCase();
     var uid = getUpUid(card);
     for (var i = 0; i < list.length; i++) {
       var w = String(list[i] == null ? '' : list[i]).trim();
       if (!w) continue;
       if (uid && w === uid) return true;
-      if (name && name.toLowerCase() === w.toLowerCase()) return true;
+      if (!name) continue;
+      var wl = w.toLowerCase();
+      if (wl === name || name.indexOf(wl) !== -1 || wl.indexOf(name) !== -1) return true;
     }
     return false;
   }

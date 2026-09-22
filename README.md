@@ -1,9 +1,9 @@
 # B站屏蔽助手 · BiliTitleFilter
 
-[![License: Apache 2.0](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](https://www.apache.org/licenses/LICENSE-2.0)
+[![License: PolyForm Noncommercial](https://img.shields.io/badge/License-PolyForm_Noncommercial-orange.svg)](https://polyformproject.org/licenses/noncommercial/1.0.0/)
 ![version](https://img.shields.io/badge/version-1.3.3--beta-orange)
 ![browser](https://img.shields.io/badge/Edge%20%7C%20Chrome-Chromium-00aeec)
-![tests](https://img.shields.io/badge/tests-249%20passed-brightgreen)
+![tests](https://img.shields.io/badge/tests-258%20passed-brightgreen)
 
 一个 B 站网页端扩展：给不想看的视频标题加几个关键词，它们就从页面上消失；也能按分区屏蔽直播、番剧这类推广内容。
 
@@ -57,9 +57,9 @@ Related links: https://microsoftedge.microsoft.com/addons/detail/mnedaofgbbcdgpo
 - A draggable panel inside the page
 - Follows Bilibili's dark mode
 
-纯原生 JavaScript，没有运行时依赖。测试用 jsdom 跑，一共 249 项。
+纯原生 JavaScript，没有运行时依赖。测试用 jsdom 跑，一共 258 项。
 
-Plain JavaScript, no runtime dependencies. The tests run on jsdom — 249 checks in total.
+Plain JavaScript, no runtime dependencies. The tests run on jsdom — 258 checks in total.
 
 ---
 
@@ -72,15 +72,15 @@ Plain JavaScript, no runtime dependencies. The tests run on jsdom — 249 checks
 
 ## 许可证 / License
 
-本项目基于 [Apache License 2.0](LICENSE) 发布。
+本项目基于 [PolyForm Noncommercial License 1.0.0](LICENSE) 发布。
 
-你可以自由使用、修改和分发本软件（包括商业用途），需要保留原始版权声明与许可证文件。
+你可以为非商业目的自由使用、修改和分发本软件，但必须保留原始版权声明，且不得用于任何商业用途。
 
 Copyright (c) 2026 ke25019
 
-This project is licensed under the [Apache License 2.0](LICENSE).
+This project is licensed under the [PolyForm Noncommercial License 1.0.0](LICENSE).
 
-You may use, modify and distribute this software freely, including for commercial purposes, as long as you keep the original copyright notice and the license file.
+You may use, modify and distribute this software for noncommercial purposes only, provided you retain the original copyright notice. Commercial use is not permitted.
 
 Copyright (c) 2026 ke25019
 

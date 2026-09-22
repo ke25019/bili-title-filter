@@ -6,7 +6,7 @@ Manifest V3, works in Edge and Chrome, plain JavaScript with no runtime dependen
 
 ![version](https://img.shields.io/badge/version-1.3.3--beta-orange)
 ![browser](https://img.shields.io/badge/Edge%20%7C%20Chrome-Chromium-00aeec)
-![tests](https://img.shields.io/badge/tests-249%20passed-brightgreen)
+![tests](https://img.shields.io/badge/tests-258%20passed-brightgreen)
 
 ---
 
@@ -116,7 +116,7 @@ npm install
 npm test
 ```
 
-249 checks covering the blocking logic, category detection, both hiding behaviours, the settings pages and the background stats.
+258 checks covering the blocking logic, category detection, both hiding behaviours, the settings pages and the background stats.
 
 The mock DOM and its sizes were measured on the real site (utility-class structures like `.floor-card-inner > .cover-container + .pb-16.px-12 > p.title`, the `.vui_carousel` banner, the 0×0 hidden links inside `.palette-button-inner`, and so on).
 
@@ -154,6 +154,15 @@ Newest first. This is what changed and why — including the parts I got wrong.
 **The carousel switch now hides the whole block outright.** It used to follow the mask/hide mode, covering the banner with an explanation in mask mode. A banner is not a video card, so an explanation makes no sense - the point of turning it on is that the block should not be there. Whatever mode is active, the block is now removed entirely, including the grey wrapper and the grid slot it occupied, so the content below moves up as usual. The switch labels in the settings page, the toolbar popup and the in-page panel all say so now.
 
 **Two links in the settings footer:** the GitHub repository and the Microsoft Edge Add-ons store, so updates are one click away.
+
+
+**A whitelist bug that let things through.** Keywords match by substring, while the whitelist required an exact name - so with "某UP" as a keyword and "某UP主" on the whitelist, the card was still blocked. The whitelist now matches by substring too (case-insensitive, either direction), which also covers search-result cards whose name is written slightly differently.
+
+**Copyright and licence notices inside the extension.** The settings footer and the toolbar popup now show `Copyright (c) 2026 ke25019` and note that the project is released under PolyForm Noncommercial 1.0.0 (noncommercial use only).
+
+**The licence moved from Apache 2.0 to PolyForm Noncommercial 1.0.0** - no commercial use: you may use, modify and distribute the software for noncommercial purposes as long as the copyright notice stays. The `LICENSE` file, the licence sections in all three READMEs and the badge were updated together.
+
+**A new "in-site search is not guaranteed" notice** in the disclaimer: the search results page uses a different card structure, so no promise is made that every result is blocked as expected.
 
 ### 1.3.2
 
@@ -242,9 +251,9 @@ First version: block by title keyword, two blocking styles, nine promo categorie
 
 ## License
 
-This project is licensed under the [Apache License 2.0](LICENSE).
+This project is licensed under the [PolyForm Noncommercial License 1.0.0](LICENSE).
 
-You may use, modify and distribute this software freely, including for commercial purposes, as long as you keep the original copyright notice and the license file.
+You may use, modify and distribute this software for noncommercial purposes only, provided you retain the original copyright notice. Commercial use is not permitted.
 
 Copyright (c) 2026 ke25019
 
@@ -253,6 +262,7 @@ Copyright (c) 2026 ke25019
 ## Disclaimer
 
 1. Unofficial Tool: This is a personal open-source project and is not affiliated with, authorized, or endorsed by Bilibili.
-2. Usage Risk: This tool modifies Bilibili's page content via script injection, which may violate Bilibili's Terms of Service regarding the prohibition of using automated scripts to access or interfere with platform content. Users should evaluate the risks themselves.
-3. Data Security: This extension only reads local page data for filtering and does not collect or upload any personal information to external servers.
-4. Limitation of Liability: This software is provided "as is" without any express or implied warranties. The author is not liable for any account bans, data loss, or other damages resulting from the use of this tool.
+2. In-site search is not guaranteed: the search results page (search.bilibili.com) uses a slightly different card structure from the home page, so there is no promise that every result is blocked as expected - please judge by what you actually see.
+3. Usage Risk: This tool modifies Bilibili's page content via script injection, which may violate Bilibili's Terms of Service regarding the prohibition of using automated scripts to access or interfere with platform content. Users should evaluate the risks themselves.
+4. Data Security: This extension only reads local page data for filtering and does not collect or upload any personal information to external servers.
+5. Limitation of Liability: This software is provided "as is" without any express or implied warranties. The author is not liable for any account bans, data loss, or other damages resulting from the use of this tool.

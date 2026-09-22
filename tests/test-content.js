@@ -203,6 +203,22 @@ const HTML = `<!DOCTYPE html><html><head><style id="page-style">#swipeSlot{displ
         </div>
       </div>
 
+      <!-- 站内搜索结果页的卡片（结构照抄 2026-09 的 search.bilibili.com）：
+           .bili-video-card__info--bottom > a.bili-video-card__info--owner
+             > span.bili-video-card__info--author（名字在 span 里，没有 title 属性）
+             + span.bili-video-card__info--date -->
+      <div class="bili-video-card" id="s1" data-w="240" data-h="210">
+        <div class="bili-video-card__info">
+          <h3 class="bili-video-card__info--tit" title="搜索结果里的视频">搜索结果里的视频</h3>
+          <div class="bili-video-card__info--bottom">
+            <a class="bili-video-card__info--owner" href="//space.bilibili.com/77777">
+              <span class="bili-video-card__info--author">某UP主</span>
+              <span class="bili-video-card__info--date"> · 2024年8月22日</span>
+            </a>
+          </div>
+        </div>
+      </div>
+
       <div class="feed-card" id="c1" data-w="240" data-h="210">
         <div class="bili-feed-card">
           <div class="bili-video-card is-rcmd">
@@ -753,7 +769,20 @@ async function main() {
   await pushSettings({ whitelist: ['某up主'] });
   check('UP 名忽略大小写', !blocked('c1'), $('c1').className);
   await pushSettings({ whitelist: ['某UP'] });
-  check('UP 名要求完全一致（部分匹配不算）', blocked('c1'), $('c1').className);
+  check('名单项只写了名字的一部分也算命中（关键词就是按包含匹配的）', !blocked('c1'), $('c1').className);
+
+  // 回归：关键词只写了 UP 名的一部分 + 开了「同时匹配 UP 主名称」时，白名单必须照样生效
+  await pushSettings({ keywords: ['某UP'], matchUpName: true, whitelist: ['某UP主'], blockTypes: {} });
+  check('【回归】关键词只写一半 UP 名时，白名单仍然放行',
+    !blocked('c1') && !blocked('s1'), 'c1=' + $('c1').className + ' s1=' + $('s1').className);
+  await pushSettings({ whitelist: [] });
+  check('【对照】没有白名单时，UP 名部分匹配确实会屏蔽（首页卡片与搜索页卡片都会）',
+    blocked('c1') && blocked('s1'), 'c1=' + blocked('c1') + ' s1=' + blocked('s1'));
+  await pushSettings({ whitelist: ['某UP主'], keywords: ['剧透'], matchUpName: true });
+  check('搜索页卡片（真实结构）在白名单里时不被屏蔽', !blocked('s1'), $('s1').className);
+  await pushSettings({ keywords: ['搜索结果'], matchUpName: false, whitelist: [] });
+  check('没加白名单的搜索页卡片照常按标题屏蔽', blocked('s1'), $('s1').className);
+  await pushSettings({ keywords: [], whitelist: [] });
 
   // 白名单优先于分区开关
   await pushSettings({ whitelist: [], keywords: [], blockTypes: { live: true } });
