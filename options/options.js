@@ -344,7 +344,7 @@
 
     $('block-banner').addEventListener('change', function () {
       save({ blockBanner: $('block-banner').checked }, true);
-      toast($('block-banner').checked ? '已屏蔽首页顶部轮播横幅与横幅广告' : '已恢复显示首页顶部轮播横幅与横幅广告');
+      toast($('block-banner').checked ? '已屏蔽首页顶部轮播横幅' : '已恢复显示首页顶部轮播横幅');
     });
 
     $('types-none').addEventListener('click', function () {

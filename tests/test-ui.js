@@ -189,6 +189,19 @@ async function testOptions() {
     !/v\d+\.\d+\.\d+/.test(contentHeader),
     (contentHeader.match(/v\d+\.\d+\.\d+/g) || []).join(','));
 
+  console.log('\n[B3] 页脚的仓库与商店链接');
+  const footLinks = Array.from(doc.querySelectorAll('.foot__links a'));
+  const ghLink = footLinks.find((a) => /github\.com/.test(a.getAttribute('href') || ''));
+  const storeLink = footLinks.find((a) => /microsoftedge\.microsoft\.com/.test(a.getAttribute('href') || ''));
+  check('页脚有 GitHub 仓库链接', !!ghLink && /ke25019\/bili-title-filter/.test(ghLink.getAttribute('href')),
+    ghLink ? ghLink.getAttribute('href') : '(没有)');
+  check('页脚有微软扩展商店链接', !!storeLink, storeLink ? storeLink.getAttribute('href') : '(没有)');
+  check('两个链接都在新标签页打开，不影响设置页',
+    footLinks.length === 2 && footLinks.every((a) => a.getAttribute('target') === '_blank' && /noopener/.test(a.getAttribute('rel') || '')),
+    footLinks.map((a) => a.getAttribute('target') + '/' + a.getAttribute('rel')).join(' | '));
+  check('链接文案能看懂是什么', /GitHub/.test(ghLink.textContent) && /商店/.test(storeLink.textContent),
+    (ghLink.textContent + ' / ' + storeLink.textContent).trim());
+
   // 切换为完全隐藏 → 预览卡片应加上 bf-hide
   const hideRadio = doc.querySelector('input[name="mode"][value="hide"]');
   hideRadio.checked = true;

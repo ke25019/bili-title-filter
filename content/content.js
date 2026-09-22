@@ -613,7 +613,7 @@
   }
 
   /* ------------------------------------------------------------------
-   * 首页顶部轮播横幅 / 顶部横幅广告（同一个开关）
+   * 首页顶部的大轮播横幅（独立开关）
    * ------------------------------------------------------------------ */
 
   /**
@@ -662,31 +662,10 @@
   }
 
   /**
-   * 首页顶部横幅广告（实测 2026-09）。
-   *
-   * 元素：.bili-header__banner —— 首页最上方那张大横幅图。
-   * 实测 CSS：min-height:155px、height:9.375vw、max-height:240px；
-   * 里面是 <picture class="v-img banner-img">（图片 URL 带 mirror_report_banner=1 上报参数）
-   * 加一块铺满整块、可点的 <a class="banner-link">，属于推广位。
-   * 只有首页有这块，其它页面这里是 mini-header，没有这个元素。
+   * 首页顶部横幅广告（.bili-header__banner）不在本扩展的屏蔽范围内。
+   * 1.3.2 曾经把它并进「屏蔽首页顶部轮播横幅」开关，1.3.3 按反馈移除了：
+   * 那个开关只管首页顶部的大轮播，不再碰头部横幅图。
    */
-  var BANNER_AD_SELECTOR = '.bili-header__banner';
-
-  /** 找首页顶部横幅广告；拿不准（尺寸不像横幅 / 里面没有图）就返回 null —— 宁可不屏蔽 */
-  function findTopBannerAd() {
-    if (location.pathname !== '/' && location.pathname !== '/index.html') return null;
-
-    var el = document.querySelector(BANNER_AD_SELECTOR);
-    if (!el) return null;
-    if (el.closest && el.closest('#bili-filter-host')) return null;
-
-    var r = el.getBoundingClientRect();
-    if (!r.width || !r.height) return null;                            // 没渲染好 / 已经隐藏
-    if (r.width < 300 || r.height < 60 || r.height > 400) return null; // 尺寸不像一条横幅 → 放弃
-    if (!el.querySelector('.banner-link, .banner-img, picture, img')) return null;
-
-    return el;
-  }
 
   /** 轮播所在的"版块"包装层（实测：.recommended-swipe-body-normal > .recommended-swipe-body > .recommended-swipe-core > .recommended-swipe） */
   var SWIPE_WRAPPER_RE = /(^|\s)(recommended-swipe|recommended-swipe-core|recommended-swipe-body|recommended-swipe-body-normal|recommended-swipe-body-loading|recommended-swipe-body-error|recommended-swipe-body-nothing)(\s|$)/;
@@ -732,23 +711,18 @@
   }
 
   /**
-   * 顶部轮播横幅 / 顶部横幅广告：共用同一个开关（blockBanner），只作用于首页那一块。
-   * 按当前的屏蔽方式处理：
-   *   mask → 跟卡片一样盖一块说明，讲清楚这块为什么不见了（保留原来的高度）
-   *   hide → 整块收起（连外层的灰底空壳和占着的格子一起），页面不留空白、后面的内容补位
+   * 首页顶部的大轮播横幅：开关一开就整块完全隐藏，**不跟随屏蔽方式**。
+   * 原因：横幅不是视频卡片，盖一块"为什么被屏蔽"的说明没有意义 ——
+   * 打开的意图就是"这块别出现"，所以无论当前是整体遮蔽还是完全隐藏，都直接收起。
+   * 收起时会连外层的灰底空壳和它占着的网格项一起处理，
+   * 页面不留空白、后面的内容能补上来。
    */
-  function applyBannerTarget(el, action) {
+  function applyBannerTarget(el) {
     el.classList.add('bf-banner-blocked');
-    if (settings.mode === 'mask') {
-      el.classList.add('bf-blocked');
-      ensureMask(el, action);
-      log('已遮蔽：', action.kind);
-      return;
-    }
     var slot = bannerSlotBox(el);
     el.classList.add('bf-hide');
     if (slot && slot !== el) slot.classList.add('bf-banner-blocked', 'bf-hide');
-    log('已隐藏：', action.kind);
+    log('已隐藏首页顶部轮播横幅');
   }
 
   function applyBannerBlock() {
@@ -764,10 +738,7 @@
     if (!settings.enabled || !settings.blockBanner) return;
 
     var banner = findHomeBanner();
-    if (banner) applyBannerTarget(banner, { key: 'banner', kind: 'banner' });
-
-    var ad = findTopBannerAd();
-    if (ad && ad !== banner) applyBannerTarget(ad, { key: 'bannerTopAd', kind: 'bannerTopAd' });
+    if (banner) applyBannerTarget(banner);
   }
 
   /* ------------------------------------------------------------------
@@ -898,18 +869,6 @@
    * ------------------------------------------------------------------ */
 
   function buildMaskText(action) {
-    if (action.kind === 'banner') {
-      return {
-        main: '已按开关屏蔽首页顶部轮播横幅',
-        sub: '关掉「屏蔽首页顶部轮播横幅」即可恢复'
-      };
-    }
-    if (action.kind === 'bannerTopAd') {
-      return {
-        main: '已按开关屏蔽首页顶部横幅广告',
-        sub: '关掉「屏蔽首页顶部轮播横幅」即可恢复'
-      };
-    }
     if (action.kind === 'keyword') {
       return {
         main: settings.maskText || DEFAULTS.maskText,
@@ -942,11 +901,9 @@
     sub.textContent = text.sub;
     sub.style.display = text.sub ? 'block' : 'none';
 
-    // 顶部横幅（轮播 / 横幅广告）是整块屏蔽，没有绑定"悬停查看"，
-    // 就别写一句做不到的提示（鼠标移上去什么也不会发生）
-    var isBanner = action.kind === 'banner' || action.kind === 'bannerTopAd';
+    // 现在只有视频卡片会产生遮罩，而卡片都绑定了"悬停查看"，这行提示说的是实话
     var hint = mask.querySelector('.bf-mask__hint');
-    if (settings.revealOnHover && !isBanner) {
+    if (settings.revealOnHover) {
       hint.textContent = '鼠标悬停可查看';
       hint.style.display = 'block';
     } else {
@@ -1585,10 +1542,10 @@
     '        <div class="bf-label"><span>屏蔽分区推广（卡片）</span></div>',
     '        <div class="bf-types" id="bf-types"></div>',
     '        <div class="bf-subrow">',
-    '          <span>屏蔽首页顶部轮播横幅（含顶部横幅广告）</span>',
+    '          <span>屏蔽首页顶部轮播横幅</span>',
     '          <button class="bf-switch bf-switch--sm" id="bf-banner" type="button" role="switch"></button>',
     '        </div>',
-    '        <div class="bf-hint">隐藏首页最上方的轮播图和顶部横幅广告，不影响其它内容</div>',
+    '        <div class="bf-hint">打开后整块直接隐藏，不影响其它内容</div>',
     '      </div>',
     '      <div class="bf-row">',
     '        <div class="bf-label"><span>界面外观</span></div>',

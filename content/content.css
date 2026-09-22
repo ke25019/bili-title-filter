@@ -145,16 +145,12 @@ html.bf-dark {
   opacity: 0 !important;
 }
 
-/* ---------- 首页顶部横幅（轮播 / 横幅广告，共用同一个开关） ----------
-   .bf-banner-blocked 只是"这块被开关接管了"的标记，具体怎么处理由屏蔽方式决定：
-     完全隐藏 → 加上 .bf-hide（display:none）。轮播那边会连同外层的
-                .recommended-swipe 网格项一起收起（实测它是 grid-column:1/3、
-                grid-row:1/3，高度由 .shim-card 撑着，只藏 .carousel 的话
-                格子还占着、后面的视频顶不上来）；顶部横幅广告（.bili-header__banner）
-                本身就在正常流里，藏掉就直接收起来。
-     整体遮蔽 → 加上 .bf-blocked + .bf-mask，跟卡片一样盖一块说明，
-                讲清楚这块为什么不见了
-   注意别再给 .bf-banner-blocked 写 display:none —— 那样遮蔽模式下就没法显示说明了。 */
+/* ---------- 首页顶部的大轮播横幅（独立开关） ----------
+   .bf-banner-blocked 只是"这块被开关接管了"的标记，真正的隐藏靠 .bf-hide（display:none）。
+   这个开关一打开就整块完全隐藏，不跟随「整体遮蔽 / 完全隐藏」的屏蔽方式 ——
+   横幅不是视频卡片，盖一块说明没有意义。
+   隐藏时会连同外层的 .recommended-swipe 网格项一起收起（实测它是 grid-column:1/3、
+   grid-row:1/3，高度由 .shim-card 撑着，只藏 .carousel 的话格子还占着、后面的视频顶不上来）。 */
 .bf-banner-blocked {
   border-radius: 8px;
 }

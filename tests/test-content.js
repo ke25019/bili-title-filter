@@ -531,34 +531,43 @@ async function main() {
   console.log('\n[9] 首页顶部轮播横幅（独立开关，跟随屏蔽方式）');
   check('默认不屏蔽横幅', doc.querySelectorAll('.bf-banner-blocked').length === 0);
 
-  // 1.3.2 的行为：开关同时管轮播和头部横幅图，并且跟随屏蔽方式
+  // 遮蔽模式下也必须是"整块直接隐藏"，不跟随屏蔽方式
   await pushSettings({ mode: 'mask', blockBanner: true });
-  check('遮蔽模式：轮播横幅盖了一块说明',
-    $('bannerCarousel').classList.contains('bf-blocked') && !!$('bannerCarousel').querySelector(':scope > .bf-mask'),
-    $('bannerCarousel').className);
-  check('遮蔽模式：说明文案讲清了原因', /轮播横幅/.test(maskText($('bannerCarousel'))), maskText($('bannerCarousel')));
-  check('头部横幅图被同一个开关一起盖住（1.3.2 新增）',
-    $('headerBanner').classList.contains('bf-blocked') && !!$('headerBanner').querySelector(':scope > .bf-mask'),
-    $('headerBanner').className);
-
-  await pushSettings({ mode: 'hide' });
-  check('完全隐藏：轮播整块收起',
-    $('bannerCarousel').classList.contains('bf-hide') && win.getComputedStyle($('bannerCarousel')).display === 'none');
+  check('遮蔽模式：开关一开，轮播整块被标记并隐藏（不因为当前是遮蔽模式就改成盖说明）',
+    $('bannerCarousel').classList.contains('bf-banner-blocked') &&
+    $('bannerCarousel').classList.contains('bf-hide') &&
+    win.getComputedStyle($('bannerCarousel')).display === 'none',
+    $('bannerCarousel').className + ' / display=' + win.getComputedStyle($('bannerCarousel')).display);
+  check('【关键】遮蔽模式下也不生成遮罩（横幅不是视频卡片，盖说明没有意义）',
+    !$('bannerCarousel').querySelector('.bf-mask') && doc.querySelectorAll('.bf-banner-blocked .bf-mask').length === 0);
   check('【关键】连它占着的网格项一起收起（否则格子还占着、后面的内容顶不上来）',
     $('swipeSlot').classList.contains('bf-hide') && win.getComputedStyle($('swipeSlot')).display === 'none',
     $('swipeSlot').className + ' / display=' + win.getComputedStyle($('swipeSlot')).display);
-  check('头部横幅图也一起收起',
-    $('headerBanner').classList.contains('bf-hide') && win.getComputedStyle($('headerBanner')).display === 'none');
-  check('不会把同层的其它楼层一起藏掉',
+  check('轮播内层（.carousel-container / .vui_carousel）由祖先的 display:none 一起带走',
+    $('bannerCarousel').contains($('bannerBox')) && $('bannerCarousel').contains($('banner')) &&
+    win.getComputedStyle($('bannerCarousel')).display === 'none');
+
+  check('【关键】头部横幅图（.bili-header__banner）不在屏蔽范围内',
+    !$('headerBanner').classList.contains('bf-banner-blocked') &&
+    !$('headerBanner').classList.contains('bf-hide') &&
+    win.getComputedStyle($('headerBanner')).display !== 'none',
+    $('headerBanner').className);
+  check('头部横幅图里的链接也保持原样', !!$('headerBanner').querySelector('.banner-link'));
+
+  await pushSettings({ mode: 'hide' });
+  check('完全隐藏模式下行为一致（开关一开就整块移除）',
+    $('bannerCarousel').classList.contains('bf-hide') &&
+    win.getComputedStyle($('bannerCarousel')).display === 'none' &&
+    win.getComputedStyle($('swipeSlot')).display === 'none');
+  check('完全隐藏：不会把同层的其它楼层一起藏掉',
     win.getComputedStyle($('bannerSibling')).display !== 'none', win.getComputedStyle($('bannerSibling')).display);
 
   await pushSettings({ blockBanner: false });
-  check('关闭开关后横幅与头部横幅图都恢复',
+  check('关闭开关后横幅恢复显示',
     !$('bannerCarousel').classList.contains('bf-banner-blocked') &&
-    !$('headerBanner').classList.contains('bf-banner-blocked') &&
     win.getComputedStyle($('bannerCarousel')).display !== 'none' &&
     win.getComputedStyle($('swipeSlot')).display !== 'none' &&
-    win.getComputedStyle($('headerBanner')).display !== 'none');
+    !$('bannerCarousel').querySelector('.bf-mask'));
 
   // 安全阀：那个网格项里除了轮播还有别的内容时，只能藏轮播，不能连格子一起藏
   const swipeExtra = doc.createElement('div');

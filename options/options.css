@@ -193,5 +193,9 @@ textarea { resize: vertical; line-height: 1.7; }
   margin-top: 24px; padding-top: 16px; border-top: 1px solid var(--line);
   color: var(--fg-weak); font-size: 12.5px;
 }
+.foot__links { display: inline-flex; align-items: center; gap: 6px; }
+.foot__links a { color: var(--accent); text-decoration: none; }
+.foot__links a:hover { text-decoration: underline; }
+.foot__sep { opacity: .5; }
 .toast { color: var(--accent); font-weight: 600; opacity: 0; transition: opacity .2s ease; }
 .toast.is-show { opacity: 1; }
