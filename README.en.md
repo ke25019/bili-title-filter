@@ -6,7 +6,7 @@ Manifest V3, works in Edge and Chrome, plain JavaScript with no runtime dependen
 
 ![version](https://img.shields.io/badge/version-1.4.1-orange)
 ![browser](https://img.shields.io/badge/Edge%20%7C%20Chrome-Chromium-00aeec)
-![tests](https://img.shields.io/badge/tests-266%20passed-brightgreen)
+![tests](https://img.shields.io/badge/tests-268%20passed-brightgreen)
 
 ---
 
@@ -118,7 +118,7 @@ npm install
 npm test
 ```
 
-266 checks covering the blocking logic, category detection, both hiding behaviours, the settings pages and the background stats.
+268 checks covering the blocking logic, category detection, both hiding behaviours, the settings pages and the background stats.
 
 The mock DOM and its sizes were measured on the real site (utility-class structures like `.floor-card-inner > .cover-container + .pb-16.px-12 > p.title`, the `.vui_carousel` banner, the 0×0 hidden links inside `.palette-button-inner`, and so on).
 
@@ -154,6 +154,8 @@ Newest first. This is what changed and why — including the parts I got wrong.
 **The package now declares its locales, so the store is no longer stuck on English.** Earlier builds shipped no `_locales` folder and no `default_locale` in the manifest, which meant Partner Center found no language declaration at all and offered only en-US (the v1.2.0 manifest snapshot the store keeps shows exactly that).
 
 The package now carries `_locales/zh_CN/messages.json` and `_locales/en/messages.json`, and the manifest declares the name, description and icon tooltip through `default_locale: zh_CN` plus `__MSG_` placeholders. The store shows the matching text for the browser language, and both Simplified Chinese and English should be listed.
+
+**The localized descriptions were shortened to fit the store limits.** The English one was too long: submitting to the Edge Add-ons store came back with "the Description for locale en exceeds the 190 character limit". Both descriptions are now under 132 characters (the stricter Chrome limit, so either store accepts them) and the names stay under 45 characters; both limits are covered by tests now.
 
 **The Microsoft Edge Add-ons link is gone from the extension.** The settings footer now only links to the GitHub repository, so nobody lands on a stale store listing. Functionally identical to 1.4.0 - only the packaging and that one link changed.
 

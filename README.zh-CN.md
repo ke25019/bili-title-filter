@@ -6,7 +6,7 @@ Manifest V3，Edge 和 Chrome 都能装，纯 JavaScript，没有运行时依赖
 
 ![version](https://img.shields.io/badge/version-1.4.1-orange)
 ![browser](https://img.shields.io/badge/Edge%20%7C%20Chrome-Chromium-00aeec)
-![tests](https://img.shields.io/badge/tests-266%20passed-brightgreen)
+![tests](https://img.shields.io/badge/tests-268%20passed-brightgreen)
 
 ---
 
@@ -118,7 +118,7 @@ npm install
 npm test
 ```
 
-一共 266 项校验，覆盖屏蔽逻辑、分区识别、两种隐藏行为、设置页交互和后台统计。
+一共 268 项校验，覆盖屏蔽逻辑、分区识别、两种隐藏行为、设置页交互和后台统计。
 
 测试里的模拟 DOM 和尺寸都是从真实页面上量出来的（`.floor-card-inner > .cover-container + .pb-16.px-12 > p.title` 这种工具类结构、`.vui_carousel` 包裹的轮播、`.palette-button-inner` 里 0×0 的隐藏链接等等）。
 
@@ -154,6 +154,8 @@ B 站是单页应用，滚动和切页会让卡片重新渲染，所以统计的
 **扩展包补上本地化声明，商店的语言选项不再只有英文。** 之前打出来的包没有 `_locales` 目录、manifest 里也没有 `default_locale` —— 提交到 Edge 加载项商店时，Partner Center 读不到任何语言声明，语言选项就只剩一个 en-US（商店里那份 v1.2.0 的清单快照里确实看不到本地化配置）。
 
 现在包里带了 `_locales/zh_CN/messages.json` 与 `_locales/en/messages.json`，manifest 用 `default_locale: zh_CN` 加 `__MSG_` 占位声明名称、简介和图标提示。商店会按浏览器语言显示对应文案，语言列表里应当能同时看到中文（简体）和英文。
+
+**本地化文案按商店的字数上限收紧了。** en 那份简介原来太长，提交到 Edge 加载项商店时报「Description 的转换过长，超出 190 字符」。现在中英文简介都压到 132 字符以内（Chrome 的口径更严，按这个卡两边都不会被退），名称也控制在 45 字符内，并把这两条写成了校验。
 
 **扩展里不再放微软扩展商店的链接。** 设置页页脚只留 GitHub 仓库地址，避免商店页面对不上时点进去看到旧版本。功能与 1.4.0 完全一致，只是打包内容与这一行链接变了。
 

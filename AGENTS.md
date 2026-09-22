@@ -49,7 +49,9 @@
 3. 把上一个版本用 `git archive <tag> --prefix=legacy/<版本>/ -o x.zip -- . ":(exclude)legacy"`
    归档到 `legacy/`（**必须排除 legacy 自身，否则会递归膨胀**）
 4. 打包：`manifest.json` 必须在 zip **根目录**，且不含 `legacy/`、`tests/`；
-   **`_locales/` 必须打进去**（扩展商店靠它识别语言），manifest 的 `default_locale` 也要在
+   **`_locales/` 必须打进去**（扩展商店靠它识别语言），manifest 的 `default_locale` 也要在；
+   本地化后的文案有长度上限：`name` ≤ 45 字符、`description` ≤ 132 字符
+   （Edge 商店的 Description 上限是 190，Chrome 更严，按 132 卡就不会被商店打回）
 5. 提交 → 打标签 `vX.Y.Z-beta` → 推送 `main` 与标签
 6. 在 GitHub 建 Release（预发布），上传 zip 附件，并实测附件可下载
 

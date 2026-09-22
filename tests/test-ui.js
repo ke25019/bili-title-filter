@@ -366,6 +366,12 @@ async function testOptions() {
   check('manifest 用到的每个键、每种语言都有非空文案',
     used.length === 3 && used.every((k) => langs.every((l) => msgs[l] && msgs[l][k] && String(msgs[l][k].message || '').trim().length > 0)),
     used.join(','));
+  const nameOver = langs.filter((l) => msgs[l].extName.message.length > 45);
+  check('各语言的名称不超过 45 字符', nameOver.length === 0,
+    langs.map((l) => l + '=' + msgs[l].extName.message.length).join(','));
+  const descOver = langs.filter((l) => msgs[l].extDesc.message.length > 132);
+  check('各语言的简介不超过 132 字符（Edge 商店上限 190，这里按更严的 Chrome 口径卡）', descOver.length === 0,
+    langs.map((l) => l + '=' + msgs[l].extDesc.message.length).join(','));
   check('中英文案确实不一样（不是复制粘贴）',
     !!msgs.en && !!msgs.zh_CN && msgs.en.extName.message !== msgs.zh_CN.extName.message &&
     msgs.en.extDesc.message !== msgs.zh_CN.extDesc.message);
