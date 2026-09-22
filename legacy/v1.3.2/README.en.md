@@ -4,9 +4,9 @@ An extension I wrote for myself to filter Bilibili. Add a few keywords and the v
 
 Manifest V3, works in Edge and Chrome, plain JavaScript with no runtime dependencies.
 
-![version](https://img.shields.io/badge/version-1.3.3--beta-orange)
+![version](https://img.shields.io/badge/version-1.3.2-orange)
 ![browser](https://img.shields.io/badge/Edge%20%7C%20Chrome-Chromium-00aeec)
-![tests](https://img.shields.io/badge/tests-249%20passed-brightgreen)
+![tests](https://img.shields.io/badge/tests-244%20passed-brightgreen)
 
 ---
 
@@ -58,7 +58,7 @@ Anime, Chinese animation, variety shows and movies are separate switches, so you
 
 There's also an "other promos" catch-all for promo cards that don't fall into any of those (app download prompts, other channel promos, and so on). It only applies when a card matches none of the specific categories — so turning "Live" off doesn't get silently re-blocked by the catch-all.
 
-The home-page carousel has its own switch (off by default). Turning it on hides the whole block outright - it does **not** follow the mask/hide mode, because a banner is not a video card and covering it with an explanation makes no sense. It only affects that one block on the home page and is independent of the checkboxes above.
+The top block on the home page has its own switch (off by default). Turning it on blocks the big carousel banner and the top banner ad together; it only affects that one block on the home page and is independent of the checkboxes above.
 
 I didn't hard-code a single class for detecting promo cards. The order is:
 
@@ -116,7 +116,7 @@ npm install
 npm test
 ```
 
-249 checks covering the blocking logic, category detection, both hiding behaviours, the settings pages and the background stats.
+244 checks covering the blocking logic, category detection, both hiding behaviours, the settings pages and the background stats.
 
 The mock DOM and its sizes were measured on the real site (utility-class structures like `.floor-card-inner > .cover-container + .pb-16.px-12 > p.title`, the `.vui_carousel` banner, the 0×0 hidden links inside `.palette-button-inner`, and so on).
 
@@ -127,7 +127,7 @@ For issues that only show up in a real browser I use the scripts in `tests/brows
 ## FAQ
 
 **I blocked a category but content from it is still visible.**
-Category blocking is card-level only. When I can't tell which card holds the cover and title, I skip it, so a few unusual promo slots may be left alone. If it's the home-page carousel, use that separate switch.
+Category blocking is card-level only. When I can't tell which card holds the cover and title, I skip it, so a few unusual promo slots may be left alone. If it's the big carousel or the top banner ad on the home page, use that separate switch.
 
 **Some promo cards don't belong to any category.**
 Turn on the "other promos" catch-all. It only applies when a card matches no specific category.
@@ -147,19 +147,13 @@ Bilibili is a single-page app, so scrolling and navigating re-render cards. The 
 
 Newest first. This is what changed and why — including the parts I got wrong.
 
-### 1.3.3
-
-**The home-page top banner ad is no longer blocked.** 1.3.2 had folded the big header image (`.bili-header__banner`) into the carousel switch; this version drops that again: the switch only covers the carousel, and the header banner is left alone.
-
-**The carousel switch now hides the whole block outright.** It used to follow the mask/hide mode, covering the banner with an explanation in mask mode. A banner is not a video card, so an explanation makes no sense - the point of turning it on is that the block should not be there. Whatever mode is active, the block is now removed entirely, including the grey wrapper and the grid slot it occupied, so the content below moves up as usual. The switch labels in the settings page, the toolbar popup and the in-page panel all say so now.
-
-**Two links in the settings footer:** the GitHub repository and the Microsoft Edge Add-ons store, so updates are one click away.
-
 ### 1.3.2
 
 **In hide mode the carousel's slot is now actually released.** 1.3.1 removed the outer `.carousel`, but measuring the real page showed that was not enough: `.recommended-swipe-body` / `.recommended-swipe-body-normal` are `position:absolute; inset:0` boxes painted with the grey `--graph_bg_regular` background, so hiding the carousel just uncovered them; and `.recommended-swipe` itself is a grid item (`grid-column:1/3`, `grid-row:1/3`) whose height comes from the inner `.shim-card` (`height:0` + `padding-top:56.25%`). Hiding only the carousel left that 2×2 cell reserved, so the videos below never moved up. Hide mode now walks up to `.recommended-swipe` and removes the whole block, so the cell is filled by the cards that follow. The safety valve is unchanged: if the wrapper holds anything besides the carousel (a loaded image, other text), the walk stops.
 
-**That version also folded the home-page top banner ad (`.bili-header__banner`) into the same switch**; 1.3.3 removes it again on feedback - the switch only covers the carousel now.
+**New: the home-page top banner ad is blocked by the same switch as the carousel.** That is the big banner image at the very top of the home page (`.bili-header__banner`, measured at `height:9.375vw` / `min-height:155px` / `max-height:240px`): a promo image carrying the `mirror_report_banner=1` reporting parameter, plus a full-area clickable `a.banner-link`. It follows the "block home-page top carousel banner" switch: mask mode covers it with an explanation, hide mode removes it without leaving a gap. The label of that switch in the in-page panel, the toolbar popup and the settings page was updated to say it covers the banner ad too.
+
+**Fixed a hint that promised something that never happens.** The top-banner mask also said "hover to view", but banners have no hover reveal (that is card logic) — nothing happened when you hovered. The hint now only appears on card masks.
 
 ### 1.3.1
 
