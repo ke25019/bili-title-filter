@@ -4,9 +4,9 @@
 
 Manifest V3，Edge 和 Chrome 都能装，纯 JavaScript，没有运行时依赖。
 
-![version](https://img.shields.io/badge/version-1.4.1-orange)
+![version](https://img.shields.io/badge/version-1.4.0-orange)
 ![browser](https://img.shields.io/badge/Edge%20%7C%20Chrome-Chromium-00aeec)
-![tests](https://img.shields.io/badge/tests-266%20passed-brightgreen)
+![tests](https://img.shields.io/badge/tests-258%20passed-brightgreen)
 
 ---
 
@@ -19,8 +19,6 @@ Manifest V3，Edge 和 Chrome 都能装，纯 JavaScript，没有运行时依赖
 Chrome 用 `chrome://extensions/`，步骤一样。
 
 装好之后打开 B 站，标题栏附近会出现一个「屏蔽助手」按钮。点它可以拖到任意位置，位置会记住。
-
-扩展包内置简体中文与英文两种语言（`_locales/zh_CN`、`_locales/en`，manifest 里用 `__MSG_` 占位、`default_locale` 设为 `zh_CN`）。浏览器和扩展商店是按这套配置判断"支持哪些语言"的，所以提交到 Edge 加载项商店时，语言选项里应该能同时看到中文和英文；缺了 `_locales` 目录或者 `default_locale`，商店往往只认默认那一种。
 
 ---
 
@@ -118,7 +116,7 @@ npm install
 npm test
 ```
 
-一共 266 项校验，覆盖屏蔽逻辑、分区识别、两种隐藏行为、设置页交互和后台统计。
+一共 258 项校验，覆盖屏蔽逻辑、分区识别、两种隐藏行为、设置页交互和后台统计。
 
 测试里的模拟 DOM 和尺寸都是从真实页面上量出来的（`.floor-card-inner > .cover-container + .pb-16.px-12 > p.title` 这种工具类结构、`.vui_carousel` 包裹的轮播、`.palette-button-inner` 里 0×0 的隐藏链接等等）。
 
@@ -149,19 +147,9 @@ B 站是单页应用，滚动和切页会让卡片重新渲染，所以统计的
 
 按时间倒序。这里记的是每次改了什么、为什么改，包括我自己搞错的地方。
 
-### 1.4.1
-
-**扩展包补上本地化声明，商店的语言选项不再只有英文。** 之前打出来的包没有 `_locales` 目录、manifest 里也没有 `default_locale` —— 提交到 Edge 加载项商店时，Partner Center 读不到任何语言声明，语言选项就只剩一个 en-US（商店里那份 v1.2.0 的清单快照里确实看不到本地化配置）。
-
-现在包里带了 `_locales/zh_CN/messages.json` 与 `_locales/en/messages.json`，manifest 用 `default_locale: zh_CN` 加 `__MSG_` 占位声明名称、简介和图标提示。商店会按浏览器语言显示对应文案，语言列表里应当能同时看到中文（简体）和英文。
-
-**扩展里不再放微软扩展商店的链接。** 设置页页脚只留 GitHub 仓库地址，避免商店页面对不上时点进去看到旧版本。功能与 1.4.0 完全一致，只是打包内容与这一行链接变了。
-
 ### 1.4.0
 
 1.3.x 系列转为正式版，内容与 1.3.3-beta 一致，版本号定为 1.4.0。
-
-**扩展包补上了本地化配置。** 包里新增 `_locales/zh_CN` 与 `_locales/en`，manifest 用 `default_locale: zh_CN` 加 `__MSG_` 占位来声明名称、简介和图标提示。Edge 加载项商店正是读这套配置来决定语言选项的——之前只提供一个语言，提交时语言下拉里就只剩英文。
 
 这一版相对 1.2.0 换了分区推广的分类方式（改成看封面徽标）、修掉一批占位与空框问题、加了 UP 白名单，并把协议改成 PolyForm Noncommercial 1.0.0（禁止商用）。具体改动见下面的 1.3.3 / 1.3.2 / 1.3.1 / 1.3.0 几条。
 

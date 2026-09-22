@@ -4,9 +4,9 @@ An extension I wrote for myself to filter Bilibili. Add a few keywords and the v
 
 Manifest V3, works in Edge and Chrome, plain JavaScript with no runtime dependencies.
 
-![version](https://img.shields.io/badge/version-1.4.1-orange)
+![version](https://img.shields.io/badge/version-1.4.0-orange)
 ![browser](https://img.shields.io/badge/Edge%20%7C%20Chrome-Chromium-00aeec)
-![tests](https://img.shields.io/badge/tests-266%20passed-brightgreen)
+![tests](https://img.shields.io/badge/tests-258%20passed-brightgreen)
 
 ---
 
@@ -19,8 +19,6 @@ Manifest V3, works in Edge and Chrome, plain JavaScript with no runtime dependen
 On Chrome it's the same thing at `chrome://extensions/`.
 
 Once it's installed, a "屏蔽助手" button shows up near Bilibili's top bar. You can drag it anywhere and it remembers where you put it.
-
-The package ships with two locales, Simplified Chinese and English (`_locales/zh_CN`, `_locales/en`, with `__MSG_` placeholders in the manifest and `default_locale` set to `zh_CN`). Browsers and add-ons stores read exactly this configuration to decide which languages are available, so the Edge Add-ons listing should offer both Chinese and English; without the `_locales` folder or `default_locale`, a store usually only sees the default one.
 
 ---
 
@@ -118,7 +116,7 @@ npm install
 npm test
 ```
 
-266 checks covering the blocking logic, category detection, both hiding behaviours, the settings pages and the background stats.
+258 checks covering the blocking logic, category detection, both hiding behaviours, the settings pages and the background stats.
 
 The mock DOM and its sizes were measured on the real site (utility-class structures like `.floor-card-inner > .cover-container + .pb-16.px-12 > p.title`, the `.vui_carousel` banner, the 0×0 hidden links inside `.palette-button-inner`, and so on).
 
@@ -149,19 +147,9 @@ Bilibili is a single-page app, so scrolling and navigating re-render cards. The 
 
 Newest first. This is what changed and why — including the parts I got wrong.
 
-### 1.4.1
-
-**The package now declares its locales, so the store is no longer stuck on English.** Earlier builds shipped no `_locales` folder and no `default_locale` in the manifest, which meant Partner Center found no language declaration at all and offered only en-US (the v1.2.0 manifest snapshot the store keeps shows exactly that).
-
-The package now carries `_locales/zh_CN/messages.json` and `_locales/en/messages.json`, and the manifest declares the name, description and icon tooltip through `default_locale: zh_CN` plus `__MSG_` placeholders. The store shows the matching text for the browser language, and both Simplified Chinese and English should be listed.
-
-**The Microsoft Edge Add-ons link is gone from the extension.** The settings footer now only links to the GitHub repository, so nobody lands on a stale store listing. Functionally identical to 1.4.0 - only the packaging and that one link changed.
-
 ### 1.4.0
 
 The 1.3.x series is a stable release now. The content matches 1.3.3-beta; only the version number is 1.4.0.
-
-**The package now declares its locales.** It ships `_locales/zh_CN` and `_locales/en`, and the manifest uses `default_locale: zh_CN` together with `__MSG_` placeholders for the name, description and icon tooltip. The Edge Add-ons store reads exactly this configuration to decide which languages it offers - with only one locale in the package, the language dropdown stays on English.
 
 Compared with 1.2.0 this line moved promo categories to badge-based detection, fixed a batch of placeholder and leftover-box problems, added the uploader whitelist, and switched the licence to PolyForm Noncommercial 1.0.0 (no commercial use). The details are in the 1.3.3 / 1.3.2 / 1.3.1 / 1.3.0 entries below.
 
