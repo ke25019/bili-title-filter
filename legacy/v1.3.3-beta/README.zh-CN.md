@@ -4,7 +4,7 @@
 
 Manifest V3，Edge 和 Chrome 都能装，纯 JavaScript，没有运行时依赖。
 
-![version](https://img.shields.io/badge/version-1.4.0-orange)
+![version](https://img.shields.io/badge/version-1.3.3--beta-orange)
 ![browser](https://img.shields.io/badge/Edge%20%7C%20Chrome-Chromium-00aeec)
 ![tests](https://img.shields.io/badge/tests-258%20passed-brightgreen)
 
@@ -147,12 +147,6 @@ B 站是单页应用，滚动和切页会让卡片重新渲染，所以统计的
 
 按时间倒序。这里记的是每次改了什么、为什么改，包括我自己搞错的地方。
 
-### 1.4.0
-
-1.3.x 系列转为正式版，内容与 1.3.3-beta 一致，版本号定为 1.4.0。
-
-这一版相对 1.2.0 换了分区推广的分类方式（改成看封面徽标）、修掉一批占位与空框问题、加了 UP 白名单，并把协议改成 PolyForm Noncommercial 1.0.0（禁止商用）。具体改动见下面的 1.3.3 / 1.3.2 / 1.3.1 / 1.3.0 几条。
-
 ### 1.3.3
 
 **移除了首页顶部横幅广告的屏蔽。** 1.3.2 把首页最上方那张横幅图（`.bili-header__banner`）也并进了「屏蔽首页顶部轮播横幅」开关，这一版把它拿掉：这个开关只管轮播，头部横幅图不再碰。
@@ -195,8 +189,6 @@ B 站是单页应用，滚动和切页会让卡片重新渲染，所以统计的
 ### 1.2.0
 
 1.1.x 系列转为正式版，内容与 1.1.12-beta 一致，只把版本号定为 1.2.0。
-
-> **注意：这个版本已被证实存在 bug，不建议使用。** 一是分区推广按链接分类，导致「赛事」开关点了没反应、「番剧」会连带屏蔽国创 / 综艺 / 电影（1.3.0 起改成看封面徽标）；二是隐藏卡片时外层容器的样式没命中，会残留白色空框（1.3.3 修掉）。请升级到最新版本。
 
 **外层容器的隐藏样式一直没生效。** CSS 里写的是 `.bf-blocked.bf-hide` 和 `.bf-blocked.bf-hide-slot`，而外层容器（`.floor-card` 那层带边框、白底和 40px 阴影的盒子）只会拿到 `bf-hide` / `bf-hide-slot`，永远没有 `bf-blocked` —— 类名打上了，样式一条都没命中。结果就是卡片内容消失、白壳还留在页面上，也就是反馈里说的「占位符没删干净」。现在这两条规则改成裸类名：保留位置时对元素自身 `visibility:hidden`，前移补位时 `display:none`，边框、背景、阴影和背后的灰层一起消失。
 

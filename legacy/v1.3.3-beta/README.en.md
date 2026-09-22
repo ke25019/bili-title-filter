@@ -4,7 +4,7 @@ An extension I wrote for myself to filter Bilibili. Add a few keywords and the v
 
 Manifest V3, works in Edge and Chrome, plain JavaScript with no runtime dependencies.
 
-![version](https://img.shields.io/badge/version-1.4.0-orange)
+![version](https://img.shields.io/badge/version-1.3.3--beta-orange)
 ![browser](https://img.shields.io/badge/Edge%20%7C%20Chrome-Chromium-00aeec)
 ![tests](https://img.shields.io/badge/tests-258%20passed-brightgreen)
 
@@ -147,12 +147,6 @@ Bilibili is a single-page app, so scrolling and navigating re-render cards. The 
 
 Newest first. This is what changed and why — including the parts I got wrong.
 
-### 1.4.0
-
-The 1.3.x series is a stable release now. The content matches 1.3.3-beta; only the version number is 1.4.0.
-
-Compared with 1.2.0 this line moved promo categories to badge-based detection, fixed a batch of placeholder and leftover-box problems, added the uploader whitelist, and switched the licence to PolyForm Noncommercial 1.0.0 (no commercial use). The details are in the 1.3.3 / 1.3.2 / 1.3.1 / 1.3.0 entries below.
-
 ### 1.3.3
 
 **The home-page top banner ad is no longer blocked.** 1.3.2 had folded the big header image (`.bili-header__banner`) into the carousel switch; this version drops that again: the switch only covers the carousel, and the header banner is left alone.
@@ -195,8 +189,6 @@ Note: an existing "Movies & TV" setting maps to the new "Movies" only. "Anime" n
 ### 1.2.0
 
 The 1.1.x series is a stable release now. The content matches 1.1.12-beta; only the version number is 1.2.0.
-
-> **Note: this version has confirmed bugs and should not be used.** Promo categories were classified by link, so the "esports" switch did nothing and "anime" also blocked Chinese animation, variety shows and movies (switched to badge-based detection in 1.3.0); and hiding a card never applied to its outer container, leaving a white box behind (fixed in 1.3.3). Please upgrade.
 
 **The outer container's hiding rules never applied.** The CSS said `.bf-blocked.bf-hide` and `.bf-blocked.bf-hide-slot`, while the outer container (the `.floor-card` box with its border, background and 40px shadow) only ever receives `bf-hide` / `bf-hide-slot` and never `bf-blocked` - the class names were applied and not a single rule matched. The card's content disappeared while the white shell stayed on the page, which is the "leftover placeholder" from the reports. Both rules are plain class selectors now: `visibility:hidden` on the element itself when the slot is kept, `display:none` when the card is removed, so the border, background, shadow and the grey layers behind it all go away.
 
