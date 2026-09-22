@@ -1,0 +1,14 @@
+{
+  "extName": {
+    "message": "BiliTitleFilter - Video & Promo Blocker for Bilibili",
+    "description": "Extension name (shown in the browser toolbar and on the add-ons store)"
+  },
+  "extDesc": {
+    "message": "Block Bilibili videos by your own title keywords: either mask them (cover and title merged into one notice, hover to peek) or hide them completely. Also includes an uploader whitelist (uploaders on it are never blocked) and per-category blocking for 18 kinds of promoted content such as live streams, anime, Chinese animation, variety shows and movies, plus a separate switch for the home-page carousel.",
+    "description": "Extension description (shown on the add-ons store)"
+  },
+  "actionTitle": {
+    "message": "BiliTitleFilter",
+    "description": "Toolbar icon tooltip"
+  }
+}

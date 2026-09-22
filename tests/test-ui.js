@@ -335,6 +335,42 @@ async function testOptions() {
   check('恢复默认设置：屏蔽词清空', s.keywords.length === 0);
   check('恢复默认设置：模式回到 mask', s.mode === 'mask', s.mode);
 
+  // 扩展包本地化：Edge / Chrome 商店就是读这套配置来决定"支持哪些语言"的，
+  // 少了 _locales 或 default_locale，提交时语言选项里就只剩默认（英文）。
+  console.log('\n[D] 扩展包本地化配置');
+  const manifest = JSON.parse(fs.readFileSync(path.join(ROOT, 'manifest.json'), 'utf8'));
+  check('manifest 声明了 default_locale', !!manifest.default_locale, String(manifest.default_locale));
+  check('name / description / action.default_title 都改成 __MSG_ 占位',
+    /^__MSG_\w+__$/.test(manifest.name) && /^__MSG_\w+__$/.test(manifest.description) &&
+    /^__MSG_\w+__$/.test(manifest.action.default_title),
+    [manifest.name, manifest.description, manifest.action.default_title].join(' | '));
+
+  const localesDir = path.join(ROOT, '_locales');
+  const langs = fs.existsSync(localesDir) ? fs.readdirSync(localesDir) : [];
+  check('_locales 目录里有 zh_CN 与 en', langs.indexOf('zh_CN') !== -1 && langs.indexOf('en') !== -1, langs.join(','));
+  check('default_locale 指向的语言目录确实存在',
+    langs.indexOf(manifest.default_locale) !== -1, manifest.default_locale + ' / ' + langs.join(','));
+
+  const msgs = {};
+  let parseOk = true;
+  for (const l of langs) {
+    try { msgs[l] = JSON.parse(fs.readFileSync(path.join(localesDir, l, 'messages.json'), 'utf8')); }
+    catch (e) { parseOk = false; }
+  }
+  check('每个语言的 messages.json 都是合法 JSON', parseOk && langs.length >= 2, langs.join(','));
+  const baseKeys = Object.keys(msgs[manifest.default_locale] || {}).sort();
+  check('各语言的键完全一致',
+    langs.every((l) => JSON.stringify(Object.keys(msgs[l] || {}).sort()) === JSON.stringify(baseKeys)),
+    baseKeys.join(','));
+  const used = [manifest.name, manifest.description, manifest.action.default_title]
+    .map((x) => x.replace(/^__MSG_/, '').replace(/__$/, ''));
+  check('manifest 用到的每个键、每种语言都有非空文案',
+    used.length === 3 && used.every((k) => langs.every((l) => msgs[l] && msgs[l][k] && String(msgs[l][k].message || '').trim().length > 0)),
+    used.join(','));
+  check('中英文案确实不一样（不是复制粘贴）',
+    !!msgs.en && !!msgs.zh_CN && msgs.en.extName.message !== msgs.zh_CN.extName.message &&
+    msgs.en.extDesc.message !== msgs.zh_CN.extDesc.message);
+
   dom.window.close();
 }
 

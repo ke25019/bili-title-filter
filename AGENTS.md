@@ -48,7 +48,8 @@
    —— 含功能说明、更新日志、校验项计数
 3. 把上一个版本用 `git archive <tag> --prefix=legacy/<版本>/ -o x.zip -- . ":(exclude)legacy"`
    归档到 `legacy/`（**必须排除 legacy 自身，否则会递归膨胀**）
-4. 打包：`manifest.json` 必须在 zip **根目录**，且不含 `legacy/`、`tests/`
+4. 打包：`manifest.json` 必须在 zip **根目录**，且不含 `legacy/`、`tests/`；
+   **`_locales/` 必须打进去**（扩展商店靠它识别语言），manifest 的 `default_locale` 也要在
 5. 提交 → 打标签 `vX.Y.Z-beta` → 推送 `main` 与标签
 6. 在 GitHub 建 Release（预发布），上传 zip 附件，并实测附件可下载
 
