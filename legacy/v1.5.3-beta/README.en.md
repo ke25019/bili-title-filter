@@ -4,9 +4,9 @@ An extension I wrote for myself to filter Bilibili. Add a few keywords and the v
 
 Manifest V3, works in Edge and Chrome, plain JavaScript with no runtime dependencies.
 
-![version](https://img.shields.io/badge/version-1.5.4--beta-orange)
+![version](https://img.shields.io/badge/version-1.5.3--beta-orange)
 ![browser](https://img.shields.io/badge/Edge%20%7C%20Chrome-Chromium-00aeec)
-![tests](https://img.shields.io/badge/tests-324%20passed-brightgreen)
+![tests](https://img.shields.io/badge/tests-319%20passed-brightgreen)
 
 ---
 
@@ -124,7 +124,7 @@ npm install
 npm test
 ```
 
-324 checks covering the blocking logic, category detection, both hiding behaviours, the settings pages and the background stats.
+319 checks covering the blocking logic, category detection, both hiding behaviours, the settings pages and the background stats.
 
 The mock DOM and its sizes were measured on the real site (utility-class structures like `.floor-card-inner > .cover-container + .pb-16.px-12 > p.title`, the `.vui_carousel` banner, the 0×0 hidden links inside `.palette-button-inner`, and so on).
 
@@ -154,16 +154,6 @@ Bilibili is a single-page app, so scrolling and navigating re-render cards. The 
 ## Changelog
 
 Newest first. This is what changed and why — including the parts I got wrong.
-
-### 1.5.4
-
-**Found why "esports/matches" broke a second time: Bilibili renamed the wrapper around the cover badge.** For those cards the badge is the only identity signal — their link is a live room, exactly like an ordinary live card — so when the badge could not be read, the card fell back to link-based classification, came out as "live", and the "esports" switch did nothing (that is the reported "only esports is not blocked"). The whole path is loosened now:
-
-- **The badge wrapper's class name is no longer hard-coded**: alongside `.badge`, synonyms such as `[class*="cover-tag"]` and `[class*="corner"]` are accepted, with a final fallback — a short label (≤ 6 characters) sitting inside the cover area counts as a badge (anime / Chinese animation / variety / movie / class / live / esports are all that short).
-- **Synonyms count too**: a badge reading 赛事, 电竞, 比赛, 电竞赛事 or 赛事直播 all map to the "esports" category (Bilibili has changed the wording over time), and the `/blanc/` esports live-room path joined the link rule.
-- **A more subtle knock-on bug went with it**: the badge element `.floor-title` shares its name with a *title* selector. It used to be excluded only while it sat inside `.badge`, so once the wrapper was renamed the badge text was taken for the card's title, the generic detection decided "title + cover are both here" right at the cover, and **only that cover got covered** — the title and uploader name below stayed on the page. The rule "a short label on the cover is always a badge" now drives both badge reading and title exclusion, so the two can no longer disagree.
-
-**Diagnostics got more complete.** With "output debug logs to the console" enabled on the settings page: every promo card with a cover badge logs, the first time it is seen, "badge text → which category it was judged as → where the card links", which immediately shows whether the badge, the wording or the link changed. For ad slots the log names the mask host and now also **the three-level structure chain upwards from the slot** (elements plus measured sizes), and it says so explicitly when an ad is recognised but the switch is off — previously that case left no trace whatsoever, making "not recognised" and "switch not on" impossible to tell apart.
 
 ### 1.5.3
 

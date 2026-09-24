@@ -328,33 +328,6 @@ const HTML = `<!DOCTYPE html><html><head><style id="page-style">#swipeSlot{displ
         </div>
       </div>
 
-      <!-- 赛事推广的两种「换个写法就失效」的情形（v1.5.4 回归点）：
-           ① 徽标外面那层容器被改名（.cover-tag 不是 .badge）→ 以前读不到角标，
-              卡片就掉回按链接判定（赛事卡链的是直播间 → 被算成直播），「赛事」开关点了没反应；
-           ② 徽标文案换成同义词「电竞」，而且链接走电竞直播间路径 /blanc/。 -->
-      <div class="floor-single-card" data-w="238" data-h="248">
-        <div class="single-card floor-card" data-w="238" data-h="248">
-          <div class="floor-card-inner" id="tMatchRenamed" data-w="238" data-h="224">
-            <div class="cover-container" data-w="238" data-h="134">
-              <a href="//live.bilibili.com/22637262"><img src="bg6.jpg"></a>
-              <div class="cover-tag"><span class="floor-title">赛事</span></div>
-            </div>
-            <div class="info-container" data-w="238" data-h="90"><p class="title" title="赛事直播预约">赛事直播预约</p></div>
-          </div>
-        </div>
-      </div>
-      <div class="floor-single-card" data-w="238" data-h="248">
-        <div class="single-card floor-card" data-w="238" data-h="248">
-          <div class="floor-card-inner" id="tMatchAlias" data-w="238" data-h="224">
-            <div class="cover-container" data-w="238" data-h="134">
-              <a href="//live.bilibili.com/blanc/22637263"><img src="bg7.jpg"></a>
-              <span class="floor-title">电竞</span>
-            </div>
-            <div class="info-container" data-w="238" data-h="90"><p class="title" title="电竞赛事直播预约">电竞赛事直播预约</p></div>
-          </div>
-        </div>
-      </div>
-
       <!-- 站内搜索结果页的卡片（结构照抄 2026-09 的 search.bilibili.com）：
            .bili-video-card__info--bottom > a.bili-video-card__info--owner
              > span.bili-video-card__info--author（名字在 span 里，没有 title 属性）
@@ -1177,24 +1150,6 @@ async function main() {
     blocked('tMatch') && blockedList() === 'tMatch', blockedList());
   check('赛事卡片的类型标记为 match（不是 live）', $('tMatch').dataset.bfType === 'match', $('tMatch').dataset.bfType);
   check('赛事卡片的遮蔽文案带上分区名「赛事」', maskText($('tMatch')).indexOf('赛事') !== -1, maskText($('tMatch')));
-
-  console.log('\n[10g-2] 赛事推广换个写法也得认（v1.5.4 回归点）');
-  // 反馈：赛事以前修好过，后来又屏蔽不了，而且只有赛事不行。
-  // 这类卡片唯一的身份标识就是封面角标（链接是直播间，跟普通直播卡片一样），
-  // 所以角标读不到 / 文案换同义词，都会让它掉回按链接判定 → 算成直播 → 「赛事」开关没反应。
-  check('徽标容器被改名（.cover-tag）后仍能读出角标并判为 match',
-    blocked('tMatchRenamed') && $('tMatchRenamed').dataset.bfType === 'match',
-    $('tMatchRenamed').dataset.bfType || $('tMatchRenamed').className);
-  check('徽标写成同义词「电竞」也判为 match',
-    blocked('tMatchAlias') && $('tMatchAlias').dataset.bfType === 'match',
-    $('tMatchAlias').dataset.bfType || $('tMatchAlias').className);
-  check('赛事类型认得了电竞直播间路径 /blanc/',
-    win.BF_TYPES.filter((t) => t.key === 'match')[0].href.test('//live.bilibili.com/blanc/22637263'),
-    String(win.BF_TYPES.filter((t) => t.key === 'match')[0].href));
-  check('赛事类型认得徽标同义词表（赛事 / 电竞 / 比赛）',
-    (win.BF_TYPES.filter((t) => t.key === 'match')[0].badges || []).indexOf('电竞') !== -1);
-  check('普通视频卡片的长标题不会被当成角标（长度上限 6 字）',
-    !blocked('c1') && $('c1').dataset.bfType !== 'match', $('c1').dataset.bfType || '(无类型)');
 
   await pushSettings({ blockTypes: {} });
   check('全部关掉后都恢复显示', blockedList() === '(无)', blockedList());

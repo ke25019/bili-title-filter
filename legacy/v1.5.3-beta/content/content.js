@@ -352,55 +352,9 @@
    *   1) resolveCardTarget 会在**封面链接**上就找到"标题 + 封面"，把封面链接当成一整张卡片；
    *   2) getTitle 会拿「番剧」两个字去比对屏蔽词，卡片真正的标题被彻底忽略。
    */
-  /**
-   * 徽标外面那层容器（`.badge` 这类）。B 站换过一次类名（反馈里「赛事」第二次失效
-   * 就是这个原因），所以这里连同义类名一起认；两条兜底在 isBadgeLabel 里。
-   */
-  var BADGE_WRAP_SELECTOR = '.badge, [class*="badge"], [class*="cover-tag"], [class*="corner"]';
-
-  /** 徽标所在的容器（`.badge` 这种） */
-  var BADGE_SELECTOR = '.badge, [class*="badge"]';
-
-  /**
-   * 徽标的兜底来源：B 站改过一次这层容器的类名，只认 .badge 的话，
-   * 「赛事」这类卡片就会掉回按链接判定（赛事卡片的链接是直播间 → 被算成直播），
-   * 结果「赛事」开关点了没反应（反馈过两次）。
-   * 封面上那个短文案（实测都很短：番剧/国创/综艺/电影/课堂/直播/赛事…）
-   * 只要落在封面区域里、且不超过 6 个字，就仍然当徽标用；
-   * 长度这一条是为了不把真正的标题（「赛事直播预约」这种）当成徽标。
-   */
-  var BADGE_FALLBACK_SELECTOR = [
-    '.floor-title',
-    '[class*="floor-title"]',
-    '[class*="cover-tag"]',
-    '[class*="cover"] [class*="tag"]',
-    '[class*="corner"]'
-  ].join(',');
-
-  var BADGE_COVER_SELECTOR = '.cover-container, [class*="cover"], [class*="pic"], [class*="img"]';
-
-  var BADGE_MAX_LEN = 6;
-
-  function cleanText(el) {
-    return ((el && el.textContent) || '').replace(/\s+/g, '').trim();
-  }
-
-  /**
-   * 这个元素是不是"封面角标"（而不是卡片标题）。
-   *
-   * 判据一：在外面那层徽标容器里。
-   * 判据二（兜底）：落在封面区域里、而且文案很短 —— 实测徽标文案都是
-   * 番剧/国创/综艺/电影/课堂/直播/赛事 这种 2~3 个字，而卡片标题不会长在封面上。
-   * 为什么必须认出来：`.floor-title` 同时是"标题选择器"，一旦被当成标题，
-   * 通用识别会在封面这一层就认定"标题 + 封面都有了"，于是只遮住封面那一块，
-   * 卡片下方的标题和 UP 名留在页面上（就是"只挡住一半"那个老问题）。
-   */
   function isBadgeLabel(el) {
     if (!el || !el.closest) return false;
-    if (el.closest(BADGE_WRAP_SELECTOR)) return true;
-    if (!el.closest(BADGE_COVER_SELECTOR)) return false;
-    var t = cleanText(el);
-    return !!t && t.length <= BADGE_MAX_LEN;
+    return !!el.closest('.badge, [class*="badge"], [class*="tag-label"]');
   }
 
   function getTitle(card) {
@@ -669,23 +623,23 @@
     }
     return false;
   }
-  /** 卡片封面左上角的分区徽标文字（判据与兜底见上方 isBadgeLabel 的注释） */
+
+  /**
+   * 卡片封面左上角的分区徽标文字。
+   *
+   * B 站把「这张推广属于哪个分区」直接标在封面上（实测文案：番剧、国创、综艺、电影、
+   * 课堂、直播、赛事…），这是最可靠的判据 —— 光看链接分不出来：
+   *   - 番剧 / 国创 / 综艺 / 电影的推广卡片，链接全都是 //www.bilibili.com/bangumi/play/epXXXX
+   *   - 赛事卡片多半是「直播预约」，链接是 live.bilibili.com 的直播间
+   * 按链接判定就会出现「开番剧把国创、综艺、电影一起屏蔽」「赛事开关点了没反应」。
+   */
+  var BADGE_SELECTOR = '.badge, [class*="badge"]';
+
   function getBadgeText(card) {
     var box = card.querySelector(BADGE_SELECTOR);
-    if (box) {
-      var el = box.querySelector('.floor-title') || box;
-      var t = cleanText(el);
-      if (t) return t;
-    }
-    var marks = card.querySelectorAll(BADGE_FALLBACK_SELECTOR);
-    for (var i = 0; i < marks.length && i < 4; i++) {
-      var m = marks[i];
-      var txt = cleanText(m);
-      if (!txt || txt.length > BADGE_MAX_LEN) continue;
-      if (!m.closest(BADGE_COVER_SELECTOR)) continue;   // 必须在封面区域内
-      return txt;
-    }
-    return '';
+    if (!box) return '';
+    var el = box.querySelector('.floor-title') || box;
+    return (el.textContent || '').replace(/\s+/g, '').trim();
   }
 
   /** 这个容器本身是不是广告位（判据见 AD_SLOT_SELECTOR 与下方 PLAYER_BANNER_INNER_SELECTOR） */
@@ -866,48 +820,6 @@
    * 「其他推广」只在该卡片没有命中任何具体分区时才生效，
    * 这样关掉某个分区开关时不会又被兜底规则抓回来。
    */
-  /** 元素速写：TAG.class#id 实测尺寸 —— 诊断日志里用来描述结构 */
-  function describeEl(el) {
-    if (!el) return '(无)';
-    var cls = typeof el.className === 'string' ? el.className.trim() : '';
-    var r = el.getBoundingClientRect ? el.getBoundingClientRect() : { width: 0, height: 0 };
-    return el.tagName + (cls ? '.' + cls.split(/\s+/).join('.') : '') + (el.id ? '#' + el.id : '') +
-      ' ' + Math.round(r.width) + '×' + Math.round(r.height);
-  }
-
-  /** 从元素往上最多 4 层的结构链（诊断用） */
-  function describeChain(el, depth) {
-    var out = [];
-    var cur = el;
-    for (var i = 0; i < (depth || 4) && cur && cur !== document.body; i++) {
-      out.push(describeEl(cur));
-      cur = cur.parentElement;
-    }
-    return out.join(' < ');
-  }
-
-  /** 卡片里第一个链接的 host + path（诊断用，判断"这张卡到底链到哪"） */
-  function firstHrefOf(card) {
-    var a = card.querySelector('a[href]');
-    if (!a) return '(无链接)';
-    return (a.getAttribute('href') || '').replace(/^\/\//, 'https://').split('?')[0];
-  }
-
-  /**
-   * 这一类认得的所有徽标写法（badge + badges），同义写法都算
-   */
-
-  function typeBadges(t) {
-    var out = [];
-    if (t.badge) out.push(t.badge);
-    if (t.badges && t.badges.length) {
-      for (var i = 0; i < t.badges.length; i++) {
-        if (out.indexOf(t.badges[i]) === -1) out.push(t.badges[i]);
-      }
-    }
-    return out;
-  }
-
   function detectType(card) {
     // 广告位容器的身份由类名直接确定，不再往下猜：
     // 广告里常混着 /topic-detail、活动页之类的链接，按链接判定会被排在
@@ -918,10 +830,7 @@
     if (badge) {
       for (var b = 0; b < TYPES.length; b++) {
         var bt = TYPES[b];
-        var words = typeBadges(bt);
-        for (var w = 0; w < words.length; w++) {
-          if (badge.indexOf(words[w]) !== -1) return bt.key;
-        }
+        if (bt.badge && badge.indexOf(bt.badge) !== -1) return bt.key;
       }
     }
     var hits = matchSpecificTypes(card);
@@ -1301,7 +1210,9 @@
     log('已屏蔽：', action.key, getTitle(card));
     if (action.type === 'ad' || isAdSlot(card)) {
       // 调试日志里带上"遮的是哪一层"和它的实测尺寸，方便日后核对广告位结构变化
-      log('广告位遮罩宿主：', describeChain(card, 2));
+      var r = card.getBoundingClientRect ? card.getBoundingClientRect() : { width: 0, height: 0 };
+      log('广告位遮罩宿主：', card.tagName + '.' + (card.className || card.id || ''),
+        Math.round(r.width) + '×' + Math.round(r.height));
     }
   }
 
@@ -1474,18 +1385,6 @@
 
     var type = detectType(card);
 
-    // 诊断：分区推广卡片第一次被看到时，把「角标文案 → 判定成哪一类 → 卡片链到哪」
-    // 打进控制台。反馈里"某个分区开关点了没反应"基本都是这三者之一变了，
-    // 有了这一行就不用靠猜（需要先在设置页打开「输出调试日志到控制台」）。
-    if (settings.debug && card.dataset.bfSeen !== '1') {
-      card.dataset.bfSeen = '1';
-      var seenBadge = getBadgeText(card);
-      if (seenBadge) {
-        log('卡片角标诊断：角标「' + seenBadge + '」→ 判定为 ' + type + '（' + typeLabel(type) + '）' +
-          '｜链接 ' + firstHrefOf(card));
-      }
-    }
-
     if (settings.blockTypes && settings.blockTypes[type]) {
       applyBlock(card, { key: 'type:' + type, kind: 'type', type: type });
       return;
@@ -1494,7 +1393,9 @@
     // 广告位认出来了、但「广告」开关没开 —— 这一条以前完全没有痕迹，
     // 反馈里"广告怎么都不屏蔽"就很难判断到底是没认出来还是开关没开
     if (type === 'ad') {
-      log('发现广告位，但「广告」开关是关的：', describeChain(card, 3));
+      var r0 = card.getBoundingClientRect ? card.getBoundingClientRect() : { width: 0, height: 0 };
+      log('发现广告位，但「广告」开关是关的：', card.tagName + '.' + (card.className || card.id || ''),
+        Math.round(r0.width) + '×' + Math.round(r0.height));
     }
 
     var hit = matcher ? matcher(getTitle(card)) : null;
