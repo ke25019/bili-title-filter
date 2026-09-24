@@ -157,8 +157,7 @@ Newest first. This is what changed and why — including the parts I got wrong.
 
 ### 1.5.0
 
-**This is a beta release** (the same changes briefly went out as the stable 1.4.2; that release was withdrawn and they ship as 1.5.0-beta instead).
-
+**This is a beta release** (the same changes were first put together as the stable 1.4.2, but that release was never published; they ship as 1.5.0-beta instead).
 
 **The login page is no longer blocked by the "other promos" rule** (thanks to [@ziye081220](https://github.com/ziye081220) for the report). Bilibili signs you in on `passport.bilibili.com`, and the links inside the login card matched the catch-all promo domain rule, so the whole login panel got masked as a promo. Now the login page (`passport.bilibili.com`, and any path containing `login`) is never blocked, `passport` is excluded from the catch-all domain rule, and login-related containers are excluded from card scanning.
 
