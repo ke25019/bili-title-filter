@@ -4,7 +4,7 @@
 
 Manifest V3，Edge 和 Chrome 都能装，纯 JavaScript，没有运行时依赖。
 
-![version](https://img.shields.io/badge/version-1.4.2-orange)
+![version](https://img.shields.io/badge/version-1.5.0--beta-orange)
 ![browser](https://img.shields.io/badge/Edge%20%7C%20Chrome-Chromium-00aeec)
 ![tests](https://img.shields.io/badge/tests-283%20passed-brightgreen)
 
@@ -155,7 +155,10 @@ B 站是单页应用，滚动和切页会让卡片重新渲染，所以统计的
 
 按时间倒序。这里记的是每次改了什么、为什么改，包括我自己搞错的地方。
 
-### 1.4.2
+### 1.5.0
+
+**这一版是测试版**（这批改动原本发成了 1.4.2 正式版，已撤回，改以 1.5.0 测试版发布）。
+
 
 **修掉登录页被「其他推广」整块挡住的问题**（感谢 [@ziye081220](https://github.com/ziye081220) 反馈）。B 站的登录在 `passport.bilibili.com`，登录卡片里的链接正好命中「其他推广」的域名规则，于是整块登录面板被当成推广屏蔽掉。现在：登录页（`passport.bilibili.com`，以及路径里带 `login` 的页面）一律不屏蔽；`passport` 也从「其他推广」的域名规则里排除；`login` 相关区域加入了卡片扫描的排除名单。
 
@@ -290,7 +293,7 @@ B 站是单页应用，滚动和切页会让卡片重新渲染，所以统计的
 
 ## 贡献者
 
-- [@ziye081220](https://github.com/ziye081220)：反馈了「登录页被其他推广整块屏蔽」这个 bug（1.4.2 修复）
+- [@ziye081220](https://github.com/ziye081220)：反馈了「登录页被其他推广整块屏蔽」这个 bug（1.5.0 修复）
 
 ---
 

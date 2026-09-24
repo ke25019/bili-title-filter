@@ -4,7 +4,7 @@ An extension I wrote for myself to filter Bilibili. Add a few keywords and the v
 
 Manifest V3, works in Edge and Chrome, plain JavaScript with no runtime dependencies.
 
-![version](https://img.shields.io/badge/version-1.4.2-orange)
+![version](https://img.shields.io/badge/version-1.5.0--beta-orange)
 ![browser](https://img.shields.io/badge/Edge%20%7C%20Chrome-Chromium-00aeec)
 ![tests](https://img.shields.io/badge/tests-283%20passed-brightgreen)
 
@@ -155,7 +155,10 @@ Bilibili is a single-page app, so scrolling and navigating re-render cards. The 
 
 Newest first. This is what changed and why — including the parts I got wrong.
 
-### 1.4.2
+### 1.5.0
+
+**This is a beta release** (the same changes briefly went out as the stable 1.4.2; that release was withdrawn and they ship as 1.5.0-beta instead).
+
 
 **The login page is no longer blocked by the "other promos" rule** (thanks to [@ziye081220](https://github.com/ziye081220) for the report). Bilibili signs you in on `passport.bilibili.com`, and the links inside the login card matched the catch-all promo domain rule, so the whole login panel got masked as a promo. Now the login page (`passport.bilibili.com`, and any path containing `login`) is never blocked, `passport` is excluded from the catch-all domain rule, and login-related containers are excluded from card scanning.
 
@@ -290,7 +293,7 @@ First version: block by title keyword, two blocking styles, nine promo categorie
 
 ## Contributors
 
-- [@ziye081220](https://github.com/ziye081220) reported the login page being blocked by the promo rule (fixed in 1.4.2)
+- [@ziye081220](https://github.com/ziye081220) reported the login page being blocked by the promo rule (fixed in 1.5.0)
 
 ---
 
