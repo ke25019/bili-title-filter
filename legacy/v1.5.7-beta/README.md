@@ -1,7 +1,7 @@
 # B站屏蔽助手 · BiliTitleFilter
 
 [![License: PolyForm Noncommercial](https://img.shields.io/badge/License-PolyForm_Noncommercial-orange.svg)](https://polyformproject.org/licenses/noncommercial/1.0.0/)
-![version](https://img.shields.io/badge/version-1.5.8--beta-orange)
+![version](https://img.shields.io/badge/version-1.5.7--beta-orange)
 ![browser](https://img.shields.io/badge/Edge%20%7C%20Chrome-Chromium-00aeec)
 ![tests](https://img.shields.io/badge/tests-337%20passed-brightgreen)
 

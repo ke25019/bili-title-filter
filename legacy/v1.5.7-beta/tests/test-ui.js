@@ -1,0 +1,409 @@
+/**
+ * B站屏蔽助手 - 设置界面（popup / options）验证脚本（jsdom）
+ * 用法：node test-ui.js
+ */
+const fs = require('fs');
+const path = require('path');
+const { JSDOM } = require('jsdom');
+
+const ROOT = path.join(__dirname, '..');
+const DEFAULTS_SRC = fs.readFileSync(path.join(ROOT, 'shared', 'defaults.js'), 'utf8');
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+
+let pass = 0;
+let fail = 0;
+function check(name, cond, extra) {
+  if (cond) { pass++; console.log('  \u2713 ' + name); }
+  else { fail++; console.log('  \u2717 ' + name + (extra !== undefined ? '  -> ' + extra : '')); }
+}
+
+/** 轮询等待条件成立，避免异步回调造成的时序抖动 */
+async function waitFor(fn, timeout = 1500) {
+  const t0 = Date.now();
+  while (Date.now() - t0 < timeout) {
+    if (fn()) return true;
+    await sleep(50);
+  }
+  return fn();
+}
+
+function makeEnv(htmlPath, scriptRel) {
+  const html = fs.readFileSync(htmlPath, 'utf8');
+  const dom = new JSDOM(html, { runScripts: 'outside-only', pretendToBeVisual: true, url: 'https://example.com/' });
+  const win = dom.window;
+  const store = { sync: {}, local: {} };
+  const errors = [];
+
+  win.addEventListener('error', (e) => errors.push(String(e.message || e.error)));
+
+  function pick(s, keys) {
+    const out = {};
+    if (typeof keys === 'string') { if (keys in s) out[keys] = s[keys]; return out; }
+    if (Array.isArray(keys)) { keys.forEach((k) => { if (k in s) out[k] = s[k]; }); return out; }
+    return Object.assign({}, s);
+  }
+  const area = (name) => ({
+    get(keys, cb) {
+      const s = store[name] || (store[name] = {});
+      const res = keys ? pick(s, keys) : Object.assign({}, s);
+      if (cb) setTimeout(() => cb(res), 0);
+      return undefined;
+    },
+    set(obj, cb) {
+      const s = store[name] || (store[name] = {});
+      Object.assign(s, obj);
+      if (cb) setTimeout(cb, 0);
+      return undefined;
+    }
+  });
+
+  win.chrome = {
+    storage: { sync: area('sync'), local: area('local'), onChanged: { addListener() {} } },
+    runtime: {
+      lastError: null,
+      onMessage: { addListener() {} },
+      sendMessage(_m, cb) { if (cb) setTimeout(() => cb({ today: 3, total: 12 }), 0); },
+      openOptionsPage() {},
+      // 模拟真实扩展环境：版本号只存在于 manifest
+      getManifest() { return { version: '9.9.9-test' }; }
+    }
+  };
+  win.confirm = () => true;
+  win.URL.createObjectURL = () => 'blob:mock';
+  win.URL.revokeObjectURL = () => {};
+
+  win.eval(DEFAULTS_SRC);
+  win.eval(fs.readFileSync(path.join(ROOT, scriptRel), 'utf8'));
+
+  // 注意：不手动派发 DOMContentLoaded。
+  // 页面脚本使用 ready() 助手，在 readyState 非 loading 时立即初始化，
+  // 手动派发会让监听器绑定两次（正是测试脚手架曾出现的假象）。
+  return { win, dom, store, errors };
+}
+
+async function testPopup() {
+  console.log('\n[A] 扩展弹窗 popup');
+  const { win, dom, store, errors } = makeEnv(path.join(ROOT, 'popup', 'popup.html'), 'popup/popup.js');
+  const doc = win.document;
+  await sleep(120);
+
+  check('脚本执行无异常', errors.length === 0, errors.join(' | '));
+  check('渲染出 18 个分区选项', doc.querySelectorAll('#types .type').length === 18, doc.querySelectorAll('#types .type').length);
+  // 统计文案是通过 runtime 消息异步回调写入的，这里轮询等待，避免定时抖动
+  const statsOk = await waitFor(() => /今日屏蔽 3 个/.test(doc.getElementById('stats').textContent));
+  check('统计已加载', statsOk, doc.getElementById('stats').textContent);
+  check('默认屏蔽方式为整体遮蔽', doc.querySelector('#mode button[data-value="mask"]').classList.contains('is-active'));
+
+  // 添加屏蔽词
+  doc.getElementById('kw-input').value = '剧透, 营销号';
+  doc.getElementById('kw-add').click();
+  await sleep(60);
+  check('逗号分隔批量添加屏蔽词', JSON.stringify(store.sync.bfSettings.keywords) === JSON.stringify(['剧透', '营销号']),
+    JSON.stringify(store.sync.bfSettings.keywords));
+  check('屏蔽词以 chip 形式渲染', doc.querySelectorAll('#chips .chip').length === 2);
+  check('弹窗里有版权行', /Copyright \(c\) 2026 ke25019/.test(doc.querySelector('.copyright') ? doc.querySelector('.copyright').textContent : ''), doc.querySelector('.copyright') ? doc.querySelector('.copyright').textContent : '(没有)');
+
+  // 删除
+  doc.querySelector('#chips .chip__del').click();
+  await sleep(60);
+  check('删除屏蔽词生效', JSON.stringify(store.sync.bfSettings.keywords) === JSON.stringify(['营销号']),
+    JSON.stringify(store.sync.bfSettings.keywords));
+
+  // 切换模式
+  doc.querySelector('#mode button[data-value="hide"]').click();
+  await sleep(60);
+  check('切换为完全隐藏模式已保存', store.sync.bfSettings.mode === 'hide', store.sync.bfSettings.mode);
+  check('模式切换同步激活态', doc.querySelector('#mode button[data-value="hide"]').classList.contains('is-active'));
+
+  // 完全隐藏：保留原位置开关
+  check('存在「隐藏时保留原位置」开关', !!doc.getElementById('keepslot'));
+  check('切到完全隐藏后该开关显示出来', doc.getElementById('keepslot-row').style.display === 'flex',
+    doc.getElementById('keepslot-row').style.display);
+  check('默认保留原位置（与 v1.0.0 行为一致）', store.sync.bfSettings.hideKeepSlot !== false);
+  check('开关回显为开启', doc.getElementById('keepslot').classList.contains('is-on'));
+  doc.getElementById('keepslot').click();
+  await sleep(60);
+  check('点击后关闭「保留原位置」', store.sync.bfSettings.hideKeepSlot === false);
+  doc.getElementById('keepslot').click();
+  await sleep(60);
+  check('再次点击恢复保留原位置', store.sync.bfSettings.hideKeepSlot === true);
+  check('提示文案随模式变化', /位置留空/.test(doc.getElementById('mode-hint').textContent),
+    doc.getElementById('mode-hint').textContent);
+
+  // 分区屏蔽（卡片级）
+  doc.querySelector('#types .type[data-key="live"]').click();
+  await sleep(60);
+  check('勾选屏蔽直播卡片已保存', store.sync.bfSettings.blockTypes.live === true);
+
+  // 首页顶部轮播横幅开关
+  check('存在「屏蔽首页顶部轮播横幅」开关', !!doc.getElementById('banner'));
+  doc.getElementById('banner').click();
+  await sleep(60);
+  check('轮播横幅开关已保存', store.sync.bfSettings.blockBanner === true, JSON.stringify(store.sync.bfSettings.blockBanner));
+  check('轮播横幅开关回显为开启', doc.getElementById('banner').classList.contains('is-on'));
+  doc.getElementById('banner').click();
+  await sleep(60);
+  check('再次点击可关闭轮播横幅', store.sync.bfSettings.blockBanner === false);
+  check('弹窗不再包含「整行板块」开关', !doc.getElementById('sections'));
+
+  // 总开关
+  doc.getElementById('enabled').click();
+  await sleep(60);
+  check('总开关可关闭', store.sync.bfSettings.enabled === false);
+
+  dom.window.close();
+}
+
+async function testOptions() {
+  console.log('\n[B] 完整设置页 options');
+  const { win, dom, store, errors } = makeEnv(path.join(ROOT, 'options', 'options.html'), 'options/options.js');
+  const doc = win.document;
+  await sleep(120);
+
+  check('脚本执行无异常', errors.length === 0, errors.join(' | '));
+  check('分区表格渲染出 18 行', doc.querySelectorAll('#types .trow').length === 18, doc.querySelectorAll('#types .trow').length);
+  check('每个分区一个「屏蔽」开关', doc.querySelectorAll('#types input[data-key]').length === 18,
+    doc.querySelectorAll('#types input[data-key]').length);
+  check('设置页包含「屏蔽首页顶部轮播横幅」', !!doc.getElementById('block-banner'));
+  check('默认选中「整体遮蔽」', doc.querySelector('input[name="mode"][value="mask"]').checked);
+  check('遮蔽文案输入框已填充默认值',
+    doc.getElementById('mask-text').value === '根据您的屏蔽词已将此视频屏蔽',
+    doc.getElementById('mask-text').value);
+  check('预览文案与设置一致', doc.getElementById('preview-text').textContent === '根据您的屏蔽词已将此视频屏蔽');
+  // 统计是异步取回来的（runtime.sendMessage 回调），机器负载高时 120ms 不够 ——
+  // 用轮询等待，避免出现"多跑几个测试套件就偶发失败"的假红
+  const statsOk2 = await waitFor(() => /累计屏蔽 12 个/.test(doc.getElementById('stats-text').textContent));
+  check('统计已加载', statsOk2, doc.getElementById('stats-text').textContent);
+
+  console.log('\n[B2] 页脚版本号必须跟 manifest 一致（回归：以前写死成 v1.0.0）');
+  const footText = doc.querySelector('.foot').textContent;
+  check('页脚显示的是 manifest 里的版本号',
+    doc.getElementById('app-version').textContent.trim() === 'v9.9.9-test',
+    JSON.stringify(doc.getElementById('app-version').textContent));
+  check('页脚文案里带上了版本号', /B站屏蔽助手 v9\.9\.9-test/.test(footText), footText.trim());
+  const optsHtml = fs.readFileSync(path.join(ROOT, 'options', 'options.html'), 'utf8');
+  const footHtml = (optsHtml.match(/<footer[\s\S]*?<\/footer>/) || [''])[0];
+  check('设置页页脚里没有写死的版本号',
+    !/v\d+\.\d+\.\d+/.test(footHtml),
+    (footHtml.match(/v\d+\.\d+\.\d+/g) || []).join(','));
+  check('设置页脚本从 manifest 读取版本号',
+    /getManifest\(\)\.version/.test(fs.readFileSync(path.join(ROOT, 'options', 'options.js'), 'utf8')));
+  const contentHeader = fs.readFileSync(path.join(ROOT, 'content', 'content.js'), 'utf8').split('\n').slice(0, 3).join('\n');
+  check('内容脚本头部注释里也没有写死的版本号',
+    !/v\d+\.\d+\.\d+/.test(contentHeader),
+    (contentHeader.match(/v\d+\.\d+\.\d+/g) || []).join(','));
+
+  console.log('\n[B3] 页脚的仓库与商店链接');
+  const footLinks = Array.from(doc.querySelectorAll('.foot__links a'));
+  const ghLink = footLinks.find((a) => /github\.com/.test(a.getAttribute('href') || ''));
+  const storeLink = footLinks.find((a) => /microsoftedge\.microsoft\.com/.test(a.getAttribute('href') || ''));
+  check('页脚有 GitHub 仓库链接', !!ghLink && /ke25019\/bili-title-filter/.test(ghLink.getAttribute('href')),
+    ghLink ? ghLink.getAttribute('href') : '(没有)');
+  check('页脚不再放微软扩展商店链接', !storeLink, storeLink ? storeLink.getAttribute('href') : '(没有，符合预期)');
+  check('页脚链接在新标签页打开，不影响设置页',
+    footLinks.length === 1 && footLinks.every((a) => a.getAttribute('target') === '_blank' && /noopener/.test(a.getAttribute('rel') || '')),
+    footLinks.map((a) => a.getAttribute('target') + '/' + a.getAttribute('rel')).join(' | '));
+  check('链接文案能看懂是什么', /GitHub/.test(ghLink.textContent), ghLink.textContent.trim());
+  check('页脚有版权行', /Copyright \(c\) 2026 ke25019/.test(footText), footText.trim());
+  check('页脚写明协议且注明禁止商用',
+    /PolyForm Noncommercial 1\.0\.0/.test(footText) && /禁止商用/.test(footText));
+  check('设置页里说明了站内搜索不保证', /站内搜索/.test(doc.body.textContent));
+  check('协议不再是 Apache', !/Apache/i.test(doc.body.textContent));
+
+  // 切换为完全隐藏 → 预览卡片应加上 bf-hide
+  const hideRadio = doc.querySelector('input[name="mode"][value="hide"]');
+  hideRadio.checked = true;
+  hideRadio.dispatchEvent(new win.Event('change', { bubbles: true }));
+  await sleep(60);
+  check('切换隐藏模式后预览同步', doc.getElementById('preview-card').classList.contains('bf-hide'));
+  check('隐藏模式已保存', store.sync.bfSettings.mode === 'hide', store.sync.bfSettings.mode);
+
+  // 修改文案 → 预览同步
+  const mt = doc.getElementById('mask-text');
+  mt.value = '该视频已被你的屏蔽词挡住';
+  mt.dispatchEvent(new win.Event('change', { bubbles: true }));
+  await sleep(60);
+  check('自定义遮蔽文案已保存', store.sync.bfSettings.maskText === '该视频已被你的屏蔽词挡住', store.sync.bfSettings.maskText);
+
+  // 批量编辑
+  doc.getElementById('kw-bulk').value = '剧透\n标题党\n\n剧透\n营销号';
+  doc.getElementById('kw-bulk-save').click();
+  await sleep(60);
+  check('批量保存去重并忽略空行',
+    JSON.stringify(store.sync.bfSettings.keywords) === JSON.stringify(['剧透', '标题党', '营销号']),
+    JSON.stringify(store.sync.bfSettings.keywords));
+
+  console.log('\n[B1b] 页面级开关（站内搜索 / UP 个人主页）');
+  check('设置页有「站内搜索结果页」开关', !!doc.getElementById('block-on-search'));
+  check('设置页有「UP 个人主页」开关', !!doc.getElementById('block-on-space'));
+  check('默认：搜索页开、UP 个人主页关',
+    doc.getElementById('block-on-search').checked === true && doc.getElementById('block-on-space').checked === false,
+    doc.getElementById('block-on-search').checked + '/' + doc.getElementById('block-on-space').checked);
+  doc.getElementById('block-on-space').click();
+  await sleep(60);
+  check('打开「UP 个人主页」会保存', store.sync.bfSettings.blockOnSpace === true, String(store.sync.bfSettings.blockOnSpace));
+  doc.getElementById('block-on-search').click();
+  await sleep(60);
+  check('关掉「站内搜索结果页」会保存', store.sync.bfSettings.blockOnSearch === false, String(store.sync.bfSettings.blockOnSearch));
+  doc.getElementById('block-on-search').click();
+  await sleep(60);
+  check('再打开又回到开', store.sync.bfSettings.blockOnSearch === true);
+
+  console.log('\n[B2] UP 白名单（设置页）');
+  check('设置页有 UP 白名单区域',
+    !!doc.getElementById('wl-input') && !!doc.getElementById('wl-chips') && !!doc.getElementById('wl-bulk'));
+  check('白名单为空时给出提示', !!doc.querySelector('#wl-chips .empty'),
+    doc.getElementById('wl-chips').textContent.trim());
+
+  doc.getElementById('wl-input').value = '某UP主, 12345';
+  doc.getElementById('wl-add').click();
+  await sleep(60);
+  check('逗号分隔批量添加白名单',
+    JSON.stringify(store.sync.bfSettings.whitelist) === JSON.stringify(['某UP主', '12345']),
+    JSON.stringify(store.sync.bfSettings.whitelist));
+  check('白名单以 chip 形式渲染', doc.querySelectorAll('#wl-chips .chip').length === 2,
+    String(doc.querySelectorAll('#wl-chips .chip').length));
+
+  doc.querySelector('#wl-chips .chip__del').click();
+  await sleep(60);
+  check('删除白名单项生效', JSON.stringify(store.sync.bfSettings.whitelist) === JSON.stringify(['12345']),
+    JSON.stringify(store.sync.bfSettings.whitelist));
+
+  doc.getElementById('wl-bulk').value = '甲UP\n\n乙UP\n甲UP';
+  doc.getElementById('wl-bulk-save').click();
+  await sleep(60);
+  check('白名单批量保存去重并忽略空行',
+    JSON.stringify(store.sync.bfSettings.whitelist) === JSON.stringify(['甲UP', '乙UP']),
+    JSON.stringify(store.sync.bfSettings.whitelist));
+  doc.getElementById('wl-bulk-load').click();
+  await sleep(60);
+  check('白名单「载入当前列表」把现有内容填进文本框',
+    doc.getElementById('wl-bulk').value === '甲UP\n乙UP', JSON.stringify(doc.getElementById('wl-bulk').value));
+  doc.getElementById('wl-bulk').value = '';
+
+  // 卡片全选 / 整行全选 / 全部取消
+  doc.getElementById('types-all').click();
+  await sleep(60);
+  const all = store.sync.bfSettings.blockTypes;
+  check('全选后 18 个分区均开启', Object.keys(all).length === 18 && Object.values(all).every(Boolean), JSON.stringify(all));
+
+  // 单个分区开关
+  const liveCard = doc.querySelector('#types input[data-key="live"]');
+  liveCard.checked = false;
+  liveCard.dispatchEvent(new win.Event('change', { bubbles: true }));
+  await sleep(60);
+  check('分区开关可单独关闭', store.sync.bfSettings.blockTypes.live === false);
+
+  // 顶部轮播横幅
+  const bannerBox = doc.getElementById('block-banner');
+  bannerBox.checked = true;
+  bannerBox.dispatchEvent(new win.Event('change', { bubbles: true }));
+  await sleep(60);
+  check('轮播横幅开关已保存', store.sync.bfSettings.blockBanner === true);
+
+  doc.getElementById('types-none').click();
+  await sleep(60);
+  check('全部取消后所有分区均关闭', Object.values(store.sync.bfSettings.blockTypes).every((v) => !v));
+
+  // 正则 / 大小写 / UP 主开关
+  const rx = doc.getElementById('use-regex');
+  rx.checked = true;
+  rx.dispatchEvent(new win.Event('change', { bubbles: true }));
+  await sleep(40);
+  check('正则开关已保存', store.sync.bfSettings.useRegex === true);
+
+  const up = doc.getElementById('match-up');
+  up.checked = true;
+  up.dispatchEvent(new win.Event('change', { bubbles: true }));
+  await sleep(40);
+  check('UP 主匹配开关已保存', store.sync.bfSettings.matchUpName === true);
+
+  // 悬停展示开关
+  const hv = doc.getElementById('hover-reveal');
+  check('悬停展示默认开启', hv.checked === true);  hv.checked = false;
+  hv.dispatchEvent(new win.Event('change', { bubbles: true }));
+  await sleep(40);
+  check('悬停展示开关已保存', store.sync.bfSettings.revealOnHover === false);
+  check('关闭悬停后预览卡片同步取消可悬停', !doc.getElementById('preview-card').classList.contains('bf-hoverable'));
+
+  // 隐藏时保留原位置（设置页checkbox）
+  const keepSlot = doc.getElementById('hide-keep-slot');
+  check('设置页存在「完全隐藏时保留原位置」', !!keepSlot);
+  check('设置页默认勾选（保留原位置）', keepSlot.checked === true);
+  keepSlot.checked = false;
+  keepSlot.dispatchEvent(new win.Event('change', { bubbles: true }));
+  await sleep(60);
+  check('取消勾选后保存为不保留位置', store.sync.bfSettings.hideKeepSlot === false);
+
+  // 重置悬浮按钮位置
+  doc.getElementById('reset-pos').click();
+  await sleep(60);
+  check('重置位置清空本地坐标', store.local.bfButtonPos === null, JSON.stringify(store.local.bfButtonPos));
+
+  // 主题
+  doc.querySelector('#theme button[data-value="dark"]').click();
+  await sleep(60);
+  check('主题切换为深色已保存', store.sync.bfSettings.theme === 'dark', store.sync.bfSettings.theme);
+  check('设置页自身跟随深色主题', doc.documentElement.getAttribute('data-theme') === 'dark');
+
+  // 恢复默认
+  doc.getElementById('reset-all').click();
+  await sleep(60);
+  const s = store.sync.bfSettings;
+  check('恢复默认设置：屏蔽词清空', s.keywords.length === 0);
+  check('恢复默认设置：模式回到 mask', s.mode === 'mask', s.mode);
+
+  // 扩展包本地化：Edge / Chrome 商店就是读这套配置来决定"支持哪些语言"的，
+  // 少了 _locales 或 default_locale，提交时语言选项里就只剩默认（英文）。
+  console.log('\n[D] 扩展包本地化配置');
+  const manifest = JSON.parse(fs.readFileSync(path.join(ROOT, 'manifest.json'), 'utf8'));
+  check('manifest 声明了 default_locale', !!manifest.default_locale, String(manifest.default_locale));
+  check('name / description / action.default_title 都改成 __MSG_ 占位',
+    /^__MSG_\w+__$/.test(manifest.name) && /^__MSG_\w+__$/.test(manifest.description) &&
+    /^__MSG_\w+__$/.test(manifest.action.default_title),
+    [manifest.name, manifest.description, manifest.action.default_title].join(' | '));
+
+  const localesDir = path.join(ROOT, '_locales');
+  const langs = fs.existsSync(localesDir) ? fs.readdirSync(localesDir) : [];
+  check('_locales 目录里有 zh_CN 与 en', langs.indexOf('zh_CN') !== -1 && langs.indexOf('en') !== -1, langs.join(','));
+  check('default_locale 指向的语言目录确实存在',
+    langs.indexOf(manifest.default_locale) !== -1, manifest.default_locale + ' / ' + langs.join(','));
+
+  const msgs = {};
+  let parseOk = true;
+  for (const l of langs) {
+    try { msgs[l] = JSON.parse(fs.readFileSync(path.join(localesDir, l, 'messages.json'), 'utf8')); }
+    catch (e) { parseOk = false; }
+  }
+  check('每个语言的 messages.json 都是合法 JSON', parseOk && langs.length >= 2, langs.join(','));
+  const baseKeys = Object.keys(msgs[manifest.default_locale] || {}).sort();
+  check('各语言的键完全一致',
+    langs.every((l) => JSON.stringify(Object.keys(msgs[l] || {}).sort()) === JSON.stringify(baseKeys)),
+    baseKeys.join(','));
+  const used = [manifest.name, manifest.description, manifest.action.default_title]
+    .map((x) => x.replace(/^__MSG_/, '').replace(/__$/, ''));
+  check('manifest 用到的每个键、每种语言都有非空文案',
+    used.length === 3 && used.every((k) => langs.every((l) => msgs[l] && msgs[l][k] && String(msgs[l][k].message || '').trim().length > 0)),
+    used.join(','));
+  const nameOver = langs.filter((l) => msgs[l].extName.message.length > 45);
+  check('各语言的名称不超过 45 字符', nameOver.length === 0,
+    langs.map((l) => l + '=' + msgs[l].extName.message.length).join(','));
+  const descOver = langs.filter((l) => msgs[l].extDesc.message.length > 132);
+  check('各语言的简介不超过 132 字符（Edge 商店上限 190，这里按更严的 Chrome 口径卡）', descOver.length === 0,
+    langs.map((l) => l + '=' + msgs[l].extDesc.message.length).join(','));
+  check('中英文案确实不一样（不是复制粘贴）',
+    !!msgs.en && !!msgs.zh_CN && msgs.en.extName.message !== msgs.zh_CN.extName.message &&
+    msgs.en.extDesc.message !== msgs.zh_CN.extDesc.message);
+
+  dom.window.close();
+}
+
+async function main() {
+  await testPopup();
+  await testOptions();
+  console.log('\n========================================');
+  console.log('通过 ' + pass + ' 项，失败 ' + fail + ' 项');
+  process.exit(fail ? 1 : 0);
+}
+
+main().catch((e) => { console.error(e); process.exit(2); });

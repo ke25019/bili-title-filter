@@ -4,7 +4,7 @@ An extension I wrote for myself to filter Bilibili. Add a few keywords and the v
 
 Manifest V3, works in Edge and Chrome, plain JavaScript with no runtime dependencies.
 
-![version](https://img.shields.io/badge/version-1.5.8--beta-orange)
+![version](https://img.shields.io/badge/version-1.5.7--beta-orange)
 ![browser](https://img.shields.io/badge/Edge%20%7C%20Chrome-Chromium-00aeec)
 ![tests](https://img.shields.io/badge/tests-337%20passed-brightgreen)
 
@@ -154,18 +154,6 @@ Bilibili is a single-page app, so scrolling and navigating re-render cards. The 
 ## Changelog
 
 Newest first. This is what changed and why — including the parts I got wrong.
-
-### 1.5.8
-
-**This release was rebuilt from the `v1.5.0-beta` code base**, and adds exactly three things on top of 1.5.0: blocking the player's right-hand ad, blocking the banner ad below the player, and blocking the esports category on the home page. That claim is verifiable: I went through the diff against 1.5.0 line by line — only 6 places in 1.5.0's existing code were touched, and every one of them is an interface those three features need (`.floor-card-inner` joined the card list, badge reading gained a fallback, the badge-exclusion test was loosened, `detectType` learned synonyms, `processCard` gained an "ad slot" parameter, and the restore path passes the same parameter). Everything else is added code. In other words, every 1.5.0 feature (keywords, 18 category switches, both hiding styles, the uploader whitelist, per-page switches, the in-page panel, dark mode) is intact and unchanged.
-
-The three things:
-
-- **The player's right-hand ad** (the right-column ad card and promoted entries inside the danmaku list): ad slots are recognised by class (`#slide_ad`, `.slide-gg`, `.video-card-ad-small`, `.ad-report*`, `.ad-floor*`) and then walked up to the **whole ad card** — judged by having no other real card, no second ad slot (ancestors/descendants do not count, they belong to the same ad) and a size still on the scale of a card (≤600×640). When the slot itself is inline (such as `<a class="ad-report">`) it is first resolved to a block-level host, otherwise the mask collapses into a thin line; an empty placeholder (holding only `<!---->`) is skipped; and a layer that holds the danmaku list is never crossed.
-- **The banner ad below the player**: the measured chain `#slide_ad.slide-ad-exp > .slide-gg > .van-slide.item-box > .item > .ad-report.link > a.ad-report-inner` is handled as one block (together with the `img.gg-pic` badge and `.close-btn`); the in-player activity banner `.inside-wrp` requires both `.inside-bg` and `.hinter-msg`, with a fallback for images served from `/bfs/activity-plat/` because Bilibili has renamed that wrapper.
-- **The home-page esports category**: the `match` category now also accepts the wordings 电竞 / 比赛 / 电竞赛事 / 赛事直播 alongside the 赛事 badge, and the esports live-room path `/blanc/` joined the link rule; `.floor-card-inner` joined the card list (esports promo cards now link to ordinary videos, so link-based discovery cannot find them), backed by the "walk up from the cover badge" discovery path.
-
-> For the record: the numbers between 1.5.0 and 1.5.7 all describe this same implementation (1.5.6 and 1.5.7 are identical in content, differing only in the number). The v1.5.6-beta / v1.5.7-beta releases were published by [@dacta-yzy](https://github.com/dacta-yzy); their additions — the danmaku list / player region protection (never collapsing a layer that holds the danmaku list during hide mode) and badge-driven discovery — are included here, and their credit stays in the contributors list below. That state is archived under `legacy/v1.5.7-beta/`.
 
 ### 1.5.7
 
@@ -376,7 +364,7 @@ First version: block by title keyword, two blocking styles, nine promo categorie
 
 ## Contributors
 
-- [@dacta-yzy](https://github.com/dacta-yzy) wrote the uploader whitelist and the home-page carousel banner blocking (v1.3.1 / v1.3.2), reported and pushed on two families of breakage (the play-page ad sharing a parent with the danmaku list, and the esports card discovery), and provided the ad-shell layer guard (v1.5.6 / v1.5.7)
+- [@dacta-yzy](https://github.com/dacta-yzy) wrote the uploader whitelist and the home-page carousel banner blocking (v1.3.1 / v1.3.2), and reported and pushed on two families of breakage (the play-page ad sharing a parent with the danmaku list, and the esports card discovery; merged into v1.5.6)
 - [@ziye081220](https://github.com/ziye081220) reported the login page being blocked by the promo rule (fixed in 1.5.0)
 
 ---

@@ -4,7 +4,7 @@
 
 Manifest V3，Edge 和 Chrome 都能装，纯 JavaScript，没有运行时依赖。
 
-![version](https://img.shields.io/badge/version-1.5.8--beta-orange)
+![version](https://img.shields.io/badge/version-1.5.7--beta-orange)
 ![browser](https://img.shields.io/badge/Edge%20%7C%20Chrome-Chromium-00aeec)
 ![tests](https://img.shields.io/badge/tests-337%20passed-brightgreen)
 
@@ -154,18 +154,6 @@ B 站是单页应用，滚动和切页会让卡片重新渲染，所以统计的
 ## 更新记录
 
 按时间倒序。这里记的是每次改了什么、为什么改，包括我自己搞错的地方。
-
-### 1.5.8
-
-**这一版是以 `v1.5.0-beta` 的代码为基底重构出来的**，相对 1.5.0 只多了三件事 —— 播放器右侧广告屏蔽、播放器底部横幅广告屏蔽、首页赛事分区屏蔽。之所以能这样讲，是因为我逐条核对过与 1.5.0 的差异：改动到的 1.5.0 原有代码只有 6 处，且全部是这三件事必需的接口（把 `.floor-card-inner` 收进卡片名单、角标读取加兜底、角标排除判据放宽、`detectType` 支持同义词、`processCard` 增加"广告位专用"参数、恢复时带上同一个参数），其余全是新增代码。也就是说 1.5.0 原有的功能（关键词、18 类分区开关、两种隐藏方式、UP 白名单、页面级开关、悬浮面板、深色模式）一个没少、一点没改。
-
-三件事分别是：
-
-- **播放器右侧广告**（右栏广告卡、弹幕列表里的推广条）：按类名认出广告位（`#slide_ad`、`.slide-gg`、`.video-card-ad-small`、`.ad-report*`、`.ad-floor*`），再往上收到「整卡外壳」—— 判据是没有别的真卡片、没有第二块广告位（祖先/后代不算，它们属于同一张广告）、尺寸还在卡片量级（≤600×640）。广告位本身是行内元素时（`<a class="ad-report">`）先收到块级宿主再遮，否则遮罩会缩成一条细线；空占位（只有 `<!---->`）跳过不遮；同层装着弹幕列表时绝不再往上收。
-- **播放器底部横幅广告**：`#slide_ad.slide-ad-exp > .slide-gg > .van-slide.item-box > .item > .ad-report.link > a.ad-report-inner` 这条实测链整块处理（`img.gg-pic` 角标与 `.close-btn` 一起遮）；播放器活动横幅 `.inside-wrp` 要求同时有 `.inside-bg` 与 `.hinter-msg`，并保留「图片走 `/bfs/activity-plat/`」兜底（B 站换过那层容器的类名）。
-- **首页赛事分区**：`match` 这一类除徽标「赛事」外还认「电竞 / 比赛 / 电竞赛事 / 赛事直播」等同义写法，链接判据加入电竞直播间路径 `/blanc/`；`.floor-card-inner` 收进卡片名单（赛事推广卡片的链接现在是普通视频，光靠链接发现不了），并保留「从封面徽标反推卡片」这条发现路径兜底。
-
-> 顺带说明：1.5.0 之后到 1.5.7 的编号，内容其实就是这份实现（1.5.6 与 1.5.7 完全相同，只差编号），其中 v1.5.6-beta / v1.5.7-beta 由 [@dacta-yzy](https://github.com/dacta-yzy) 发布；他补的「弹幕列表 / 播放器区域保护」（完全隐藏时不把装着弹幕列表的父层当空壳收走）与「徽标驱动发现」都已包含在本版里，署名也保留在下方贡献者名单中。这份状态已归档到 `legacy/v1.5.7-beta/`。
 
 ### 1.5.7
 
@@ -376,7 +364,7 @@ B 站是单页应用，滚动和切页会让卡片重新渲染，所以统计的
 
 ## 贡献者
 
-- [@dacta-yzy](https://github.com/dacta-yzy)：写了 UP 白名单与首页轮播横幅屏蔽（v1.3.1 / v1.3.2），反馈推动了两类失效（播放页广告与弹幕列表同父级、赛事卡片发现），并提供了广告外壳的越层防护（v1.5.6 / v1.5.7）
+- [@dacta-yzy](https://github.com/dacta-yzy)：写了 UP 白名单与首页轮播横幅屏蔽（v1.3.1 / v1.3.2），并反馈推动了两类失效（播放页广告与弹幕列表同父级、赛事卡片发现；已并入 v1.5.6）
 - [@ziye081220](https://github.com/ziye081220)：反馈了「登录页被其他推广整块屏蔽」这个 bug（1.5.0 修复）
 
 ---
