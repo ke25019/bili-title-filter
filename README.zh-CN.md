@@ -6,7 +6,7 @@ Manifest V3，Edge 和 Chrome 都能装，纯 JavaScript，没有运行时依赖
 
 ![version](https://img.shields.io/badge/version-1.5.3--beta-orange)
 ![browser](https://img.shields.io/badge/Edge%20%7C%20Chrome-Chromium-00aeec)
-![tests](https://img.shields.io/badge/tests-317%20passed-brightgreen)
+![tests](https://img.shields.io/badge/tests-319%20passed-brightgreen)
 
 ---
 
@@ -124,7 +124,7 @@ npm install
 npm test
 ```
 
-一共 317 项校验，覆盖屏蔽逻辑、分区识别、两种隐藏行为、设置页交互和后台统计。
+一共 319 项校验，覆盖屏蔽逻辑、分区识别、两种隐藏行为、设置页交互和后台统计。
 
 测试里的模拟 DOM 和尺寸都是从真实页面上量出来的（`.floor-card-inner > .cover-container + .pb-16.px-12 > p.title` 这种工具类结构、`.vui_carousel` 包裹的轮播、`.palette-button-inner` 里 0×0 的隐藏链接等等）。
 
@@ -165,7 +165,9 @@ B 站是单页应用，滚动和切页会让卡片重新渲染，所以统计的
 
 **③ 顺带修掉「播放器横幅怎么都不屏蔽」**。广告位以前会被 `isNestedCard` 卡死：那个判断看的是「祖先有没有被处理过」，而**没被屏蔽**的卡片同样带着这个标记（`clearBlock` 也会写），所以页面上一旦有容器被误判成卡片，它里面的广告位就永远轮不到处理。现在只有祖先**真的被遮住**才跳过。横幅自身的识别也不再绑死 `.right > .inside-bg` 这一层，改成「扫全部 `.inside-wrp` 再按结构筛」，并补了「图片走 `/bfs/activity-plat/`」这条兜底判据。
 
-另外加了个排查用的东西：打开设置页的「输出调试日志到控制台」后，每遮一块广告都会打印**遮罩宿主是哪个元素、实测多大**（例如 `广告位遮罩宿主： DIV.ad-card-wrapper 350×250`），以后 B 站改结构时能一眼看出该调哪里。
+另外加了个排查用的东西：打开设置页的「输出调试日志到控制台」后，日志里会写明**每块广告的遮罩宿主是哪个元素、实测多大**（例如 `广告位遮罩宿主： DIV.ad-card-wrapper 350×250`）；如果广告认出来了但「广告」开关是关着的，也会打一条 `发现广告位，但「广告」开关是关的：…` —— 以前这种情况页面上一点痕迹都没有，很难区分"没认出来"和"开关没开"。
+
+拿到使用者贴的播放器贴片广告完整 outerHTML 之后，选择器与注释也按实测改准了：真实结构是 `#slide_ad.slide-ad-exp > .slide-gg > .van-slide.item-box > .item > .ad-report.link > a.ad-report-inner`，外加 `img.gg-pic`（广告角标）和 `.close-btn`（关闭按钮）—— 这里的 `gg` 就是"广告"，B 站自己就是这么命名的。`.slide-gg` 也加进了广告位名单，并补了「整块被收进遮罩宿主、里层不各自遮一次」的回归用例。
 
 ### 1.5.2
 

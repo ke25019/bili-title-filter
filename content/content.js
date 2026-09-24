@@ -34,13 +34,15 @@
    * ------------------------------------------------------------------ */
 
   /**
-   * 广告位容器（实测于 2025 年播放页，结构照抄自 Copy outerHTML）：
-   *   - 播放器里的贴片广告：
-   *     #slide_ad.slide-ad-exp > .slide-ad > .van-slide-item-box > .item > .ad-report-link > a.ad-report-inner > img
+   * 广告位容器（实测结构，逐字来自使用者贴的 Copy outerHTML）：
+   *   - 播放器区的贴片广告（"gg" 就是"广告"，B 站自己这么命名）：
+   *     #slide_ad.slide-ad-exp > .slide-gg > .van-slide.item-box > .item
+   *       > .ad-report.link > a.ad-report-inner > img
+   *       + img.gg-pic（广告角标） + .close-btn > i.van-icon-guanbi（关闭按钮）
    *   - 右栏广告卡片：
    *     .video-card-ad-small > .ad-report-inner > a.ad-report > .ad-floor-cover-img > img
    *
-   * 为什么要单独列出来：这两块既不在下面那套视频卡片类名里，又**没有标题**，
+   * 为什么要单独列出来：这些块既不在下面那套视频卡片类名里、又**没有标题**，
    * 所以走不了「命中链接 + 标题 + 封面」的通用识别 —— 实测一个都收不上来，
    * 「广告」分区开关对它们完全无效（有人反馈过：播放页广告怎么都屏蔽不掉）。
    * 注意这里**不并入 CARD_SELECTOR**：广告位本身往往只装着图片，
@@ -51,6 +53,7 @@
   var AD_SLOT_SELECTOR = [
     '#slide_ad',
     '.slide-ad-exp',
+    '.slide-gg',
     '.slide-ad',
     '.video-card-ad-small',
     '[class*="ad-report"]',
@@ -1385,6 +1388,14 @@
     if (settings.blockTypes && settings.blockTypes[type]) {
       applyBlock(card, { key: 'type:' + type, kind: 'type', type: type });
       return;
+    }
+
+    // 广告位认出来了、但「广告」开关没开 —— 这一条以前完全没有痕迹，
+    // 反馈里"广告怎么都不屏蔽"就很难判断到底是没认出来还是开关没开
+    if (type === 'ad') {
+      var r0 = card.getBoundingClientRect ? card.getBoundingClientRect() : { width: 0, height: 0 };
+      log('发现广告位，但「广告」开关是关的：', card.tagName + '.' + (card.className || card.id || ''),
+        Math.round(r0.width) + '×' + Math.round(r0.height));
     }
 
     var hit = matcher ? matcher(getTitle(card)) : null;

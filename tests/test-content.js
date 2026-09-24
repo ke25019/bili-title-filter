@@ -96,25 +96,31 @@ const HTML = `<!DOCTYPE html><html><head><style id="page-style">#swipeSlot{displ
       <p class="title">游戏中心推广</p>
     </div>
 
-    <!-- 播放页里的两块广告（DOM 照抄自反馈截图里的 Copy outerHTML）：
-         ① 播放器里的贴片广告
-            #slide_ad.slide-ad-exp > .slide-ad > .van-slide-item-box > .item > .ad-report-link > a.ad-report-inner
-         ② 右栏广告卡片
+    <!-- 播放页里的广告（DOM 逐字照抄自使用者贴的 Copy outerHTML）：
+         ① 播放器区里的贴片广告（"gg" = 广告，B 站自己就是这么命名的）：
+            #slide_ad.slide-ad-exp > .slide-gg > .van-slide.item-box > .item
+              > .ad-report.link > a.ad-report-inner > img
+              + img.gg-pic（广告角标） + .close-btn > i.van-icon-guanbi
+         ② 右栏广告卡片（结构来自反馈截图里的 DOM 树）：
             .video-card-ad-small > .ad-report-inner > a.ad-report > .ad-floor-cover-img
          这两块既不在视频卡片类名里、又**没有标题**，以前走「命中链接 + 标题 + 封面」
          的通用识别一条都收不上来 —— 「广告」开关点了完全没反应（v1.5.1 回归点）。 -->
     <div id="slideAd" data-w="1130" data-h="640">
       <div id="slide_ad" class="slide-ad-exp" data-w="350" data-h="200">
-        <div class="slide-ad" data-w="350" data-h="200">
-          <div class="van-slide-item-box" data-w="350" data-h="200">
+        <div class="slide-gg" data-w="350" data-h="200">
+          <div class="van-slide item-box" style="width:350px;height:200px" data-w="350" data-h="200">
             <div class="item" data-w="350" data-h="200">
-              <div class="ad-report-link" data-w="350" data-h="200">
+              <div class="ad-report link" data-w="350" data-h="200">
                 <a class="ad-report-inner" target="_blank" data-loc-id="2628"
-                   href="//cm.bilibili.com/cm/api/fees/pc/sync/v2/cmd?a=1"><img src="slide-ad.jpg" alt="广告"></a>
+                   data-target-url="https://m.bilibili.com/topic-detail?topic_id=1345970"
+                   href="//cm.bilibili.com/cm/api/fees/pc/sync/v2?msg=a%7C2628%2Cb%7Cbilibili&amp;ts=1790254590091&amp;spm_id_from=333.788.right_bottom.adfloor-2624.click"><img
+                   src="https://i0.hdslb.com/bfs/sycp_brand/creative_img/202609/10a77ec6b0a57946a99c1416d472b7f0.jpg" alt=""></a>
               </div>
+              <img alt="" src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAEwAAAAsCAYAAAB+7w==" class="gg-pic">
             </div>
           </div>
         </div>
+        <div class="close-btn"><i class="van-icon-guanbi"></i></div>
       </div>
     </div>
 
@@ -773,10 +779,21 @@ async function main() {
   check('贴片广告只生成一块遮罩，文案按分区设置走',
     $('slide_ad').querySelectorAll(':scope > .bf-mask').length === 1 &&
     maskText($('slide_ad')).indexOf('广告') !== -1, maskText($('slide_ad')));
-  check('【关键】嵌套的 .ad-report-link / .ad-report-inner 不会变成第二张卡片重复遮蔽',
+  check('【关键】嵌套的 .ad-report.link / .ad-report-inner 不会变成第二张卡片重复遮蔽',
     !$('slide_ad').querySelector('.ad-report-inner').classList.contains('bf-blocked') &&
     !$('adRight').querySelector('.ad-report-inner').classList.contains('bf-blocked') &&
     $('slide_ad').querySelectorAll('.bf-mask').length === 1);
+  check('【关键】真实结构（.slide-gg / .van-slide.item-box / .ad-report.link / .gg-pic / .close-btn）整块都被收进遮罩宿主里',
+    $('slide_ad').contains($('slide_ad').querySelector('.slide-gg')) &&
+    $('slide_ad').contains($('slide_ad').querySelector('.van-slide.item-box')) &&
+    $('slide_ad').contains($('slide_ad').querySelector('.ad-report.link')) &&
+    $('slide_ad').contains($('slide_ad').querySelector('.gg-pic')) &&
+    $('slide_ad').contains($('slide_ad').querySelector('.close-btn')) &&
+    $('slide_ad').classList.contains('bf-blocked'));
+  check('广告角标与关闭按钮所在的里层没有被各自遮一次',
+    !$('slide_ad').querySelector('.slide-gg').classList.contains('bf-blocked') &&
+    !$('slide_ad').querySelector('.item').classList.contains('bf-blocked') &&
+    !$('slide_ad').querySelector('.gg-pic').classList.contains('bf-blocked'));
 
   await pushSettings({ blockTypes: {}, keywords: ['剧透'] });
   check('【回归】播放页不受「UP 个人主页」开关影响，关键词照常屏蔽',

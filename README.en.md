@@ -6,7 +6,7 @@ Manifest V3, works in Edge and Chrome, plain JavaScript with no runtime dependen
 
 ![version](https://img.shields.io/badge/version-1.5.3--beta-orange)
 ![browser](https://img.shields.io/badge/Edge%20%7C%20Chrome-Chromium-00aeec)
-![tests](https://img.shields.io/badge/tests-317%20passed-brightgreen)
+![tests](https://img.shields.io/badge/tests-319%20passed-brightgreen)
 
 ---
 
@@ -124,7 +124,7 @@ npm install
 npm test
 ```
 
-317 checks covering the blocking logic, category detection, both hiding behaviours, the settings pages and the background stats.
+319 checks covering the blocking logic, category detection, both hiding behaviours, the settings pages and the background stats.
 
 The mock DOM and its sizes were measured on the real site (utility-class structures like `.floor-card-inner > .cover-container + .pb-16.px-12 > p.title`, the `.vui_carousel` banner, the 0×0 hidden links inside `.palette-button-inner`, and so on).
 
@@ -165,7 +165,9 @@ Newest first. This is what changed and why — including the parts I got wrong.
 
 **③ "The player banner never gets blocked" is fixed too.** Ad slots used to be stuck on `isNestedCard`: that check looks at whether an ancestor has *ever been processed*, and cards that were **not** blocked carry the same marker (`clearBlock` writes it as well), so once any container on the page was misidentified as a card, ad slots inside it never got their turn. Now only ancestors that are **actually covered** are skipped. Banner detection no longer hard-codes the `.right > .inside-bg` level either: it scans every `.inside-wrp` and filters by structure, with an additional fallback for images served from `/bfs/activity-plat/`.
 
-One diagnostic aid came with it: with "output debug logs to the console" enabled on the settings page, every blocked ad now logs **which element is the mask host and its measured size** (e.g. `广告位遮罩宿主： DIV.ad-card-wrapper 350×250`), so the next time Bilibili changes its markup it is obvious what to adjust.
+One diagnostic aid came with it: with "output debug logs to the console" enabled on the settings page, the log names **which element is the mask host and its measured size** for every blocked ad (e.g. `广告位遮罩宿主： DIV.ad-card-wrapper 350×250`). If an ad is recognised while the "ads" switch is off, it logs `发现广告位，但「广告」开关是关的：…` — previously that case left no trace at all, making it hard to tell "not recognised" from "switch not on".
+
+After receiving the full outerHTML of the in-player ad, the selectors and comments were aligned with what was actually measured: the real structure is `#slide_ad.slide-ad-exp > .slide-gg > .van-slide.item-box > .item > .ad-report.link > a.ad-report-inner`, plus `img.gg-pic` (the ad badge) and `.close-btn` (the close button) — `gg` is short for "advertisement" (`guanggao`) and that is Bilibili's own naming. `.slide-gg` joined the ad-slot list, and regression cases now assert that the whole block lands inside the mask host with no inner element covered separately.
 
 ### 1.5.2
 
