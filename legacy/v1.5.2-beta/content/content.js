@@ -64,13 +64,7 @@
    * "把整个播放器当成广告卡遮掉"这种最坏情况。
    */
   var AD_FRAME_MAX_W = 600;
-  var AD_FRAME_MAX_H = 640;
-
-  /**
-   * 「整卡外壳」允许的子元素个数上限。广告卡一般只有"图片块 + 文字块"两三个子节点，
-   * 而弹幕列表、推荐流这类面板动辄几十个 —— 这条是防止一路收进面板里的兜底判据。
-   */
-  var AD_FRAME_MAX_CHILDREN = 6;
+  var AD_FRAME_MAX_H = 560;
 
   /** 视频 / 推广卡片容器（已知类名，实测于 2025 年 B 站首页 / 搜索页 / 播放页） */
   var CARD_SELECTOR = [
@@ -662,30 +656,16 @@
    * 反馈：右栏广告卡只挡住了一部分 —— 图片那块被遮住了，卡片下方的标题、
    * UP 名和「广告」角标还露在页面上。原因是这些文字挂在外层容器上，
    * 而那个外层容器的类名不在任何已知列表里（写死类名必然漏）。
-   * 这里的做法是从广告位向上收，收到"仍然只装着这一块广告"的最外层。
-   *
-   * 停止条件（任一条命中就停，宁可少收一层也不错收一屏）：
-   *   ① 这一层是"面板/列表"（弹幕列表、评论区、推荐流、播放器…）——
-   *      反馈里"把弹幕列表算进去了"就是这么来的
-   *   ② 这一层里还有别的真卡片（有标题或有封面）→ 到了推荐列表
-   *   ③ 子元素个数超过 6 —— 广告卡只有两三个子节点，列表不会只有这么少
-   *   ④ 尺寸超过 600×640 —— 播放器那层自然被挡住
-   * 另外：行内元素（`<a class="ad-report">` 这种）不能当遮罩宿主，见 blockTargetFor。
+   * 这里的做法是从广告位向上收，收到"仍然只装着这一块广告"的最外层：
+   *   ① 这一层里不能再有别的卡片（有 → 到了列表容器，停）
+   *   ② 这一层里不能再有第二块广告（有 → 一遮就是一片，停）
+   *   ③ 尺寸必须还在卡片量级（宽 ≤ 600 / 高 ≤ 400）→ 播放器那层自然被挡住
+   *   ④ 最多向上 3 层
    */
-  /** 量得出尺寸吗（0×0 的中间层多半是行内盒或 display:contents 的包装层，不该当宿主，也不该终止向上收） */
-  function hasMeasurableBox(el) {
-    var r = el.getBoundingClientRect ? el.getBoundingClientRect() : null;
-    return !!(r && r.width && r.height);
-  }
-
   function findAdCardFrame(slot) {
     var frame = slot;
     var cur = slot.parentElement;
-    // 最多 5 层：广告位的嵌套链实测可以到 .ad-report-link > .item > .van-slide-item-box > .slide-ad > #slide_ad
-    // 这么深，层数切太浅会让同一条链上的不同节点各自收到不同的一层，结果套出好几块遮罩
-    for (var i = 0; cur && cur !== document.body && cur !== document.documentElement && i < 5; i++) {
-      // 行内盒 / 量不到尺寸的包装层既不能当遮罩宿主，也不该让收敛就此停住 → 跳过它继续往上
-      if (isInlineBox(cur) || !hasMeasurableBox(cur)) { cur = cur.parentElement; continue; }
+    for (var i = 0; cur && cur !== document.body && cur !== document.documentElement && i < 3; i++) {
       if (!isAdFrameCandidate(cur, slot)) break;
       frame = cur;
       cur = cur.parentElement;
@@ -693,68 +673,24 @@
     return frame;
   }
 
-  /**
-   * 页面上的"面板/列表"：广告卡再往外收就一定会把无关内容卷进来
-   * （实测反馈：播放器右边那块广告一往上收就把弹幕列表算进去了）。
-   * 注意只认"面板容器"的类名，不认单条弹幕（`danmaku-item` 这类）——
-   * 弹幕列表里的推广条本身就是一条弹幕，它得能当广告卡。
-   */
-  var AD_FRAME_PANEL_RE = /danmubox|danmaku-(list|box|container|wrap|panel)|comment|reply|recommend|player|right-container|video-info|toolbar|activity-plat|feed-list|video-list/i;
-
-  function isAdFramePanel(el) {
-    // 自身就是广告位（例如弹幕列表里那条推广）→ 不算面板
-    if (el.matches && el.matches(AD_SLOT_SELECTOR)) return false;
-    var cls = typeof el.className === 'string' ? el.className : '';
-    var id = el.id || '';
-    return AD_FRAME_PANEL_RE.test(cls) || AD_FRAME_PANEL_RE.test(id);
-  }
-
-  /** 像不像一张真卡片：有标题或有封面。只有"顺带匹配上"的空壳子元素才两条都不占 */
-  function looksLikeRealCard(el) {
-    if (findTitleEl(el)) return true;
-    return hasCoverInside(el);
-  }
-
   function isAdFrameCandidate(box, slot) {
     if (!box.querySelectorAll) return false;
     if (isPlayerBannerHost(box) || (box.matches && box.matches(PLAYER_BANNER_INNER_SELECTOR))) return false;
-    if (box.querySelector(PLAYER_BANNER_INNER_SELECTOR)) return false;   // 里面装着播放器横幅 → 别越过去
-    if (isAdFramePanel(box)) return false;                             // ①
-    if (box.children.length > AD_FRAME_MAX_CHILDREN) return false;      // ③
 
+    // ① 别的卡片
     var cards = box.querySelectorAll(CARD_SELECTOR);
     for (var i = 0; i < cards.length; i++) {
-      if (slot.contains(cards[i])) continue;        // 广告位自己（含它的后代）
-      if (!looksLikeRealCard(cards[i])) continue;   // 只匹配到类名的空壳子元素，不算
-      return false;                                 // ②
+      if (slot.contains(cards[i])) continue;   // 广告位自己（含它的后代）
+      return false;
     }
-    return isCardSizedBox(box, AD_FRAME_MAX_W, AD_FRAME_MAX_H);   // ④
-  }
-
-  /**
-   * 遮罩宿主必须是块级元素。
-   *
-   * 实测反馈：「上面会有一些像素露在外面」——广告位常常是行内元素
-   * （`<a class="ad-report">`、`<span class="ad-floor">` 这类），
-   * 行内盒上放绝对定位的遮罩会错位，而且 `overflow:hidden` 对行内盒不生效，
-   * 于是遮罩变成一条细线、底下的图片和文字照样露出来。
-   * 所以先往上找到第一个块级祖先再动手；找不到（或找到的是面板）就交给上层判断。
-   */
-  function isInlineBox(el) {
-    if (!el || !el.getComputedStyle) return false;
-    var d = '';
-    try { d = (el.ownerDocument.defaultView || window).getComputedStyle(el).display || ''; } catch (e) { return false; }
-    if (d.indexOf('inline') !== 0) return false;
-    return d !== 'inline-block' && d !== 'inline-flex' && d !== 'inline-grid';
-  }
-
-  function blockTargetFor(el) {
-    var cur = el;
-    for (var i = 0; i < 3 && cur && cur !== document.body; i++) {
-      if (!isInlineBox(cur)) return cur;
-      cur = cur.parentElement;
+    // ② 别的广告位
+    var ads = box.querySelectorAll(AD_SLOT_SELECTOR);
+    for (var j = 0; j < ads.length; j++) {
+      if (slot.contains(ads[j])) continue;
+      return false;
     }
-    return el;
+    // ③ 尺寸
+    return isCardSizedBox(box, AD_FRAME_MAX_W, AD_FRAME_MAX_H);
   }
 
   /**
@@ -766,9 +702,8 @@
    *                              //i2.hdslb.com/bfs/activity-plat/static/…/xxx.jpg@640w_200h_!web-video-activity-cover.avif
    *
    * 为什么不把 .inside-wrp 直接写进 CARD_SELECTOR：这个类名太通用（B 站多处活动位都在用），
-   * 写死会让别的页面上的同名容器也被当成卡片。所以判据带上结构，而且扫描时是
-   * 「先扫全部 .inside-wrp，再用结构判据筛」（不用 :has()，也没绑定 .right 这一层 ——
-   * 实测里 onreadystatechange 式的中间层很容易变，绑定死了就会漏），
+   * 写死会让别的页面上的同名容器也被当成卡片。所以判据带上结构：
+   * 必须以「图片块 .inside-bg」为入口，再回到同时含 .hinter-msg 的 .inside-wrp 上，
    * 整块一起处理 —— 只藏右边图片的话，左边那行文案会留在页面上（等于没屏蔽干净）。
    */
   var PLAYER_BANNER_INNER_SELECTOR = '.inside-wrp > .right > .inside-bg';
@@ -778,26 +713,19 @@
     if (!el || !el.closest) return null;
     var host = el.closest('.inside-wrp');
     if (!host) return null;
-    if (!isPlayerBannerHost(host)) return null;   // 结构不对 → 不是这块横幅
+    if (!host.querySelector('.hinter-msg')) return null;   // 没有那行文案 → 不是这块横幅
     return host;
   }
 
-  /**
-   * 这块 .inside-wrp 是不是播放器里的活动横幅：
-   * 正常判据是「有文案行 .hinter-msg + 有图片块 .inside-bg」；
-   * 兜底判据是「里面有走 /bfs/activity-plat/ 的活动图」——
-   * B 站这类活动位的图片都来自活动平台，文案行的类名偶尔会变。
-   */
   function isPlayerBannerHost(el) {
     if (!el || !el.matches || !el.matches('.inside-wrp')) return false;
-    if (el.querySelector('.inside-bg') && el.querySelector('.hinter-msg')) return true;
-    return !!el.querySelector('img[src*="activity-plat"]');
+    return !!el.querySelector('.inside-bg') && !!el.querySelector('.hinter-msg');
   }
 
   /**
    * 一个广告位应该处理哪一块：
    *   - 播放器活动横幅的图片块 → 整块横幅（.inside-wrp）
-   *   - 其它广告位 → 先找块级宿主（行内元素不能放遮罩），再往上收成"整卡外壳"
+   *   - 其它广告位 → 它的"整卡外壳"（见 findAdCardFrame）
    */
   function adSlotTarget(el) {
     if (!el || !el.matches) return null;
@@ -806,9 +734,7 @@
     if (el.matches(PLAYER_BANNER_INNER_SELECTOR)) return null;
     if (el.matches('.inside-wrp')) return isPlayerBannerHost(el) ? el : null;
     if (!el.matches(AD_SLOT_SELECTOR)) return null;
-    var host = blockTargetFor(el);
-    if (!host || isInlineBox(host)) return null;   // 找不到块级宿主 → 宁可不遮，也别遮成一条线
-    return findAdCardFrame(host);
+    return findAdCardFrame(el);
   }
 
   /**
@@ -1205,12 +1131,6 @@
     sessionBlocked += 1;
     bumpStat(1);
     log('已屏蔽：', action.key, getTitle(card));
-    if (action.type === 'ad' || isAdSlot(card)) {
-      // 调试日志里带上"遮的是哪一层"和它的实测尺寸，方便日后核对广告位结构变化
-      var r = card.getBoundingClientRect ? card.getBoundingClientRect() : { width: 0, height: 0 };
-      log('广告位遮罩宿主：', card.tagName + '.' + (card.className || card.id || ''),
-        Math.round(r.width) + '×' + Math.round(r.height));
-    }
   }
 
   /**
@@ -1351,16 +1271,8 @@
     return true;
   }
 
-  /** 祖先里有没有"真的被遮住了"的卡片（只处理过的标记不算，见 scanAdSlots 的说明） */
-  function insideBlockedCard(el) {
-    var p = el.parentElement;
-    return !!(p && p.closest('[data-bf-state="blocked"]'));
-  }
-
-  function processCard(card, opts) {
-    // opts.ad：广告位专用，绕过 isNestedCard（它看的是"祖先处理过没有"，
-    // 而没被屏蔽的卡片也会带上那个标记，会把广告位永久卡住）
-    if (!(opts && opts.ad) && isNestedCard(card)) return;
+  function processCard(card) {
+    if (isNestedCard(card)) return;
 
     if (!settings.enabled) {
       clearBlock(card);
@@ -1465,7 +1377,7 @@
     var hasKeywords = !!(settings.keywords && settings.keywords.length);
     if (!(settings.blockTypes && settings.blockTypes.ad) && !hasKeywords) return;   // 没开广告开关、也没屏蔽词 → 不用扫
 
-    var nodes = document.querySelectorAll(AD_SLOT_SELECTOR + ',' + PLAYER_BANNER_INNER_SELECTOR + ',.inside-wrp');
+    var nodes = document.querySelectorAll(AD_SLOT_SELECTOR + ',' + PLAYER_BANNER_INNER_SELECTOR);
     var seen = [];
     for (var i = 0; i < nodes.length; i++) {
       var slot = nodes[i];
@@ -1477,12 +1389,7 @@
       seen.push(target);
       trackedCards.add(target);
       if (target.dataset.bfState === 'blocked') continue;   // 已屏蔽，跳过
-      // 广告位要绕过 isNestedCard：那个判断看的是"祖先有没有被处理过（data-bf-card）"，
-      // 而 clearBlock 会给没屏蔽的卡片也打上这个标记 —— 页面上一旦有容器被误判成卡片，
-      // 里面的广告位就永远轮不到处理（实测反馈里横幅怎么都不屏蔽，就是这条卡住的）。
-      // 真正被遮住的祖先仍然要跳过，否则会在遮罩里再套一块遮罩。
-      if (insideBlockedCard(target)) continue;
-      processCard(target, { ad: true });
+      processCard(target);
     }
   }
 
@@ -1495,7 +1402,7 @@
     if (force && trackedCards.size) {
       trackedCards.forEach(function (card) {
         if (!card.isConnected) { trackedCards.delete(card); return; }
-        if (!card.matches || !card.matches(CARD_SELECTOR)) processCard(card, { ad: isAdSlot(card) });
+        if (!card.matches || !card.matches(CARD_SELECTOR)) processCard(card);
       });
     }
 

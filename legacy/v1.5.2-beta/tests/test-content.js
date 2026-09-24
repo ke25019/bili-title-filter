@@ -191,30 +191,6 @@ const HTML = `<!DOCTYPE html><html><head><style id="page-style">#swipeSlot{displ
       </div>
     </div>
 
-    <!-- 播放器右边的弹幕列表面板（实测类名 #danmubox.danmubox-container）：
-         里面夹着一条推广弹幕。反馈：广告往上收的时候「把弹幕列表算进去了」，
-         所以面板本身绝不能被当成广告卡，而夹在里面的那条广告要被正常屏蔽。 -->
-    <div id="danmubox" class="danmubox-container" data-w="350" data-h="500">
-      <div class="danmaku-item" data-w="350" data-h="20">普通弹幕 1</div>
-      <div class="danmaku-item" data-w="350" data-h="20">普通弹幕 2</div>
-      <div class="danmaku-item" data-w="350" data-h="20">普通弹幕 3</div>
-      <div class="danmaku-item" data-w="350" data-h="20">普通弹幕 4</div>
-      <div class="danmaku-item" data-w="350" data-h="20">普通弹幕 5</div>
-      <div class="danmaku-item" data-w="350" data-h="20">普通弹幕 6</div>
-      <div class="danmaku-item" data-w="350" data-h="20">普通弹幕 7</div>
-      <!-- 推广弹幕：整条是 <a>（行内元素），里面再套一层图片块 -->
-      <a class="danmaku-ad-item ad-report" id="dmAd" data-w="350" data-h="78"
-         href="//cm.bilibili.com/cm/api/fees/pc/sync/v2/cmd?e=5">
-        <div class="ad-report-inner" data-w="350" data-h="78">
-          <div class="ad-floor-cover-img" id="dmAdImg" data-w="175" data-h="78"><img src="dm.jpg" alt="广告"></div>
-        </div>
-        <div class="info" data-w="175" data-h="78">
-          <p class="title" title="各位指挥官！准备好了吗？">各位指挥官！准备好了吗？</p>
-          <span class="sub">立即下载</span>
-        </div>
-      </a>
-    </div>
-
     <div class="container is-version8" id="feed-list" style="display:grid">
       <!-- 用户反馈的那张首页「分区推荐」卡片，DOM 原样照抄自 Copy outerHTML：
            封面链接里带着分区徽标 .badge > .floor-title（文案「番剧」），
@@ -852,32 +828,6 @@ async function main() {
   check('关掉「广告」后横幅恢复原状（遮罩被移除、隐藏类被撤掉）',
     !blocked('playerBanner') && !$('playerBanner').querySelector('.bf-mask') &&
     !$('playerBanner').classList.contains('bf-hide'), $('playerBanner').className);
-
-  console.log('\n[9f] 弹幕列表里的推广弹幕（v1.5.3 回归点）');
-  // 反馈：播放器右边的广告「把弹幕列表算进去了」，而且「上面会有一些像素露在外面」。
-  // 实测两个原因：① 收敛规则会一路收进弹幕列表面板；② 广告位本身是行内 <a>，
-  // 行内盒上放绝对定位遮罩会错位（overflow:hidden 对行内盒也不生效），
-  // 于是遮罩缩成一条细线、底下的图片和文字照样露出来。
-  check('广告开关关着时，推广弹幕不被屏蔽',
-    !blocked('dmAd') && !$('dmAd').querySelector('.bf-mask'), $('dmAd').className);
-
-  await pushSettings({ blockTypes: { ad: true } });
-  check('推广弹幕被屏蔽', blocked('dmAd'), $('dmAd').className);
-  check('【关键】遮罩宿主不是行内元素（行内盒上放遮罩会错位成一条线）',
-    win.getComputedStyle($('dmAd')).display.indexOf('inline') !== 0,
-    'display=' + win.getComputedStyle($('dmAd')).display);
-  check('【关键】弹幕列表面板本身绝没有被遮掉',
-    !blocked('danmubox') && !$('danmubox').classList.contains('bf-hide') &&
-    !$('danmubox').querySelector(':scope > .bf-mask'), $('danmubox').className);
-  check('面板里的普通弹幕也没受影响',
-    !$('danmubox').querySelector('.danmaku-item.bf-blocked') &&
-    !$('danmubox').querySelector('.danmaku-item .bf-mask'));
-  check('推广弹幕只生成一块遮罩（里面的图片块不会各遮一次）',
-    $('dmAd').querySelectorAll('.bf-mask').length === 1 && !blocked('dmAdImg'),
-    String($('dmAd').querySelectorAll('.bf-mask').length));
-  await pushSettings({ blockTypes: { ad: false } });
-  check('关掉「广告」后推广弹幕恢复',
-    !blocked('dmAd') && !$('dmAd').querySelector('.bf-mask'), $('dmAd').className);
 
   console.log('\n[10] 完全隐藏模式：收敛被顶上来填空的"空占位项"');
   // 遮蔽模式下不应动任何占位项（遮蔽保留占位，不会有东西被顶上来）

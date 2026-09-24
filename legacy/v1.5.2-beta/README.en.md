@@ -4,9 +4,9 @@ An extension I wrote for myself to filter Bilibili. Add a few keywords and the v
 
 Manifest V3, works in Edge and Chrome, plain JavaScript with no runtime dependencies.
 
-![version](https://img.shields.io/badge/version-1.5.3--beta-orange)
+![version](https://img.shields.io/badge/version-1.5.2--beta-orange)
 ![browser](https://img.shields.io/badge/Edge%20%7C%20Chrome-Chromium-00aeec)
-![tests](https://img.shields.io/badge/tests-317%20passed-brightgreen)
+![tests](https://img.shields.io/badge/tests-310%20passed-brightgreen)
 
 ---
 
@@ -124,7 +124,7 @@ npm install
 npm test
 ```
 
-317 checks covering the blocking logic, category detection, both hiding behaviours, the settings pages and the background stats.
+310 checks covering the blocking logic, category detection, both hiding behaviours, the settings pages and the background stats.
 
 The mock DOM and its sizes were measured on the real site (utility-class structures like `.floor-card-inner > .cover-container + .pb-16.px-12 > p.title`, the `.vui_carousel` banner, the 0×0 hidden links inside `.palette-button-inner`, and so on).
 
@@ -154,18 +154,6 @@ Bilibili is a single-page app, so scrolling and navigating re-render cards. The 
 ## Changelog
 
 Newest first. This is what changed and why — including the parts I got wrong.
-
-### 1.5.3
-
-**Promoted entries inside the danmaku list are no longer "covered by a thin line only".** The report was that the ad on the right of the player "counted the danmaku list in" and that "some pixels are still exposed above". Three separate defects came out of it:
-
-**① The walk-up swallowed the danmaku panel.** The panel holds no video cards and stays under the size cap, so the previous two conditions could not stop it. There are more now: panel class names (`danmubox`, comment areas, recommendation feeds, the player…) halt the walk; more than 6 child elements halts it (an ad card has two or three children, a list never does); and shell elements that merely happen to match a class name no longer count as "another card".
-
-**② What actually exposed the pixels was an inline element.** An ad slot is often just an `<a class="ad-report">` (an inline box): an absolutely positioned mask on an inline box is mispositioned, and `overflow:hidden` has no effect on inline boxes at all — so the mask collapsed into a thin line while the image and text underneath stayed visible, which is exactly the dashed line plus leaked pixels in the screenshot. The slot is now first resolved to a **block-level host**; while walking up, inline boxes (and wrappers with no measurable size) are **stepped over rather than treated as an end point** — stopping there made different nodes of the same ad chain land on different levels and produce several nested masks (I hit that during implementation; the tests went red and caught it).
-
-**③ "The player banner never gets blocked" is fixed too.** Ad slots used to be stuck on `isNestedCard`: that check looks at whether an ancestor has *ever been processed*, and cards that were **not** blocked carry the same marker (`clearBlock` writes it as well), so once any container on the page was misidentified as a card, ad slots inside it never got their turn. Now only ancestors that are **actually covered** are skipped. Banner detection no longer hard-codes the `.right > .inside-bg` level either: it scans every `.inside-wrp` and filters by structure, with an additional fallback for images served from `/bfs/activity-plat/`.
-
-One diagnostic aid came with it: with "output debug logs to the console" enabled on the settings page, every blocked ad now logs **which element is the mask host and its measured size** (e.g. `广告位遮罩宿主： DIV.ad-card-wrapper 350×250`), so the next time Bilibili changes its markup it is obvious what to adjust.
 
 ### 1.5.2
 
