@@ -3,7 +3,7 @@
 [![License: PolyForm Noncommercial](https://img.shields.io/badge/License-PolyForm_Noncommercial-orange.svg)](https://polyformproject.org/licenses/noncommercial/1.0.0/)
 ![version](https://img.shields.io/badge/version-1.5.8--beta-orange)
 ![browser](https://img.shields.io/badge/Edge%20%7C%20Chrome-Chromium-00aeec)
-![tests](https://img.shields.io/badge/tests-337%20passed-brightgreen)
+![tests](https://img.shields.io/badge/tests-341%20passed-brightgreen)
 
 一个 B 站网页端扩展：给不想看的视频标题加几个关键词，它们就从页面上消失；也能按分区屏蔽直播、番剧这类推广内容。
 
@@ -55,9 +55,9 @@ Details and the FAQ live in the two documents linked above.
 - A draggable panel inside the page
 - Follows Bilibili's dark mode
 
-纯原生 JavaScript，没有运行时依赖。测试用 jsdom 跑，一共 337 项。
+纯原生 JavaScript，没有运行时依赖。测试用 jsdom 跑，一共 341 项。
 
-Plain JavaScript, no runtime dependencies. The tests run on jsdom — 337 checks in total.
+Plain JavaScript, no runtime dependencies. The tests run on jsdom — 341 checks in total.
 
 ---
 

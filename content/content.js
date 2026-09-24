@@ -182,7 +182,19 @@
   /** 横幅 / 轮播属于"板块推广位"，只由板块级开关负责，卡片级不碰 */
   var BANNER_EXCLUDE = '.carousel-area, .carousel-container, [class*="carousel"], [class*="banner"]';
 
-  /** 顶栏 / 导航区域：分区识别时必须跳过，否则会把「直播」入口当成直播卡片 */
+  /**
+   * 顶栏 / 导航区域。**任何屏蔽路径都不许碰这里**：
+   * 它既不是视频卡片也不是推广位，是站点自己的导航，遮住它就是"把首页/番剧/直播这些入口挡住了"
+   * （反馈过：播放页开了「广告」之后顶栏被遮）。
+   *
+   * 除了老的类名，这里补上了 2026-09 实测到的现役顶栏结构（抓首页服务端 HTML 核对过）：
+   *   .bili-header.bili-header--large > .bili-header__menu.bili-header__bar
+   *     > .left-entry > .left-entry-main > .left-entry__item.v-popover-wrap > a.left-entry__item-trigger
+   *     > .center-search-container > .nav-search-input …
+   *     > .right-entry > .right-entry__item …
+   * 导航项是 .channel-link（88 个），所以老的 .default-entry / .nav-link 其实已经不在了，
+   * 只留老类名会漏掉现役结构。
+   */
   var NAV_EXCLUDE = [
     'header',
     'nav',
@@ -207,6 +219,17 @@
     '.v-popup-wrap',
     '.popover',
     '.bili-dropdown',
+    /* 现役顶栏（实测 2026-09） */
+    '.bili-header__menu',
+    '.bili-header__bar',
+    '.bili-header__banner',
+    '.left-entry-main',
+    '.left-entry__item',
+    '.left-entry__item-trigger',
+    '.right-entry__item',
+    '.nav-search',
+    '.nav-search-input',
+    '.header-upload-entry',
     /* 实测补充：这两个区域里藏着 0×0 的隐藏推广链接，曾被误判成卡片 */
     '.header-channel',
     '.palette-button-outer',
@@ -218,6 +241,14 @@
     '.passport',
     '.bili-login'
   ].join(',');
+
+  /**
+   * 这个元素是不是落在"绝对不许动"的站点区域里（顶栏 / 导航 / 登录面板）。
+   * 所有屏蔽路径（关键词、分区、广告位、徽标发现、外层空壳收敛）都要先过这一关。
+   */
+  function isChromeRegion(el) {
+    return !!(el && el.closest && el.closest(NAV_EXCLUDE));
+  }
 
   /** 卡片容器语义提示（仅作为最末位的兜底提示，不再作为主要判据） */
   var CARD_HINT_RE = /card|item|module|entry|video|live|bangumi|pgc|media|floor|short|cover/i;
@@ -816,6 +847,10 @@
     //    落到 .video-pod-above-modules 上，把弹幕列表一起隐掉（1.5.7 后的回归点）。
     if (box.matches && box.matches(PROTECTED_REGION_SELECTOR)) return false;
     if (box.querySelector(PROTECTED_REGION_SELECTOR)) return false;
+    // ⓪-2 顶栏 / 导航同样绝不能被当成广告外壳收走：实测顶栏里也会出现推广位，
+    //      一旦被收，首页/番剧/直播这些入口就跟着被遮住（反馈过的 bug）。
+    if (box.matches && box.matches(NAV_EXCLUDE)) return false;
+    if (box.querySelector && box.querySelector(NAV_EXCLUDE)) return false;
     if (isPlayerBannerHost(box) || (box.matches && box.matches(PLAYER_BANNER_INNER_SELECTOR))) return false;
     if (box.querySelector(PLAYER_BANNER_INNER_SELECTOR)) return false;   // 里面装着播放器横幅 → 别越过去
     if (isAdFramePanel(box)) return false;                             // ①
@@ -911,6 +946,7 @@
    */
   function adSlotTarget(el) {
     if (!el || !el.matches) return null;
+    if (isChromeRegion(el)) return null;   // 顶栏 / 导航里的推广位同样不碰（宁可不屏蔽）
     var banner = playerBannerHostOf(el);
     if (banner) return banner;
     if (el.matches(PLAYER_BANNER_INNER_SELECTOR)) return null;
@@ -947,7 +983,8 @@
       ' ' + Math.round(r.width) + '×' + Math.round(r.height);
   }
 
-  /** 从元素往上最多 4 层的结构链（诊断用） */  function describeChain(el, depth) {
+  /** 从元素往上最多 4 层的结构链（诊断用） */
+  function describeChain(el, depth) {
     var out = [];
     var cur = el;
     for (var i = 0; i < (depth || 4) && cur && cur !== document.body; i++) {
@@ -1330,6 +1367,10 @@
   }
 
   function applyBlock(card, action) {
+    // 兜底：顶栏 / 导航 / 登录面板绝不允许被打上屏蔽类（上面 processCard 已经拦了一道，
+    // 这里再拦一道，防止将来新增路径绕过）
+    if (isChromeRegion(card)) return;
+
     var wasBlocked = card.dataset.bfState === 'blocked';
     var already = wasBlocked && card.dataset.bfKey === action.key;
 
@@ -1414,11 +1455,14 @@
    * 注意：完全没有任何卡片的容器也算"可以越过"，但它不能同时含有真实文字内容。
    */
   function containerFullyHidden(el) {
-    // 0) 容器里装着页面功能（弹幕列表 / 播放器）→ 永远不算"空壳"。
+    // 0) 容器里装着页面功能（弹幕列表 / 播放器 / 顶栏导航）→ 永远不算"空壳"。
     //    实测：播放页的 .video-pod-above-modules__inner 同时装着弹幕列表和贴片广告，
     //    少了这一条，隐藏广告时会顺着空壳往上把弹幕列表也隐掉。
     if (el.matches && el.matches(PROTECTED_REGION_SELECTOR)) return false;
     if (el.querySelector && el.querySelector(PROTECTED_REGION_SELECTOR)) return false;
+    // 顶栏 / 导航同理：完全隐藏模式下收敛空壳时绝不能把顶栏一起隐掉
+    if (el.matches && el.matches(NAV_EXCLUDE)) return false;
+    if (el.querySelector && el.querySelector(NAV_EXCLUDE)) return false;
 
     // 1) 容器里所有卡片都必须已经被我们隐藏
     var cards = el.querySelectorAll(CARD_SELECTOR);
@@ -1530,6 +1574,17 @@
     // opts.ad：广告位专用，绕过 isNestedCard（它看的是"祖先处理过没有"，
     // 而没被屏蔽的卡片也会带上那个标记，会把广告位永久卡住）
     if (!(opts && opts.ad) && isNestedCard(card)) return;
+
+    // 顶栏 / 导航 / 登录面板：任何路径都不许屏蔽。
+    // 反馈过：播放页开了「广告」之后顶栏的入口被整块遮住 —— 所以这一关放在最前面，
+    // 关键词、分区开关、广告位、徽标发现、外层空壳收敛全都必须过它。
+    if (isChromeRegion(card)) {
+      if (card.dataset.bfState === 'blocked') {
+        log('顶栏/导航区域，撤销屏蔽：', describeEl(card));
+        clearBlock(card);
+      }
+      return;
+    }
 
     if (!settings.enabled) {
       clearBlock(card);
@@ -1728,6 +1783,7 @@
     var seen = [];
     for (var i = 0; i < nodes.length; i++) {
       var slot = nodes[i];
+      if (isChromeRegion(slot)) continue;   // 顶栏 / 导航里的东西一律跳过（反馈过的 bug：顶栏被遮）
       var target = adSlotTarget(slot);
       if (!target) continue;
       // 外壳的身份明确标出来（见 isAdSlot）：光看类名认不出来，也不能靠"里面装着广告"来猜

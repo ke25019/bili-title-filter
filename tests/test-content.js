@@ -446,7 +446,47 @@ const HTML = `<!DOCTYPE html><html><head><style id="page-style">#swipeSlot{displ
         </div>
       </div>
 
-      <!-- 站内搜索结果页的卡片（结构照抄 2026-09 的 search.bilibili.com）：
+      <!-- 真实顶栏（2026-09 抓首页服务端 HTML 核对过的结构）+ 几个"陷阱"：
+       ① 导航项是 .channel-link 的 <a>；② 右侧入口带一个 [class*="badge"] 的数字角标；
+       ③ 顶栏里塞一个 [class*="ad-report"] 的推广位（实测顶栏里确实会出现推广位）。
+       反馈：播放页开了「广告」之后顶栏被整块遮住 —— 任何路径都不许碰顶栏，这一组专用来看住它。 -->
+  <div class="bili-header bili-header--large" id="realHeader">
+    <div class="bili-header__menu is-zh bili-header__bar" id="headerBar" data-w="1401" data-h="64">
+      <div class="left-entry is-zh menu-left" id="headerLeftEntry" data-w="600" data-h="64">
+        <div class="left-entry-main">
+          <div class="v-popover-wrap left-entry__item home-page-entry">
+            <a href="//www.bilibili.com" class="left-entry__item-trigger">首页</a>
+          </div>
+          <div class="v-popover-wrap left-entry__item">
+            <a href="//www.bilibili.com/v/match/" class="channel-link" id="navMatchLink">赛事</a>
+          </div>
+          <div class="v-popover-wrap left-entry__item">
+            <a href="//live.bilibili.com/" class="channel-link" id="navLiveLink">直播</a>
+          </div>
+        </div>
+        <a class="default-entry" href="//www.bilibili.com/anime/">番剧</a>
+      </div>
+      <div class="center-search-container" id="headerSearch" data-w="500" data-h="40">
+        <div class="nav-search"><input class="nav-search-input" placeholder="搜索"></div>
+      </div>
+      <div class="right-entry" id="headerRightEntry" data-w="300" data-h="64">
+        <div class="right-entry__item">
+          <a href="//message.bilibili.com/" class="right-entry__item-trigger">
+            <img src="msg.png"><span class="right-entry-badge badge">1</span>
+          </a>
+        </div>
+        <div class="right-entry__item">
+          <a href="//www.bilibili.com/v/match/" class="right-entry__item-trigger">赛事</a>
+        </div>
+      </div>
+      <!-- 顶栏里的推广位（陷阱③）：任何扫描路径都不许遮它 -->
+      <div class="ad-report strip-ad left-banner" id="headerAd" data-w="300" data-h="60">
+        <a class="ad-report-inner" href="//cm.bilibili.com/header"><img src="ha.png"></a>
+      </div>
+    </div>
+  </div>
+
+  <!-- 站内搜索结果页的卡片（结构照抄 2026-09 的 search.bilibili.com）：
            .bili-video-card__info--bottom > a.bili-video-card__info--owner
              > span.bili-video-card__info--author（名字在 span 里，没有 title 属性）
              + span.bili-video-card__info--date -->
@@ -1289,6 +1329,31 @@ async function main() {
 
   await pushSettings({ blockTypes: {} });
   check('全部关掉后都恢复显示', blockedList() === '(无)', blockedList());
+
+  console.log('\n[9g] 顶栏 / 导航绝不能被屏蔽（v1.5.8 回归点）');
+  // 反馈：播放页开了「广告」之后，顶栏的入口被整块遮住。
+  // 这里把全部开关都打开、再加关键词，看顶栏是不是依然一点没动。
+  await pushSettings({
+    mode: 'mask', hideKeepSlot: true, keywords: ['测试', '首页', '赛事', '直播'], whitelist: [],
+    blockTypes: { ad: true, live: true, match: true, bangumi: true, other: true }
+  });
+  check('【关键】顶栏整体没有被遮（顶栏里的推广位也不遮）',
+    !blocked('realHeader') && !blocked('headerBar') && !blocked('headerAd') &&
+    !blocked('headerLeftEntry') && !blocked('headerRightEntry') && !blocked('headerSearch') &&
+    doc.querySelectorAll('.bili-header .bf-mask').length === 0,
+    '顶栏内遮罩数=' + doc.querySelectorAll('.bili-header .bf-mask').length);
+  check('【关键】导航项一个都没被打上屏蔽类',
+    !blocked('navMatchLink') && !blocked('navLiveLink') &&
+    !doc.querySelector('.bili-header .bf-blocked'),
+    doc.querySelector('.bili-header .bf-blocked') ? doc.querySelector('.bili-header .bf-blocked').className : '(无)');
+  check('顶栏里带 badge 类名的数字角标没有触发徽标驱动发现',
+    !doc.querySelector('#realHeader [class*="badge"]').classList.contains('bf-blocked') &&
+    !doc.querySelector('#realHeader [class*="badge"] .bf-mask'));
+  check('【安全阀】完全隐藏模式下顶栏也不会被当成空壳收走',
+    !$('realHeader').classList.contains('bf-hide') && !$('realHeader').classList.contains('bf-hide-slot') &&
+    win.getComputedStyle($('realHeader')).display !== 'none',
+    $('realHeader').className);
+  await pushSettings({ blockTypes: {}, keywords: [] });
 
   console.log('\n[10g-3] 实测结构：赛事推广楼层卡片 + 右栏广告同层装着弹幕列表（v1.5.5 回归点）');
   check('未打开「赛事」时，实测赛事卡片不被屏蔽', !blocked('realMatch'), $('realMatch').className);

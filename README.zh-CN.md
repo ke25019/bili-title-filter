@@ -6,7 +6,7 @@ Manifest V3，Edge 和 Chrome 都能装，纯 JavaScript，没有运行时依赖
 
 ![version](https://img.shields.io/badge/version-1.5.8--beta-orange)
 ![browser](https://img.shields.io/badge/Edge%20%7C%20Chrome-Chromium-00aeec)
-![tests](https://img.shields.io/badge/tests-337%20passed-brightgreen)
+![tests](https://img.shields.io/badge/tests-341%20passed-brightgreen)
 
 ---
 
@@ -124,7 +124,7 @@ npm install
 npm test
 ```
 
-一共 337 项校验，覆盖屏蔽逻辑、分区识别、两种隐藏行为、设置页交互和后台统计。
+一共 341 项校验，覆盖屏蔽逻辑、分区识别、两种隐藏行为、设置页交互和后台统计。
 
 测试里的模拟 DOM 和尺寸都是从真实页面上量出来的（`.floor-card-inner > .cover-container + .pb-16.px-12 > p.title` 这种工具类结构、`.vui_carousel` 包裹的轮播、`.palette-button-inner` 里 0×0 的隐藏链接等等）。
 
@@ -166,6 +166,10 @@ B 站是单页应用，滚动和切页会让卡片重新渲染，所以统计的
 - **首页赛事分区**：`match` 这一类除徽标「赛事」外还认「电竞 / 比赛 / 电竞赛事 / 赛事直播」等同义写法，链接判据加入电竞直播间路径 `/blanc/`；`.floor-card-inner` 收进卡片名单（赛事推广卡片的链接现在是普通视频，光靠链接发现不了），并保留「从封面徽标反推卡片」这条发现路径兜底。
 
 > 顺带说明：1.5.0 之后到 1.5.7 的编号，内容其实就是这份实现（1.5.6 与 1.5.7 完全相同，只差编号），其中 v1.5.6-beta / v1.5.7-beta 由 [@dacta-yzy](https://github.com/dacta-yzy) 发布；他补的「弹幕列表 / 播放器区域保护」（完全隐藏时不把装着弹幕列表的父层当空壳收走）与「徽标驱动发现」都已包含在本版里，署名也保留在下方贡献者名单中。这份状态已归档到 `legacy/v1.5.7-beta/`。
+
+> **本版修掉一个 bug（编号仍是 1.5.8）**：播放页开「广告」之后，**顶栏会被整块遮住** —— 首页 / 番剧 / 直播 / 游戏中心这些入口和右侧的消息、动态、收藏都不该被碰。根因是顶栏里也会出现推广位（实测顶栏里有 `.ad-report.strip-ad.left-banner`），广告位往上收「整卡外壳」时就可能把顶栏一起收走；而老的排除名单里那几个类名（`.default-entry`、`.nav-link`、`.channel-entry`）在现役顶栏里**已经不存在了**（实测现役顶栏是 `.bili-header__menu` / `.bili-header__bar` / `.left-entry__item` / `.channel-link` / `.nav-search`），所以排除没生效。现在把**顶栏 / 导航 / 登录面板**定为"绝对不许动"的区域：关键词、分区开关、广告位、徽标发现、外层空壳收敛**每条路径都得先过这一关**，并补上实测到的现役顶栏类名。新增 4 条回归用例（真实顶栏结构、顶栏里的推广位、带 `badge` 类名的数字角标、完全隐藏模式），合计 **341 项**。
+
+> **本版还把包体积压小了 55%**（108.4 KB → **49.2 KB**）：包里不再带 README / AGENTS（约 97 KB 纯文档，仓库里照旧完整保留），打包副本会去掉注释、空行与行首缩进，仓库源文件保持原样（那些注释是实测记录）。新增 `tools/pack.mjs` 让打包可复用，而且**每一步都带语法校验** —— 它当场抓到过两次剥离错误（块注释续行不以 `*` 开头、注释与代码挤在同一行），避免了把坏文件打进去。
 
 ### 1.5.7
 

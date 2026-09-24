@@ -6,7 +6,7 @@ Manifest V3, works in Edge and Chrome, plain JavaScript with no runtime dependen
 
 ![version](https://img.shields.io/badge/version-1.5.8--beta-orange)
 ![browser](https://img.shields.io/badge/Edge%20%7C%20Chrome-Chromium-00aeec)
-![tests](https://img.shields.io/badge/tests-337%20passed-brightgreen)
+![tests](https://img.shields.io/badge/tests-341%20passed-brightgreen)
 
 ---
 
@@ -124,7 +124,7 @@ npm install
 npm test
 ```
 
-337 checks covering the blocking logic, category detection, both hiding behaviours, the settings pages and the background stats.
+341 checks covering the blocking logic, category detection, both hiding behaviours, the settings pages and the background stats.
 
 The mock DOM and its sizes were measured on the real site (utility-class structures like `.floor-card-inner > .cover-container + .pb-16.px-12 > p.title`, the `.vui_carousel` banner, the 0×0 hidden links inside `.palette-button-inner`, and so on).
 
@@ -166,6 +166,10 @@ The three things:
 - **The home-page esports category**: the `match` category now also accepts the wordings 电竞 / 比赛 / 电竞赛事 / 赛事直播 alongside the 赛事 badge, and the esports live-room path `/blanc/` joined the link rule; `.floor-card-inner` joined the card list (esports promo cards now link to ordinary videos, so link-based discovery cannot find them), backed by the "walk up from the cover badge" discovery path.
 
 > For the record: the numbers between 1.5.0 and 1.5.7 all describe this same implementation (1.5.6 and 1.5.7 are identical in content, differing only in the number). The v1.5.6-beta / v1.5.7-beta releases were published by [@dacta-yzy](https://github.com/dacta-yzy); their additions — the danmaku list / player region protection (never collapsing a layer that holds the danmaku list during hide mode) and badge-driven discovery — are included here, and their credit stays in the contributors list below. That state is archived under `legacy/v1.5.7-beta/`.
+
+> **This version fixes a bug (still numbered 1.5.8)**: with "ads" enabled on the video page, **the site header got covered** — the 首页 / 番剧 / 直播 / 游戏中心 entries and the message, feed and favourites icons on the right must never be touched. The cause is that the header also carries promo slots (measured: `.ad-report.strip-ad.left-banner` lives in the header), so walking up to the "whole ad card" could take the header with it; and the old exclusion classes (`.default-entry`, `.nav-link`, `.channel-entry`) **no longer exist in the current header** (measured: `.bili-header__menu` / `.bili-header__bar` / `.left-entry__item` / `.channel-link` / `.nav-search`), so the exclusion never applied. The **header / navigation / login panel** is now an "absolutely untouchable" region: keywords, category switches, ad slots, badge discovery and the shell collapse **all have to pass that gate**, and the measured header class names were added. Four new regression cases (real header structure, a promo slot inside the header, a numeric `badge` element, and hide mode) bring the suite to **341 checks**.
+
+> **This version also cut the package size by 55%** (108.4 KB → **49.2 KB**): README / AGENTS are no longer shipped (about 97 KB of pure documentation, kept in full in the repository), and packaged copies drop comments, blank lines and leading indentation while the repository sources stay untouched (those comments are the measurement record). `tools/pack.mjs` makes packaging repeatable and **validates syntax at every step** — it caught two stripping mistakes on the spot (a block-comment continuation not starting with `*`, and a comment sharing a line with its function), which kept a broken build from ever being shipped.
 
 ### 1.5.7
 
