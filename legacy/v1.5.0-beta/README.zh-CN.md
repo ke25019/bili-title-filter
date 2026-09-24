@@ -4,9 +4,9 @@
 
 Manifest V3，Edge 和 Chrome 都能装，纯 JavaScript，没有运行时依赖。
 
-![version](https://img.shields.io/badge/version-1.5.1--beta-orange)
+![version](https://img.shields.io/badge/version-1.5.0--beta-orange)
 ![browser](https://img.shields.io/badge/Edge%20%7C%20Chrome-Chromium-00aeec)
-![tests](https://img.shields.io/badge/tests-294%20passed-brightgreen)
+![tests](https://img.shields.io/badge/tests-283%20passed-brightgreen)
 
 ---
 
@@ -124,7 +124,7 @@ npm install
 npm test
 ```
 
-一共 294 项校验，覆盖屏蔽逻辑、分区识别、两种隐藏行为、设置页交互和后台统计。
+一共 283 项校验，覆盖屏蔽逻辑、分区识别、两种隐藏行为、设置页交互和后台统计。
 
 测试里的模拟 DOM 和尺寸都是从真实页面上量出来的（`.floor-card-inner > .cover-container + .pb-16.px-12 > p.title` 这种工具类结构、`.vui_carousel` 包裹的轮播、`.palette-button-inner` 里 0×0 的隐藏链接等等）。
 
@@ -155,15 +155,10 @@ B 站是单页应用，滚动和切页会让卡片重新渲染，所以统计的
 
 按时间倒序。这里记的是每次改了什么、为什么改，包括我自己搞错的地方。
 
-### 1.5.1
-
-**播放页的广告终于能被屏蔽了**。反馈里说播放页的广告怎么屏蔽都还在，「广告」开关点了没反应，看着像是整页被放行了。查下来是这么回事：播放器里的贴片广告（`#slide_ad` > `.slide-ad` > `.van-slide-item-box` > `.ad-report-link` > `a.ad-report-inner`）和右栏那张广告卡（`.video-card-ad-small` > `.ad-report-inner` > `a.ad-report`）都不在已知的视频卡片类名里，而且广告**没有标题**，所以走不了「命中链接 + 标题 + 封面」的通用识别 —— 实测一个都收不上来，等于这两块从来没进过屏蔽流程，跟页面级开关没关系。现在这两类广告位按类名显式认出来（`AD_SLOT_SELECTOR`），并且直接判为「广告」，不再往链接上猜：广告卡片里常混着 `/topic-detail`、活动页之类的链接，按链接判定会被排在 `TYPES` 前面的「活动」抢走。嵌套的 `.ad-report-link` / `.ad-report-inner` 会被当成嵌套卡片跳过，只留最外层一块遮罩。
-
-顺带把「播放页会不会被当成 UP 主主页」写成回归用例了：页面级开关只看域名（`space.bilibili.com` / `search.bilibili.com`），播放页永远照关键词和分区开关办事。右栏那个 UP 主信息块（`.up-info-container`）不是卡片，也不会被「其他推广」抓走。
-
 ### 1.5.0
 
-**这一版是测试版**（这批改动原本做成了 1.4.2 正式版，但那个版本没有公开发布，最后改为以 1.5.0 测试版发出来）。
+**这一版是测试版**（这批改动原本发成了 1.4.2 正式版，已撤回，改以 1.5.0 测试版发布）。
+
 
 **修掉登录页被「其他推广」整块挡住的问题**（感谢 [@ziye081220](https://github.com/ziye081220) 反馈）。B 站的登录在 `passport.bilibili.com`，登录卡片里的链接正好命中「其他推广」的域名规则，于是整块登录面板被当成推广屏蔽掉。现在：登录页（`passport.bilibili.com`，以及路径里带 `login` 的页面）一律不屏蔽；`passport` 也从「其他推广」的域名规则里排除；`login` 相关区域加入了卡片扫描的排除名单。
 

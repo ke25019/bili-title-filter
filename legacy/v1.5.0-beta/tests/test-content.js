@@ -96,45 +96,6 @@ const HTML = `<!DOCTYPE html><html><head><style id="page-style">#swipeSlot{displ
       <p class="title">游戏中心推广</p>
     </div>
 
-    <!-- 播放页里的两块广告（DOM 照抄自反馈截图里的 Copy outerHTML）：
-         ① 播放器里的贴片广告
-            #slide_ad.slide-ad-exp > .slide-ad > .van-slide-item-box > .item > .ad-report-link > a.ad-report-inner
-         ② 右栏广告卡片
-            .video-card-ad-small > .ad-report-inner > a.ad-report > .ad-floor-cover-img
-         这两块既不在视频卡片类名里、又**没有标题**，以前走「命中链接 + 标题 + 封面」
-         的通用识别一条都收不上来 —— 「广告」开关点了完全没反应（v1.5.1 回归点）。 -->
-    <div id="slideAd" data-w="360" data-h="420">
-      <div id="slide_ad" class="slide-ad-exp" data-w="350" data-h="200">
-        <div class="slide-ad" data-w="350" data-h="200">
-          <div class="van-slide-item-box" data-w="350" data-h="200">
-            <div class="item" data-w="350" data-h="200">
-              <div class="ad-report-link" data-w="350" data-h="200">
-                <a class="ad-report-inner" target="_blank" data-loc-id="2628"
-                   href="//cm.bilibili.com/cm/api/fees/pc/sync/v2/cmd?a=1"><img src="slide-ad.jpg" alt="广告"></a>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <div class="video-card-ad-small" id="adRight" data-w="350" data-h="173">
-      <div class="ad-report-inner" data-w="350" data-h="173">
-        <a class="ad-report" target="_blank" href="//cm.bilibili.com/cm/api/fees/pc/sync/v2/cmd?b=2">
-          <div class="ad-floor-cover-img" data-w="350" data-h="173"><img src="ad-right.jpg" alt="广告"></div>
-        </a>
-      </div>
-    </div>
-
-    <!-- 播放页右栏的 UP 主信息块：它不是卡片，也不该被当成推广 -->
-    <div class="up-info-container" id="upInfo" data-w="350" data-h="120">
-      <div class="up-info--wrapper">
-        <a class="up-info--avatar" href="//space.bilibili.com/77777"><img src="avatar.jpg"></a>
-        <div class="up-info--top"><a class="up-info--name" href="//space.bilibili.com/77777">某UP主</a></div>
-        <div class="up-info--desc">这个人很神秘</div>
-      </div>
-    </div>
-
     <div class="container is-version8" id="feed-list" style="display:grid">
       <!-- 用户反馈的那张首页「分区推荐」卡片，DOM 原样照抄自 Copy outerHTML：
            封面链接里带着分区徽标 .badge > .floor-title（文案「番剧」），
@@ -672,50 +633,6 @@ async function main() {
   await pushSettings({ keywords: ['剧透'], blockOnSpace: false });
   check('切回首页后恢复屏蔽', blocked('c1'), $('c1').className);
   await pushSettings({ keywords: [], blockOnSearch: true, blockOnSpace: false });
-
-  console.log('\n[9c] 播放页广告位与 UP 主信息块（v1.5.1 回归点）');
-  // 反馈：播放页的广告怎么都屏蔽不掉。实测原因是这两块广告既不在视频卡片类名里、
-  // 又没有标题，通用识别一条都收不上来，所以「广告」开关对它们完全无效。
-  dom.reconfigure({ url: 'https://www.bilibili.com/video/BV1mW6tCfdTradk' });
-  // 顺带换掉屏蔽词：值没变的设置变更不会触发重扫，URL 换了必须靠这次变更重新扫一遍
-  await pushSettings({ mode: 'mask', keywords: ['不该命中的词'], whitelist: [], blockTypes: {}, matchUpName: false });
-  check('广告开关关着时，两块广告都不被屏蔽',
-    !blocked('slide_ad') && !blocked('adRight'), $('slide_ad').className + ' / ' + $('adRight').className);
-  check('UP 主信息块不会被当成卡片（播放页不会被判成 UP 主页）',
-    $('upInfo').dataset.bfCard !== '1' && !blocked('upInfo'), $('upInfo').className);
-
-  await pushSettings({ blockTypes: { ad: true } });
-  check('打开「广告」后，播放器贴片广告被屏蔽', blocked('slide_ad'), $('slide_ad').className);
-  check('打开「广告」后，右栏广告卡片被屏蔽', blocked('adRight'), $('adRight').className);
-  check('两块广告都判为 ad（不会被排在 TYPES 前面的「活动」抢走）',
-    $('slide_ad').dataset.bfType === 'ad' && $('adRight').dataset.bfType === 'ad',
-    $('slide_ad').dataset.bfType + '/' + $('adRight').dataset.bfType);
-  check('贴片广告只生成一块遮罩，文案按分区设置走',
-    $('slide_ad').querySelectorAll(':scope > .bf-mask').length === 1 &&
-    maskText($('slide_ad')).indexOf('广告') !== -1, maskText($('slide_ad')));
-  check('【关键】嵌套的 .ad-report-link / .ad-report-inner 不会变成第二张卡片重复遮蔽',
-    !$('slide_ad').querySelector('.ad-report-inner').classList.contains('bf-blocked') &&
-    !$('adRight').querySelector('.ad-report-inner').classList.contains('bf-blocked') &&
-    $('slide_ad').querySelectorAll('.bf-mask').length === 1);
-
-  await pushSettings({ blockTypes: {}, keywords: ['剧透'] });
-  check('【回归】播放页不受「UP 个人主页」开关影响，关键词照常屏蔽',
-    blocked('c1'), $('c1').className);
-
-  await pushSettings({ mode: 'hide', hideKeepSlot: true, blockTypes: { ad: true } });
-  check('完全隐藏（保留位置）时广告位只隐身、不改动布局',
-    $('slide_ad').classList.contains('bf-hide-slot') && !$('slide_ad').classList.contains('bf-hide'),
-    $('slide_ad').className);
-  await pushSettings({ mode: 'hide', hideKeepSlot: false });
-  check('完全隐藏（移除位置）时广告位整块收起',
-    $('slide_ad').classList.contains('bf-hide') && win.getComputedStyle($('slide_ad')).display === 'none',
-    $('slide_ad').className);
-
-  await pushSettings({ mode: 'mask', hideKeepSlot: true, blockTypes: { ad: false }, keywords: [] });
-  check('关掉「广告」后两块广告都恢复原状',
-    !blocked('slide_ad') && !blocked('adRight') && !$('slide_ad').querySelector('.bf-mask') &&
-    !$('adRight').querySelector('.bf-mask'), $('slide_ad').className + ' / ' + $('adRight').className);
-  dom.reconfigure({ url: 'https://www.bilibili.com/' });
 
   console.log('\n[10] 完全隐藏模式：收敛被顶上来填空的"空占位项"');
   // 遮蔽模式下不应动任何占位项（遮蔽保留占位，不会有东西被顶上来）

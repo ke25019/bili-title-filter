@@ -33,28 +33,6 @@
    * 页面选择器
    * ------------------------------------------------------------------ */
 
-  /**
-   * 广告位容器（实测于 2025 年播放页，结构照抄自 Copy outerHTML）：
-   *   - 播放器里的贴片广告：
-   *     #slide_ad.slide-ad-exp > .slide-ad > .van-slide-item-box > .item > .ad-report-link > a.ad-report-inner > img
-   *   - 右栏广告卡片：
-   *     .video-card-ad-small > .ad-report-inner > a.ad-report > .ad-floor-cover-img > img
-   *
-   * 为什么要单独列出来：这两块既不在下面那套视频卡片类名里，又**没有标题**，
-   * 所以走不了「命中链接 + 标题 + 封面」的通用识别 —— 实测一个都收不上来，
-   * 「广告」分区开关对它们完全无效（有人反馈过：播放页广告怎么都屏蔽不掉）。
-   * 收到最外层容器即可，里面嵌套的 .ad-report-link / .ad-report-inner 会被
-   * isNestedCard 当嵌套卡片跳过，不会重复生成遮罩。
-   */
-  var AD_SLOT_SELECTOR = [
-    '#slide_ad',
-    '.slide-ad-exp',
-    '.slide-ad',
-    '.video-card-ad-small',
-    '[class*="ad-report"]',
-    '[class*="ad-floor"]'
-  ].join(',');
-
   /** 视频 / 推广卡片容器（已知类名，实测于 2025 年 B 站首页 / 搜索页 / 播放页） */
   var CARD_SELECTOR = [
     '.bili-video-card',
@@ -80,8 +58,7 @@
     /* 注意：.floor-card / .floor-card-inner 是"楼层里的卡片"，其真实结构
        （实测）是 .floor-card-inner > 封面 + 标题，由通用识别用
        「命中链接 + 标题 + 封面」定位，因此不写死在这里。 */
-    '.anime-list-item',
-    AD_SLOT_SELECTOR
+    '.anime-list-item'
   ].join(',');
 
   /** 标题所在元素（按优先级排列） */
@@ -623,11 +600,6 @@
     return (el.textContent || '').replace(/\s+/g, '').trim();
   }
 
-  /** 这个容器本身是不是广告位（判据见 AD_SLOT_SELECTOR） */
-  function isAdSlot(el) {
-    return !!(el && el.matches && el.matches(AD_SLOT_SELECTOR));
-  }
-
   /**
    * 判定卡片属于哪个分区 / 类型。
    * 先看封面徽标（最可靠），认不出来再退回「链接 + class」判定；
@@ -635,11 +607,6 @@
    * 这样关掉某个分区开关时不会又被兜底规则抓回来。
    */
   function detectType(card) {
-    // 广告位容器的身份由类名直接确定，不再往下猜：
-    // 广告里常混着 /topic-detail、活动页之类的链接，按链接判定会被排在
-    // 「广告」前面的类型抢走（TYPES 里 activity 在 ad 之前），点「广告」开关就没反应。
-    if (isAdSlot(card)) return 'ad';
-
     var badge = getBadgeText(card);
     if (badge) {
       for (var b = 0; b < TYPES.length; b++) {

@@ -4,9 +4,9 @@ An extension I wrote for myself to filter Bilibili. Add a few keywords and the v
 
 Manifest V3, works in Edge and Chrome, plain JavaScript with no runtime dependencies.
 
-![version](https://img.shields.io/badge/version-1.5.1--beta-orange)
+![version](https://img.shields.io/badge/version-1.5.0--beta-orange)
 ![browser](https://img.shields.io/badge/Edge%20%7C%20Chrome-Chromium-00aeec)
-![tests](https://img.shields.io/badge/tests-294%20passed-brightgreen)
+![tests](https://img.shields.io/badge/tests-283%20passed-brightgreen)
 
 ---
 
@@ -124,7 +124,7 @@ npm install
 npm test
 ```
 
-294 checks covering the blocking logic, category detection, both hiding behaviours, the settings pages and the background stats.
+283 checks covering the blocking logic, category detection, both hiding behaviours, the settings pages and the background stats.
 
 The mock DOM and its sizes were measured on the real site (utility-class structures like `.floor-card-inner > .cover-container + .pb-16.px-12 > p.title`, the `.vui_carousel` banner, the 0×0 hidden links inside `.palette-button-inner`, and so on).
 
@@ -155,15 +155,10 @@ Bilibili is a single-page app, so scrolling and navigating re-render cards. The 
 
 Newest first. This is what changed and why — including the parts I got wrong.
 
-### 1.5.1
-
-**Ads on the video page can finally be blocked.** The report was that ads on the play page stayed no matter what, and the "ads" switch seemed to do nothing — as if the whole page had been exempted. What was actually happening: the in-player ad (`#slide_ad` > `.slide-ad` > `.van-slide-item-box` > `.ad-report-link` > `a.ad-report-inner`) and the right-column ad card (`.video-card-ad-small` > `.ad-report-inner` > `a.ad-report`) are not in the known video-card class list, and an ad has **no title**, so the generic "promo link + title + cover" detection rejected both — measured: not a single one was ever collected, so they never entered the blocking pipeline at all. It had nothing to do with the per-page switches. Both slots are now recognised by class (`AD_SLOT_SELECTOR`) and classified as "ads" outright instead of guessing from links: ad cards often carry `/topic-detail` or activity-page links, and link-based matching handed them to "activity", which sits earlier in `TYPES`. Nested `.ad-report-link` / `.ad-report-inner` elements are treated as nested cards and skipped, so only one mask is created.
-
-While I was in there, "could the play page be mistaken for an uploader's homepage?" became a regression test: the per-page switches only look at the host (`space.bilibili.com` / `search.bilibili.com`), so the play page always follows your keywords and category switches. The uploader info block on the right (`.up-info-container`) is not a card and is not caught by the "other promos" catch-all either.
-
 ### 1.5.0
 
-**This is a beta release** (the same changes were first put together as the stable 1.4.2, but that release was never published; they ship as 1.5.0-beta instead).
+**This is a beta release** (the same changes briefly went out as the stable 1.4.2; that release was withdrawn and they ship as 1.5.0-beta instead).
+
 
 **The login page is no longer blocked by the "other promos" rule** (thanks to [@ziye081220](https://github.com/ziye081220) for the report). Bilibili signs you in on `passport.bilibili.com`, and the links inside the login card matched the catch-all promo domain rule, so the whole login panel got masked as a promo. Now the login page (`passport.bilibili.com`, and any path containing `login`) is never blocked, `passport` is excluded from the catch-all domain rule, and login-related containers are excluded from card scanning.
 
