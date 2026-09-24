@@ -157,20 +157,9 @@ Newest first. This is what changed and why — including the parts I got wrong.
 
 ### 1.6.0
 
-**This release simply promotes the `v1.5.0-beta` code to stable** — the code is identical, only the version number differs (`manifest` now reads 1.6.0).
+**This release simply promotes the `v1.5.0-beta` code to stable**: the code is identical, only the version number in `manifest.json` reads 1.6.0 — nothing added, nothing changed.
 
-**It also announces that, due to technical limitations, support for blocking ads on the player page is cancelled.** The player's right-hand ad and the banner ad below the player that the 1.5.1–1.5.8 line tried to block will not ship — that implementation kept failing on real pages (masks covering only part of the ad, masks collapsing into a thin line, the danmaku list being dragged in, masks even landing on the site header, and finally trouble with the player's layout and page reloads). I judged it cannot be made reliable with the technical ability I have, and shipping a version that gets in the way is worse than not shipping it. Those releases (v1.5.1-beta through v1.5.8-beta) are marked "deprecated, unmaintained" on GitHub.
-
-So 1.6.0 is exactly the 1.5.0 feature set:
-
-- Block by title keyword (regex, case sensitivity, uploader matching)
-- Eighteen promo-category switches plus an "other promos" catch-all, and a separate switch for the home-page carousel banner
-- Two blocking styles: mask (reveals on hover) and hide (keeps the slot by default)
-- Uploader whitelist and per-page switches (search pages on by default, uploader pages off, login pages never blocked)
-- A draggable in-page panel, dark-mode support, Chinese and English locales
-
-> The change log and code of 1.5.1–1.5.8 remain in the entries below and in the `legacy/` snapshots. One thing to be clear about: **if you want ads on the player page blocked, 1.6.0 cannot do it** — that is exactly the capability being cancelled here.
-
+**It also announces that, due to technical limitations, support for blocking ads on the player page is cancelled.** The player's right-hand ad and the banner ad below the player that the 1.5.1–1.5.8 line tried to block will not ship — that implementation kept failing on real pages (masks covering only part of the ad, masks collapsing into a thin line, the danmaku list being dragged in, masks landing on the site header, and finally trouble with the player's layout and page reloads). Those releases (v1.5.1-beta through v1.5.8-beta) are marked "deprecated, unmaintained" on GitHub.
 ### 1.5.8
 
 **This release was rebuilt from the `v1.5.0-beta` code base**, and adds exactly three things on top of 1.5.0: blocking the player's right-hand ad, blocking the banner ad below the player, and blocking the esports category on the home page. That claim is verifiable: I went through the diff against 1.5.0 line by line — only 6 places in 1.5.0's existing code were touched, and every one of them is an interface those three features need (`.floor-card-inner` joined the card list, badge reading gained a fallback, the badge-exclusion test was loosened, `detectType` learned synonyms, `processCard` gained an "ad slot" parameter, and the restore path passes the same parameter). Everything else is added code. In other words, every 1.5.0 feature (keywords, 18 category switches, both hiding styles, the uploader whitelist, per-page switches, the in-page panel, dark mode) is intact and unchanged.
