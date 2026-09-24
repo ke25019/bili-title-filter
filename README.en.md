@@ -4,7 +4,7 @@ An extension I wrote for myself to filter Bilibili. Add a few keywords and the v
 
 Manifest V3, works in Edge and Chrome, plain JavaScript with no runtime dependencies.
 
-![version](https://img.shields.io/badge/version-1.5.7--beta-orange)
+![version](https://img.shields.io/badge/version-1.5.6--beta-orange)
 ![browser](https://img.shields.io/badge/Edge%20%7C%20Chrome-Chromium-00aeec)
 ![tests](https://img.shields.io/badge/tests-337%20passed-brightgreen)
 
@@ -155,9 +155,9 @@ Bilibili is a single-page app, so scrolling and navigating re-render cards. The 
 
 Newest first. This is what changed and why — including the parts I got wrong.
 
-### 1.5.7
+### 1.5.6
 
-**Two fixes from another 1.5.6 build were merged in, and the two things that build was missing are restored.** That build was based on 1.5.2 and solved two problems worth keeping:
+**Two fixes from a build someone else sent over (also numbered 1.5.6, based on 1.5.2) were merged in, and the two things that build was missing are restored.** That build was based on 1.5.2 and solved two problems worth keeping:
 
 - **Danmaku list / player region protection**: while collapsing "outer shells" in hide mode, a layer that holds the danmaku list or the player (measured: `#danmukuBox.danmaku-box`, `.video-pod-above-modules__inner`) is never collapsed upwards — the ad and the danmaku list are siblings under one parent, and without this rule hiding the ad hides the danmaku list with it.
 - **Badge-driven card discovery**: alongside "known class names" and "promo link signatures", a third discovery path walks up from the cover badge. Promo cards in home-page modules such as esports link to ordinary videos or activity pages and may use unrecognised class names, so only this path reaches them (it complements 1.5.5's approach of putting `.floor-card-inner` in the card list).
@@ -167,7 +167,7 @@ That build also dropped everything done after 1.5.2, which caused two visible pr
 - **The banner ad below the player was not blocked** (the brand creative inside `#slide_ad` and the activity banner `.inside-wrp`) — that build carried none of that code. It is restored against the measured markup: `#slide_ad.slide-ad-exp > .slide-gg > .van-slide.item-box > …`; for the activity banner both the image block `.inside-bg` and the wording line `.hinter-msg` must be present (Bilibili has renamed that wrapper, so there is a fallback for images served from `/bfs/activity-plat/`).
 - **The right-column ad's mask did not cover enough** — only the ad slot itself was covered, leaving the card's title, uploader name and the "block this promo" button visible. The mask now walks up to the **whole ad card**: it stops at the outermost element that still holds only that one ad, judged by having no other real card, no second ad slot (ancestors/descendants do not count, they belong to the same ad) and a size still on the scale of a card (≤600×640 — the player's own 1130-wide layer can therefore never be taken for an ad card). When the ad slot itself is an inline element (such as `<a class="ad-report">`), it is first resolved to a block-level host, otherwise the mask collapses into a thin line and the content underneath stays visible.
 
-- **The ad-shell collapse no longer crosses `.video-pod-above-modules`** (the regression fixed in this round): the 1.5.7 region protection only listed `.video-pod-above-modules__inner`, so when that layer holds no second ad slot (an ad that has not loaded yet, for instance) the collapse kept climbing to `.video-pod-above-modules` and took the whole layer holding the danmaku list with it. That collapse now shares the same "never an empty shell" list as the card collapse, and only panel-level danmaku class names are protected (`danmaku-list` / `danmaku-panel` / `danmaku-container`) — a single danmaku item (`danmaku-item`) can still be an ad card, because a promo danmaku inside the list has to be blockable on its own.
+- **The ad-shell collapse no longer crosses `.video-pod-above-modules`** (the regression fixed in this round): when first merged in, the region protection only listed `.video-pod-above-modules__inner`, so when that layer holds no second ad slot (an ad that has not loaded yet, for instance) the collapse kept climbing to `.video-pod-above-modules` and took the whole layer holding the danmaku list with it. That collapse now shares the same "never an empty shell" list as the card collapse, and only panel-level danmaku class names are protected (`danmaku-list` / `danmaku-panel` / `danmaku-container`) — a single danmaku item (`danmaku-item`) can still be an ad card, because a promo danmaku inside the list has to be blockable on its own.
 
 Also: an empty ad placeholder such as `#slide_ad` (holding only a comment) is no longer covered, so no notice box appears out of nowhere; and the fixed wait in the "stats loaded" test became polling, removing a flaky false failure.
 
@@ -358,7 +358,7 @@ First version: block by title keyword, two blocking styles, nine promo categorie
 
 ## Contributors
 
-- [@dacta-yzy](https://github.com/dacta-yzy) wrote the uploader whitelist and the home-page carousel banner blocking (v1.3.1 / v1.3.2), and reported and pushed on two families of breakage (the play-page ad sharing a parent with the danmaku list, and the esports card discovery; v1.5.6 / v1.5.7)
+- [@dacta-yzy](https://github.com/dacta-yzy) wrote the uploader whitelist and the home-page carousel banner blocking (v1.3.1 / v1.3.2), and reported and pushed on two families of breakage (the play-page ad sharing a parent with the danmaku list, and the esports card discovery; merged into v1.5.6)
 - [@ziye081220](https://github.com/ziye081220) reported the login page being blocked by the promo rule (fixed in 1.5.0)
 
 ---
