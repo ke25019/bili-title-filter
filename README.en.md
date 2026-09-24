@@ -342,6 +342,7 @@ First version: block by title keyword, two blocking styles, nine promo categorie
 
 ## Contributors
 
+- [@dacta-yzy](https://github.com/dacta-yzy) wrote the uploader whitelist and the home-page carousel banner blocking (v1.3.1 / v1.3.2)
 - [@ziye081220](https://github.com/ziye081220) reported the login page being blocked by the promo rule (fixed in 1.5.0)
 
 ---
