@@ -4,9 +4,9 @@
 
 Manifest V3，Edge 和 Chrome 都能装，纯 JavaScript，没有运行时依赖。
 
-![version](https://img.shields.io/badge/version-1.5.2--beta-orange)
+![version](https://img.shields.io/badge/version-1.5.1--beta-orange)
 ![browser](https://img.shields.io/badge/Edge%20%7C%20Chrome-Chromium-00aeec)
-![tests](https://img.shields.io/badge/tests-310%20passed-brightgreen)
+![tests](https://img.shields.io/badge/tests-294%20passed-brightgreen)
 
 ---
 
@@ -124,7 +124,7 @@ npm install
 npm test
 ```
 
-一共 310 项校验，覆盖屏蔽逻辑、分区识别、两种隐藏行为、设置页交互和后台统计。
+一共 294 项校验，覆盖屏蔽逻辑、分区识别、两种隐藏行为、设置页交互和后台统计。
 
 测试里的模拟 DOM 和尺寸都是从真实页面上量出来的（`.floor-card-inner > .cover-container + .pb-16.px-12 > p.title` 这种工具类结构、`.vui_carousel` 包裹的轮播、`.palette-button-inner` 里 0×0 的隐藏链接等等）。
 
@@ -154,14 +154,6 @@ B 站是单页应用，滚动和切页会让卡片重新渲染，所以统计的
 ## 更新记录
 
 按时间倒序。这里记的是每次改了什么、为什么改，包括我自己搞错的地方。
-
-### 1.5.2
-
-**右栏广告卡不再「只挡住一半」**。上一版把广告位本身遮住了，可卡片上的标题、UP 名和「广告」角标挂在外层容器上，于是那行字还露在页面上。根源是那层容器的类名不在任何已知列表里，写死类名必然会漏。现在的做法是**从广告位往上收**，收到「仍然只装着这一块广告」的最外层再动手，判据三条：这一层里没有别的卡片（有就说明到了推荐列表）、没有第二块广告位、尺寸还在卡片量级（宽 ≤ 600、高 ≤ 560）。第三条同时挡住了最坏情况 —— 播放器那层容器是 1130×640 起步，永远不会被当成广告卡。外壳的身份也不再靠「里面装着广告」去猜（那样整列推荐都可能被认成广告），而是认出来的时候明确标记。
-
-顺带修掉一个连带问题：广告位里的链接以前还会走「命中链接 + 标题 + 封面」的通用识别，而列表容器恰好同时有标题和封面，于是那块广告的链接会被一路猜到**整个列表容器**上，把整列推荐一起遮掉。现在广告位里的链接统一交给广告扫描处理，不再按链接往上猜。
-
-**播放器里的活动横幅广告**也归到「广告」这一项。实测结构是 `.inside-wrp > .left > .l-inside > .hinter-msg`（那行文案）与 `.right > .inside-bg.clickable > .b-img > img`（图片来自 `/bfs/activity-plat/static/`），文案和图片是分开的两个兄弟节点 —— 只按链接或只按图片识别都会漏掉一半。所以判据带上结构（必须同时有图片块和文案行），并且**整块一起屏蔽**：只挡右边图片的话，左边那行「开学季…」会留在页面上。类名 `.inside-wrp` 在 B 站多处活动位都在用，所以没写进卡片名单，避免误伤同名容器。
 
 ### 1.5.1
 

@@ -4,9 +4,9 @@ An extension I wrote for myself to filter Bilibili. Add a few keywords and the v
 
 Manifest V3, works in Edge and Chrome, plain JavaScript with no runtime dependencies.
 
-![version](https://img.shields.io/badge/version-1.5.2--beta-orange)
+![version](https://img.shields.io/badge/version-1.5.1--beta-orange)
 ![browser](https://img.shields.io/badge/Edge%20%7C%20Chrome-Chromium-00aeec)
-![tests](https://img.shields.io/badge/tests-310%20passed-brightgreen)
+![tests](https://img.shields.io/badge/tests-294%20passed-brightgreen)
 
 ---
 
@@ -124,7 +124,7 @@ npm install
 npm test
 ```
 
-310 checks covering the blocking logic, category detection, both hiding behaviours, the settings pages and the background stats.
+294 checks covering the blocking logic, category detection, both hiding behaviours, the settings pages and the background stats.
 
 The mock DOM and its sizes were measured on the real site (utility-class structures like `.floor-card-inner > .cover-container + .pb-16.px-12 > p.title`, the `.vui_carousel` banner, the 0×0 hidden links inside `.palette-button-inner`, and so on).
 
@@ -154,14 +154,6 @@ Bilibili is a single-page app, so scrolling and navigating re-render cards. The 
 ## Changelog
 
 Newest first. This is what changed and why — including the parts I got wrong.
-
-### 1.5.2
-
-**The right-column ad card is no longer only half covered.** The previous version covered the ad slot itself, but the card's title, uploader name and "ad" badge hang off an outer wrapper, so that line of text stayed on the page. The root cause: that wrapper's class name is not in any known list, and hardcoding class names is guaranteed to miss cases. The fix walks **up from the ad slot** until it reaches the outermost element that still holds only that one ad, with three conditions: no other card inside (that would mean we reached the recommendation list), no second ad slot inside, and a size still on the scale of a card (width ≤ 600, height ≤ 560). The third condition also rules out the worst case — the player's own container starts at 1130×640, so it can never be mistaken for an ad card. The wrapper's identity is no longer guessed from "it contains an ad" (which could have swallowed an entire recommendation column) but explicitly marked when it is recognised.
-
-A knock-on bug went with it: links inside an ad slot used to go through the generic "promo link + title + cover" detection, and the list container happens to have both a title and a cover, so that ad's link was resolved all the way up to **the whole list container** and covered the entire recommendation column. Links inside ad slots are now handled by the ad scan only, and never resolved upwards by link.
-
-**The in-player activity banner ad** is now part of the "ads" switch too. Its measured structure is `.inside-wrp > .left > .l-inside > .hinter-msg` (the wording) plus `.right > .inside-bg.clickable > .b-img > img` (image served from `/bfs/activity-plat/static/`), and those are two separate sibling nodes — matching by link or by image alone misses half of it. The rule therefore looks at structure (the image block *and* the wording line must both be present) and covers **the whole banner**: covering only the image on the right would leave the "back to school…" line sitting on the page. The class `.inside-wrp` is used by several activity slots across Bilibili, so it was not added to the card list, to avoid hitting same-named containers.
 
 ### 1.5.1
 

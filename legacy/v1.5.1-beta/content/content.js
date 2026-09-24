@@ -43,10 +43,8 @@
    * 为什么要单独列出来：这两块既不在下面那套视频卡片类名里，又**没有标题**，
    * 所以走不了「命中链接 + 标题 + 封面」的通用识别 —— 实测一个都收不上来，
    * 「广告」分区开关对它们完全无效（有人反馈过：播放页广告怎么都屏蔽不掉）。
-   * 注意这里**不并入 CARD_SELECTOR**：广告位本身往往只装着图片，
-   * 而卡片上的标题、UP 名、「广告」角标挂在外层容器上，只遮广告位等于没遮干净
-   * （反馈原文：只有一部分被挡住）。所以广告位统一走 scanAdSlots()，
-   * 由 adSlotTarget() 先把它收到「整卡外壳」再处理。
+   * 收到最外层容器即可，里面嵌套的 .ad-report-link / .ad-report-inner 会被
+   * isNestedCard 当嵌套卡片跳过，不会重复生成遮罩。
    */
   var AD_SLOT_SELECTOR = [
     '#slide_ad',
@@ -56,15 +54,6 @@
     '[class*="ad-report"]',
     '[class*="ad-floor"]'
   ].join(',');
-
-  /**
-   * 「整卡外壳」的尺寸上限：广告位往上收的时候，超过这个尺寸就停。
-   * 取 600×560 的依据：右栏广告卡实测 350 宽、连标题一起约 250 高；
-   * 而播放器那层的容器是 1130×640 起步 —— 宽度这条上限本身就挡住了
-   * "把整个播放器当成广告卡遮掉"这种最坏情况。
-   */
-  var AD_FRAME_MAX_W = 600;
-  var AD_FRAME_MAX_H = 560;
 
   /** 视频 / 推广卡片容器（已知类名，实测于 2025 年 B 站首页 / 搜索页 / 播放页） */
   var CARD_SELECTOR = [
@@ -91,7 +80,8 @@
     /* 注意：.floor-card / .floor-card-inner 是"楼层里的卡片"，其真实结构
        （实测）是 .floor-card-inner > 封面 + 标题，由通用识别用
        「命中链接 + 标题 + 封面」定位，因此不写死在这里。 */
-    '.anime-list-item'
+    '.anime-list-item',
+    AD_SLOT_SELECTOR
   ].join(',');
 
   /** 标题所在元素（按优先级排列） */
@@ -633,108 +623,9 @@
     return (el.textContent || '').replace(/\s+/g, '').trim();
   }
 
-  /** 这个容器本身是不是广告位（判据见 AD_SLOT_SELECTOR 与下方 PLAYER_BANNER_INNER_SELECTOR） */
+  /** 这个容器本身是不是广告位（判据见 AD_SLOT_SELECTOR） */
   function isAdSlot(el) {
-    if (!el || !el.matches) return false;
-    if (el.matches(AD_SLOT_SELECTOR)) return true;
-    if (isPlayerBannerHost(el)) return true;
-    // 「整卡外壳」的身份由 scanAdSlots 在认出来的时候明确标上（bfAdFrame）。
-    // 不写成"里面装着广告位就算" —— 那样整个推荐流、整个播放器都可能被认成广告卡。
-    return el.dataset ? el.dataset.bfAdFrame === '1' : false;
-  }
-
-  /** 量到的尺寸是不是"一张卡片"的量级（拿不到尺寸时一律按否处理） */
-  function isCardSizedBox(el, maxW, maxH) {
-    var r = el.getBoundingClientRect ? el.getBoundingClientRect() : null;
-    if (!r || !r.width || !r.height) return false;
-    return r.width <= maxW && r.height <= maxH;
-  }
-
-  /**
-   * 广告位的"整卡外壳"。
-   *
-   * 反馈：右栏广告卡只挡住了一部分 —— 图片那块被遮住了，卡片下方的标题、
-   * UP 名和「广告」角标还露在页面上。原因是这些文字挂在外层容器上，
-   * 而那个外层容器的类名不在任何已知列表里（写死类名必然漏）。
-   * 这里的做法是从广告位向上收，收到"仍然只装着这一块广告"的最外层：
-   *   ① 这一层里不能再有别的卡片（有 → 到了列表容器，停）
-   *   ② 这一层里不能再有第二块广告（有 → 一遮就是一片，停）
-   *   ③ 尺寸必须还在卡片量级（宽 ≤ 600 / 高 ≤ 400）→ 播放器那层自然被挡住
-   *   ④ 最多向上 3 层
-   */
-  function findAdCardFrame(slot) {
-    var frame = slot;
-    var cur = slot.parentElement;
-    for (var i = 0; cur && cur !== document.body && cur !== document.documentElement && i < 3; i++) {
-      if (!isAdFrameCandidate(cur, slot)) break;
-      frame = cur;
-      cur = cur.parentElement;
-    }
-    return frame;
-  }
-
-  function isAdFrameCandidate(box, slot) {
-    if (!box.querySelectorAll) return false;
-    if (isPlayerBannerHost(box) || (box.matches && box.matches(PLAYER_BANNER_INNER_SELECTOR))) return false;
-
-    // ① 别的卡片
-    var cards = box.querySelectorAll(CARD_SELECTOR);
-    for (var i = 0; i < cards.length; i++) {
-      if (slot.contains(cards[i])) continue;   // 广告位自己（含它的后代）
-      return false;
-    }
-    // ② 别的广告位
-    var ads = box.querySelectorAll(AD_SLOT_SELECTOR);
-    for (var j = 0; j < ads.length; j++) {
-      if (slot.contains(ads[j])) continue;
-      return false;
-    }
-    // ③ 尺寸
-    return isCardSizedBox(box, AD_FRAME_MAX_W, AD_FRAME_MAX_H);
-  }
-
-  /**
-   * 播放器里的活动横幅（实测结构，来自使用者贴的 Copy outerHTML）：
-   *   .inside-wrp > .left  > .l-inside > .hinter-msg
-   *                                              ↑ 文案「开学季，把兴趣玩出名堂！」
-   *                > .right > .inside-bg.clickable > .b-img > img
-   *                                              ↑ src 形如
-   *                              //i2.hdslb.com/bfs/activity-plat/static/…/xxx.jpg@640w_200h_!web-video-activity-cover.avif
-   *
-   * 为什么不把 .inside-wrp 直接写进 CARD_SELECTOR：这个类名太通用（B 站多处活动位都在用），
-   * 写死会让别的页面上的同名容器也被当成卡片。所以判据带上结构：
-   * 必须以「图片块 .inside-bg」为入口，再回到同时含 .hinter-msg 的 .inside-wrp 上，
-   * 整块一起处理 —— 只藏右边图片的话，左边那行文案会留在页面上（等于没屏蔽干净）。
-   */
-  var PLAYER_BANNER_INNER_SELECTOR = '.inside-wrp > .right > .inside-bg';
-
-  /** 从横幅的图片块回到整块横幅容器（.inside-wrp），并确认它确实是这块横幅 */
-  function playerBannerHostOf(el) {
-    if (!el || !el.closest) return null;
-    var host = el.closest('.inside-wrp');
-    if (!host) return null;
-    if (!host.querySelector('.hinter-msg')) return null;   // 没有那行文案 → 不是这块横幅
-    return host;
-  }
-
-  function isPlayerBannerHost(el) {
-    if (!el || !el.matches || !el.matches('.inside-wrp')) return false;
-    return !!el.querySelector('.inside-bg') && !!el.querySelector('.hinter-msg');
-  }
-
-  /**
-   * 一个广告位应该处理哪一块：
-   *   - 播放器活动横幅的图片块 → 整块横幅（.inside-wrp）
-   *   - 其它广告位 → 它的"整卡外壳"（见 findAdCardFrame）
-   */
-  function adSlotTarget(el) {
-    if (!el || !el.matches) return null;
-    var banner = playerBannerHostOf(el);
-    if (banner) return banner;
-    if (el.matches(PLAYER_BANNER_INNER_SELECTOR)) return null;
-    if (el.matches('.inside-wrp')) return isPlayerBannerHost(el) ? el : null;
-    if (!el.matches(AD_SLOT_SELECTOR)) return null;
-    return findAdCardFrame(el);
+    return !!(el && el.matches && el.matches(AD_SLOT_SELECTOR));
   }
 
   /**
@@ -1343,9 +1234,6 @@
     for (var i = 0; i < anchors.length && handled < 300; i++) {
       var a = anchors[i];
       if (isExcludedAnchor(a)) continue;
-      // 广告位里的链接交给 scanAdSlots 处理；这里若还按链接往上猜，
-      // 会因为"列表容器里恰好有标题和封面"而一路猜到列表容器上，把整列推荐一起遮掉
-      if (a.closest && a.closest(AD_SLOT_SELECTOR)) continue;
       if (a.closest && a.closest(BANNER_EXCLUDE)) continue;   // 横幅交给板块级开关
       var href = a.getAttribute('href') || '';
       var hit = null;
@@ -1365,38 +1253,9 @@
     }
   }
 
-  /**
-   * 广告扫描：广告位既不在 CARD_SELECTOR 里、又常常把标题挂在外面，
-   * 所以单独一趟，统一先收成"要处理的那一块"（见 adSlotTarget）再交给 processCard。
-   *
-   * 收出来的块同样记进 trackedCards：它们不是 CARD_SELECTOR 匹配到的卡片，
-   * 关掉「广告」开关时要靠这份记录恢复原状。
-   */
-  function scanAdSlots() {
-    if (!settings.enabled) return;
-    var hasKeywords = !!(settings.keywords && settings.keywords.length);
-    if (!(settings.blockTypes && settings.blockTypes.ad) && !hasKeywords) return;   // 没开广告开关、也没屏蔽词 → 不用扫
-
-    var nodes = document.querySelectorAll(AD_SLOT_SELECTOR + ',' + PLAYER_BANNER_INNER_SELECTOR);
-    var seen = [];
-    for (var i = 0; i < nodes.length; i++) {
-      var slot = nodes[i];
-      var target = adSlotTarget(slot);
-      if (!target) continue;
-      // 外壳的身份明确标出来（见 isAdSlot）：光看类名认不出来，也不能靠"里面装着广告"来猜
-      if (target !== slot && target.dataset) target.dataset.bfAdFrame = '1';
-      if (seen.indexOf(target) !== -1) continue;   // 嵌套的广告位会收敛到同一块，只处理一次
-      seen.push(target);
-      trackedCards.add(target);
-      if (target.dataset.bfState === 'blocked') continue;   // 已屏蔽，跳过
-      processCard(target);
-    }
-  }
-
   function scanAll(force) {
     fullScan(force);
     scanTypedCards();
-    scanAdSlots();
 
     // 设置变更时，把通用识别找到过的卡片也重新判定一遍（否则关掉开关后无法恢复）
     if (force && trackedCards.size) {
@@ -1466,9 +1325,6 @@
       return;
     }
     if (node.querySelector && node.querySelector(CARD_SELECTOR)) pendingFullScan = true;
-    // 广告位与播放器活动横幅都是懒加载进来的，也不在 CARD_SELECTOR 里，同样要能被发现
-    else if (node.querySelector && node.querySelector(AD_SLOT_SELECTOR)) pendingFullScan = true;
-    else if (node.querySelector && node.querySelector(PLAYER_BANNER_INNER_SELECTOR)) pendingFullScan = true;
     // 懒加载进来的推广卡片（.floor-card-inner 这类）不在 CARD_SELECTOR 里，
     // 只能靠"里面有没有分区链接"来发现，否则要等到用户滚动才会被扫到
     else if (containsTypedAnchor(node)) pendingFullScan = true;

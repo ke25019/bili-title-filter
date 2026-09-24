@@ -103,7 +103,7 @@ const HTML = `<!DOCTYPE html><html><head><style id="page-style">#swipeSlot{displ
             .video-card-ad-small > .ad-report-inner > a.ad-report > .ad-floor-cover-img
          这两块既不在视频卡片类名里、又**没有标题**，以前走「命中链接 + 标题 + 封面」
          的通用识别一条都收不上来 —— 「广告」开关点了完全没反应（v1.5.1 回归点）。 -->
-    <div id="slideAd" data-w="1130" data-h="640">
+    <div id="slideAd" data-w="360" data-h="420">
       <div id="slide_ad" class="slide-ad-exp" data-w="350" data-h="200">
         <div class="slide-ad" data-w="350" data-h="200">
           <div class="van-slide-item-box" data-w="350" data-h="200">
@@ -126,68 +126,12 @@ const HTML = `<!DOCTYPE html><html><head><style id="page-style">#swipeSlot{displ
       </div>
     </div>
 
-    <!-- 右栏广告卡的完整形态（反馈：「只有一部分被挡住」）：
-         广告位 .video-card-ad-small 里只有图片，卡片的标题 / UP 名 / 「广告」角标
-         挂在外层容器（这里叫 .ad-card-wrapper，真实类名不在任何已知列表里）上。
-         只遮广告位的话，下面那行文字会留在页面上 —— v1.5.2 回归点。 -->
-    <div class="ad-card-wrapper" id="adWrap" data-w="350" data-h="250">
-      <div class="video-card-ad-small" id="adRight2" data-w="350" data-h="173">
-        <div class="ad-report-inner" data-w="350" data-h="173">
-          <a class="ad-report" target="_blank" href="//cm.bilibili.com/cm/api/fees/pc/sync/v2/cmd?c=3">
-            <div class="ad-floor-cover-img" data-w="350" data-h="173"><img src="ad-right2.jpg" alt="广告"></div>
-          </a>
-        </div>
-      </div>
-      <div class="info" data-w="350" data-h="77">
-        <p class="title" title="开学季品牌推广">开学季品牌推广</p>
-        <a class="upname" href="//www.bilibili.com/blackboard/activity-ad.html">广告主</a>
-      </div>
-    </div>
-
-    <!-- 广告和真实卡片同处一个列表容器 → 绝不能被"整卡外壳"的收敛一起遮掉 -->
-    <div class="recommend-list" id="adList" data-w="350" data-h="400">
-      <div class="video-card-ad-small" id="adRight3" data-w="350" data-h="173">
-        <div class="ad-report-inner" data-w="350" data-h="173">
-          <a class="ad-report" href="//cm.bilibili.com/cm/api/fees/pc/sync/v2/cmd?d=4"><img src="ad3.jpg"></a>
-        </div>
-      </div>
-      <div class="video-page-card-small" id="adListCard" data-w="350" data-h="100">
-        <div class="info"><p class="title" title="列表里的正常视频">列表里的正常视频</p></div>
-      </div>
-    </div>
-
     <!-- 播放页右栏的 UP 主信息块：它不是卡片，也不该被当成推广 -->
     <div class="up-info-container" id="upInfo" data-w="350" data-h="120">
       <div class="up-info--wrapper">
         <a class="up-info--avatar" href="//space.bilibili.com/77777"><img src="avatar.jpg"></a>
         <div class="up-info--top"><a class="up-info--name" href="//space.bilibili.com/77777">某UP主</a></div>
         <div class="up-info--desc">这个人很神秘</div>
-      </div>
-    </div>
-
-    <!-- 播放器页里的活动横幅（DOM 照抄自反馈者贴的 Copy outerHTML）：
-         .inside-wrp > .left > .l-inside > .hinter-msg（文案）
-                      + .right > .inside-bg.clickable > .b-img > img
-         要点：① .inside-wrp 这个类名很通用，判据必须带结构（有图片块 + 有文案行）；
-               ② 必须整块屏蔽 —— 只挡右边图片的话，左边那行文案会留在页面上。 -->
-    <div class="inside-wrp" id="playerBanner" data-w="800" data-h="100">
-      <div class="left">
-        <div class="l-inside">
-          <div class="hinter-msg"><b>开学季，把兴趣玩出名堂！</b></div>
-        </div>
-      </div>
-      <div class="right">
-        <div title="开学季，把兴趣玩出名堂！" class="inside-bg clickable" data-w="640" data-h="100">
-          <div class="b-img"><img class="b-img__inner" loading="lazy" alt="开学季，把兴趣玩出名堂！"
-            src="//i2.hdslb.com/bfs/activity-plat/static/12102/12106/d41d8cd98f00b204e9800998ecf8427e/zOPPUfV0MS.jpg@640w_200h_!web-video-activity-cover.avif"></div>
-        </div>
-      </div>
-    </div>
-
-    <!-- 同名类名、结构不同的容器（B 站多处活动位都在用 .inside-wrp）→ 绝不能被误伤 -->
-    <div class="inside-wrp" id="otherInsideWrp" data-w="800" data-h="100">
-      <div class="right">
-        <div class="inside-bg" data-w="800" data-h="100"><div class="b-img"><img src="other.jpg"></div></div>
       </div>
     </div>
 
@@ -772,62 +716,6 @@ async function main() {
     !blocked('slide_ad') && !blocked('adRight') && !$('slide_ad').querySelector('.bf-mask') &&
     !$('adRight').querySelector('.bf-mask'), $('slide_ad').className + ' / ' + $('adRight').className);
   dom.reconfigure({ url: 'https://www.bilibili.com/' });
-
-  console.log('\n[9d] 右栏广告卡的"整卡外壳"（v1.5.2 回归点）');
-  // 反馈原文：右栏广告「只有一部分被挡住」—— 图片那块遮住了，
-  // 卡片下方的标题 / UP 名 / 「广告」角标还露在外面（这些挂在外层容器上）。
-  check('广告开关关着时，广告卡与外壳都不被屏蔽',
-    !blocked('adWrap') && !blocked('adRight2'), $('adWrap').className + ' / ' + $('adRight2').className);
-
-  await pushSettings({ blockTypes: { ad: true } });
-  check('【关键】遮住的是整卡外壳，不是只遮里面那块图片',
-    blocked('adWrap') && $('adWrap').dataset.bfType === 'ad', $('adWrap').className + ' / ' + $('adWrap').dataset.bfType);
-  check('【关键】外壳被遮住后，里面的广告位不再重复生成第二块遮罩',
-    !blocked('adRight2') && $('adWrap').querySelectorAll('.bf-mask').length === 1 &&
-    !$('adRight2').querySelector(':scope > .bf-mask'), $('adRight2').className);
-  check('卡片下方的标题与 UP 名都在被遮住的那一块里面（不会再露出来）',
-    !!$('adWrap').querySelector('.info .title') && !!$('adWrap').querySelector('.info .upname'));
-  check('【安全阀】广告和真实卡片同处一个列表时，只遮广告、不越过列表容器',
-    !blocked('adList') && !blocked('adListCard') && !$('adList').classList.contains('bf-hide'),
-    $('adList').className + ' / ' + $('adListCard').className);
-  check('【安全阀】播放器那层容器（1130×640）不会被当成"整卡外壳"收进来',
-    $('slide_ad').classList.contains('bf-blocked') && !blocked('slideAd') &&
-    !$('slideAd').querySelector(':scope > .bf-mask'), $('slideAd').className);
-
-  await pushSettings({ mode: 'mask', hideKeepSlot: true, blockTypes: { ad: false } });
-  check('关掉「广告」后外壳与广告位都恢复原状',
-    !blocked('adWrap') && !blocked('adRight2') && !blocked('adRight3') && !$('adWrap').querySelector('.bf-mask'),
-    $('adWrap').className + ' / ' + $('adRight2').className);
-
-  console.log('\n[9e] 播放器里的活动横幅（v1.5.2 回归点）');
-  // 这块横幅不属于任何已知视频卡片类名，而且图片块与文案块是分开的两个兄弟节点，
-  // 只按链接或只按图片识别都会漏掉一半（反馈：横幅广告屏蔽不掉）。
-  check('广告开关关着时，横幅不被屏蔽',
-    !blocked('playerBanner') && !$('playerBanner').querySelector('.bf-mask'), $('playerBanner').className);
-  check('同名类名但结构不同（没有文案行）的 .inside-wrp 不会被误伤',
-    $('otherInsideWrp').dataset.bfCard !== '1' && !blocked('otherInsideWrp'), $('otherInsideWrp').className);
-
-  await pushSettings({ blockTypes: { ad: true } });
-  check('打开「广告」后整块横幅被屏蔽（左边文案区 + 右边图片区一起）',
-    blocked('playerBanner'), $('playerBanner').className);
-  check('横幅判为 ad 类型', $('playerBanner').dataset.bfType === 'ad', $('playerBanner').dataset.bfType);
-  check('横幅只生成一块遮罩，文案按分区设置走',
-    $('playerBanner').querySelectorAll('.bf-mask').length === 1 &&
-    maskText($('playerBanner')).indexOf('广告') !== -1, maskText($('playerBanner')));
-  check('【关键】横幅内部的文案块与图片块不会被各自当成一张卡片重复处理',
-    !$('playerBanner').querySelector('.inside-bg').classList.contains('bf-blocked') &&
-    !$('playerBanner').querySelector('.hinter-msg').classList.contains('bf-blocked'));
-  check('横幅旁边的同名容器依然没被牵连', !blocked('otherInsideWrp'));
-
-  await pushSettings({ mode: 'hide', hideKeepSlot: false });
-  check('完全隐藏模式下横幅整块收起',
-    $('playerBanner').classList.contains('bf-hide') &&
-    win.getComputedStyle($('playerBanner')).display === 'none', $('playerBanner').className);
-
-  await pushSettings({ mode: 'mask', hideKeepSlot: true, blockTypes: { ad: false } });
-  check('关掉「广告」后横幅恢复原状（遮罩被移除、隐藏类被撤掉）',
-    !blocked('playerBanner') && !$('playerBanner').querySelector('.bf-mask') &&
-    !$('playerBanner').classList.contains('bf-hide'), $('playerBanner').className);
 
   console.log('\n[10] 完全隐藏模式：收敛被顶上来填空的"空占位项"');
   // 遮蔽模式下不应动任何占位项（遮蔽保留占位，不会有东西被顶上来）
