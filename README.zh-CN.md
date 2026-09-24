@@ -4,7 +4,7 @@
 
 Manifest V3，Edge 和 Chrome 都能装，纯 JavaScript，没有运行时依赖。
 
-![version](https://img.shields.io/badge/version-1.5.6--beta-orange)
+![version](https://img.shields.io/badge/version-1.5.7--beta-orange)
 ![browser](https://img.shields.io/badge/Edge%20%7C%20Chrome-Chromium-00aeec)
 ![tests](https://img.shields.io/badge/tests-337%20passed-brightgreen)
 
@@ -155,7 +155,7 @@ B 站是单页应用，滚动和切页会让卡片重新渲染，所以统计的
 
 按时间倒序。这里记的是每次改了什么、为什么改，包括我自己搞错的地方。
 
-### 1.5.6
+### 1.5.7
 
 **把另一份 1.5.6 构建里的两处修复并了进来，补上那份构建缺的两块。** 那份构建基于 1.5.2，自己解决了两件事，值得保留：
 
