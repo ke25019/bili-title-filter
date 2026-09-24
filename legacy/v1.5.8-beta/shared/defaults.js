@@ -126,8 +126,15 @@
       key: 'match',
       label: '赛事',
       badge: '赛事',
-      desc: '赛事、电竞赛程与直播预约推广（/match/、/esports/）',
-      href: /\/match\/|\/\/match\.bilibili\.com|\/esports\//,
+      /**
+       * 同一类内容 B 站会换着叫：徽标文案在「赛事 / 电竞 / 比赛」之间变过，
+       * 只认一个词就会出现「点了赛事开关没反应」（反馈过两次）。
+       * 这里把同义写法都列进来，任一个命中都算这一类。
+       */
+      badges: ['电竞', '比赛', '电竞赛事', '赛事直播'],
+      desc: '赛事、电竞赛程与直播预约推广（/match/、/esports/、电竞直播间 /blanc/）',
+      /* /blanc/ 是 B 站电竞（赛事）直播间的路径，实测形如 live.bilibili.com/blanc/<房间号> */
+      href: /\/match\/|\/\/match\.bilibili\.com|\/esports\/|\/blanc\//,
       cls: /\bmatch-card\b|\besports-card\b/i
     },
     {

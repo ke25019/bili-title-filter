@@ -96,6 +96,131 @@ const HTML = `<!DOCTYPE html><html><head><style id="page-style">#swipeSlot{displ
       <p class="title">游戏中心推广</p>
     </div>
 
+    <!-- 播放页里的广告（DOM 逐字照抄自使用者贴的 Copy outerHTML）：
+         ① 播放器区里的贴片广告（"gg" = 广告，B 站自己就是这么命名的）：
+            #slide_ad.slide-ad-exp > .slide-gg > .van-slide.item-box > .item
+              > .ad-report.link > a.ad-report-inner > img
+              + img.gg-pic（广告角标） + .close-btn > i.van-icon-guanbi
+         ② 右栏广告卡片（结构来自反馈截图里的 DOM 树）：
+            .video-card-ad-small > .ad-report-inner > a.ad-report > .ad-floor-cover-img
+         这两块既不在视频卡片类名里、又**没有标题**，以前走「命中链接 + 标题 + 封面」
+         的通用识别一条都收不上来 —— 「广告」开关点了完全没反应（v1.5.1 回归点）。 -->
+    <div id="slideAd" data-w="1130" data-h="640">
+      <div id="slide_ad" class="slide-ad-exp" data-w="350" data-h="200">
+        <div class="slide-gg" data-w="350" data-h="200">
+          <div class="van-slide item-box" style="width:350px;height:200px" data-w="350" data-h="200">
+            <div class="item" data-w="350" data-h="200">
+              <div class="ad-report link" data-w="350" data-h="200">
+                <a class="ad-report-inner" target="_blank" data-loc-id="2628"
+                   data-target-url="https://m.bilibili.com/topic-detail?topic_id=1345970"
+                   href="//cm.bilibili.com/cm/api/fees/pc/sync/v2?msg=a%7C2628%2Cb%7Cbilibili&amp;ts=1790254590091&amp;spm_id_from=333.788.right_bottom.adfloor-2624.click"><img
+                   src="https://i0.hdslb.com/bfs/sycp_brand/creative_img/202609/10a77ec6b0a57946a99c1416d472b7f0.jpg" alt=""></a>
+              </div>
+              <img alt="" src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAEwAAAAsCAYAAAB+7w==" class="gg-pic">
+            </div>
+          </div>
+        </div>
+        <div class="close-btn"><i class="van-icon-guanbi"></i></div>
+      </div>
+    </div>
+
+    <div class="video-card-ad-small" id="adRight" data-w="350" data-h="173">
+      <div class="ad-report-inner" data-w="350" data-h="173">
+        <a class="ad-report" target="_blank" href="//cm.bilibili.com/cm/api/fees/pc/sync/v2/cmd?b=2">
+          <div class="ad-floor-cover-img" data-w="350" data-h="173"><img src="ad-right.jpg" alt="广告"></div>
+        </a>
+      </div>
+    </div>
+
+    <!-- 右栏广告卡的完整形态（反馈：「只有一部分被挡住」）：
+         广告位 .video-card-ad-small 里只有图片，卡片的标题 / UP 名 / 「广告」角标
+         挂在外层容器（这里叫 .ad-card-wrapper，真实类名不在任何已知列表里）上。
+         只遮广告位的话，下面那行文字会留在页面上 —— v1.5.2 回归点。 -->
+    <div class="ad-card-wrapper" id="adWrap" data-w="350" data-h="250">
+      <div class="video-card-ad-small" id="adRight2" data-w="350" data-h="173">
+        <div class="ad-report-inner" data-w="350" data-h="173">
+          <a class="ad-report" target="_blank" href="//cm.bilibili.com/cm/api/fees/pc/sync/v2/cmd?c=3">
+            <div class="ad-floor-cover-img" data-w="350" data-h="173"><img src="ad-right2.jpg" alt="广告"></div>
+          </a>
+        </div>
+      </div>
+      <div class="info" data-w="350" data-h="77">
+        <p class="title" title="开学季品牌推广">开学季品牌推广</p>
+        <a class="upname" href="//www.bilibili.com/blackboard/activity-ad.html">广告主</a>
+      </div>
+    </div>
+
+    <!-- 广告和真实卡片同处一个列表容器 → 绝不能被"整卡外壳"的收敛一起遮掉 -->
+    <div class="recommend-list" id="adList" data-w="350" data-h="400">
+      <div class="video-card-ad-small" id="adRight3" data-w="350" data-h="173">
+        <div class="ad-report-inner" data-w="350" data-h="173">
+          <a class="ad-report" href="//cm.bilibili.com/cm/api/fees/pc/sync/v2/cmd?d=4"><img src="ad3.jpg"></a>
+        </div>
+      </div>
+      <div class="video-page-card-small" id="adListCard" data-w="350" data-h="100">
+        <div class="info"><p class="title" title="列表里的正常视频">列表里的正常视频</p></div>
+      </div>
+    </div>
+
+    <!-- 播放页右栏的 UP 主信息块：它不是卡片，也不该被当成推广 -->
+    <div class="up-info-container" id="upInfo" data-w="350" data-h="120">
+      <div class="up-info--wrapper">
+        <a class="up-info--avatar" href="//space.bilibili.com/77777"><img src="avatar.jpg"></a>
+        <div class="up-info--top"><a class="up-info--name" href="//space.bilibili.com/77777">某UP主</a></div>
+        <div class="up-info--desc">这个人很神秘</div>
+      </div>
+    </div>
+
+    <!-- 播放器页里的活动横幅（DOM 照抄自反馈者贴的 Copy outerHTML）：
+         .inside-wrp > .left > .l-inside > .hinter-msg（文案）
+                      + .right > .inside-bg.clickable > .b-img > img
+         要点：① .inside-wrp 这个类名很通用，判据必须带结构（有图片块 + 有文案行）；
+               ② 必须整块屏蔽 —— 只挡右边图片的话，左边那行文案会留在页面上。 -->
+    <div class="inside-wrp" id="playerBanner" data-w="800" data-h="100">
+      <div class="left">
+        <div class="l-inside">
+          <div class="hinter-msg"><b>开学季，把兴趣玩出名堂！</b></div>
+        </div>
+      </div>
+      <div class="right">
+        <div title="开学季，把兴趣玩出名堂！" class="inside-bg clickable" data-w="640" data-h="100">
+          <div class="b-img"><img class="b-img__inner" loading="lazy" alt="开学季，把兴趣玩出名堂！"
+            src="//i2.hdslb.com/bfs/activity-plat/static/12102/12106/d41d8cd98f00b204e9800998ecf8427e/zOPPUfV0MS.jpg@640w_200h_!web-video-activity-cover.avif"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 同名类名、结构不同的容器（B 站多处活动位都在用 .inside-wrp）→ 绝不能被误伤 -->
+    <div class="inside-wrp" id="otherInsideWrp" data-w="800" data-h="100">
+      <div class="right">
+        <div class="inside-bg" data-w="800" data-h="100"><div class="b-img"><img src="other.jpg"></div></div>
+      </div>
+    </div>
+
+    <!-- 播放器右边的弹幕列表面板（实测类名 #danmubox.danmubox-container）：
+         里面夹着一条推广弹幕。反馈：广告往上收的时候「把弹幕列表算进去了」，
+         所以面板本身绝不能被当成广告卡，而夹在里面的那条广告要被正常屏蔽。 -->
+    <div id="danmubox" class="danmubox-container" data-w="350" data-h="500">
+      <div class="danmaku-item" data-w="350" data-h="20">普通弹幕 1</div>
+      <div class="danmaku-item" data-w="350" data-h="20">普通弹幕 2</div>
+      <div class="danmaku-item" data-w="350" data-h="20">普通弹幕 3</div>
+      <div class="danmaku-item" data-w="350" data-h="20">普通弹幕 4</div>
+      <div class="danmaku-item" data-w="350" data-h="20">普通弹幕 5</div>
+      <div class="danmaku-item" data-w="350" data-h="20">普通弹幕 6</div>
+      <div class="danmaku-item" data-w="350" data-h="20">普通弹幕 7</div>
+      <!-- 推广弹幕：整条是 <a>（行内元素），里面再套一层图片块 -->
+      <a class="danmaku-ad-item ad-report" id="dmAd" data-w="350" data-h="78"
+         href="//cm.bilibili.com/cm/api/fees/pc/sync/v2/cmd?e=5">
+        <div class="ad-report-inner" data-w="350" data-h="78">
+          <div class="ad-floor-cover-img" id="dmAdImg" data-w="175" data-h="78"><img src="dm.jpg" alt="广告"></div>
+        </div>
+        <div class="info" data-w="175" data-h="78">
+          <p class="title" title="各位指挥官！准备好了吗？">各位指挥官！准备好了吗？</p>
+          <span class="sub">立即下载</span>
+        </div>
+      </a>
+    </div>
+
     <div class="container is-version8" id="feed-list" style="display:grid">
       <!-- 用户反馈的那张首页「分区推荐」卡片，DOM 原样照抄自 Copy outerHTML：
            封面链接里带着分区徽标 .badge > .floor-title（文案「番剧」），
@@ -203,7 +328,176 @@ const HTML = `<!DOCTYPE html><html><head><style id="page-style">#swipeSlot{displ
         </div>
       </div>
 
-      <!-- 站内搜索结果页的卡片（结构照抄 2026-09 的 search.bilibili.com）：
+      <!-- 赛事推广的两种「换个写法就失效」的情形（v1.5.4 回归点）：
+           ① 徽标外面那层容器被改名（.cover-tag 不是 .badge）→ 以前读不到角标，
+              卡片就掉回按链接判定（赛事卡链的是直播间 → 被算成直播），「赛事」开关点了没反应；
+           ② 徽标文案换成同义词「电竞」，而且链接走电竞直播间路径 /blanc/。 -->
+      <div class="floor-single-card" data-w="238" data-h="248">
+        <div class="single-card floor-card" data-w="238" data-h="248">
+          <div class="floor-card-inner" id="tMatchRenamed" data-w="238" data-h="224">
+            <div class="cover-container" data-w="238" data-h="134">
+              <a href="//live.bilibili.com/22637262"><img src="bg6.jpg"></a>
+              <div class="cover-tag"><span class="floor-title">赛事</span></div>
+            </div>
+            <div class="info-container" data-w="238" data-h="90"><p class="title" title="赛事直播预约">赛事直播预约</p></div>
+          </div>
+        </div>
+      </div>
+      <div class="floor-single-card" data-w="238" data-h="248">
+        <div class="single-card floor-card" data-w="238" data-h="248">
+          <div class="floor-card-inner" id="tMatchAlias" data-w="238" data-h="224">
+            <div class="cover-container" data-w="238" data-h="134">
+              <a href="//live.bilibili.com/blanc/22637263"><img src="bg7.jpg"></a>
+              <span class="floor-title">电竞</span>
+            </div>
+            <div class="info-container" data-w="238" data-h="90"><p class="title" title="电竞赛事直播预约">电竞赛事直播预约</p></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 实测（2026-09，使用者贴的 Copy outerHTML）的赛事推广楼层卡片：
+           链接是**普通视频**（//www.bilibili.com/video/BVxxxx/），没有任何分区链接特征，
+           所以「命中链接 + 标题 + 封面」的通用识别一个都收不到 ——
+           卡片住在 .floor-card-inner 里，只能靠类名收（v1.5.5 回归点）。
+           这颗角标（.badge > svg + span.floor-title）一直都是好的。 -->
+      <div class="floor-card single-card" id="realMatchHost" data-w="238" data-h="248">
+        <div class="floor-card-inner" id="realMatch" data-w="238" data-h="224">
+          <div class="cover-container" data-w="238" data-h="134">
+            <a href="//www.bilibili.com/video/BV1TbbC65EZ9/" target="_blank"
+               data-mod="partition_recommend.content" data-idx="click">
+              <div class="cover-shim" data-w="238" data-h="134">
+                <picture class="v-img cover"><img src="//i2.hdslb.com/bfs/archive/real.jpg@672w_378h_1c" alt=""></picture>
+              </div>
+              <div class="badge"><svg class="icon icon-title" viewBox="0 0 1024 1024"></svg><span class="floor-title">赛事</span></div>
+              <div class="bili-video-card__mask">
+                <div class="bili-video-card__stats">
+                  <div class="bili-video-card__stats--left"><span class="bili-video-card__stats--item">69.0万</span></div>
+                  <div class="bili-video-card__stats--right"><span>22:53</span></div>
+                </div>
+              </div>
+            </a>
+          </div>
+          <div class="pb-16 px-12 flex flex-col items-start info-container" data-w="238" data-h="90">
+            <p title="《上野中下辅都尽力啦2》 EP04——上野篇" class="title">
+              <a href="//www.bilibili.com/video/BV1TbbC65EZ9/" class="font-medium"><span>《上野中下辅都尽力啦2》 EP04——上野篇</span></a>
+            </p>
+            <p><a href="//space.bilibili.com/392836434" class="sub-title items-center flex hover">哔哩哔哩王者荣耀赛事</a></p>
+          </div>
+          <div class="layer"></div>
+          <div class="layer tiny"></div>
+        </div>
+      </div>
+
+      <!-- 实测（2026-09）播放器右栏那一块：弹幕列表、空的 #slide_ad 和真广告
+           三者同住一个父层 .video-pod-above-modules__inner。
+           广告卡是 .video-card-ad-small > .video-card-ad-small-inner > .ad-report > a.ad-report-inner。
+           遮罩绝不能越过那个父层，否则弹幕列表会被一起盖住（反馈原文："把弹幕列表算进去了"）。 -->
+      <div class="video-pod-above-modules__inner" id="podInner" data-w="350" data-h="900">
+        <div id="danmukuBox" class="danmaku-box" data-w="350" data-h="500">
+          <div class="danmaku-wrap"><div class="bpx-player-dm-container"><div class="danmaku-item">普通弹幕</div></div></div>
+        </div>
+        <div id="slideAdEmpty" class="slide-ad-exp" data-loc-id="2626"><!-- 空占位 --></div>
+        <div class="video-card-ad-small" id="realAd" data-w="350" data-h="180">
+          <div class="video-card-ad-small-inner" data-w="350" data-h="180">
+            <div class="ad-report" data-w="350" data-h="160">
+              <a class="ad-report-inner" target="_blank" data-loc-id="4331"
+                 href="//cm.bilibili.com/cm/api/fees/pc/sync/v2?msg=a%7C4331%2Cb%7Cbilibili&amp;ts=1790260087232&amp;spm_id_from=333.788.right_bottom.adfloor-4330.click">
+                <div class="vcd" data-w="350" data-h="160">
+                  <div class="cover" data-w="160" data-h="100">
+                    <div class="b-img" data-w="160" data-h="100"><img src="//i2.hdslb.com/bfs/archive/ad.jpg@336w_190h" class="b-img__inner"></div>
+                    <div class="badge"><svg class="badge-icon" viewBox="0 0 16 16"></svg></div>
+                  </div>
+                  <div class="info" data-w="190" data-h="100">
+                    <div class="title" title="解决存储焦虑？不妨试试移动固态！">解决存储焦虑？不妨试试移动固态！</div>
+                    <div class="upname"><div class="upname-link"><span class="name">穿灰袍的安久</span></div></div>
+                    <div class="playinfo">3.5万</div>
+                  </div>
+                </div>
+              </a>
+            </div>
+            <div class="ad-feedback-menu feedback-menu new-style"><span class="ad-feedback-menu-reference"></span></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 徽标驱动发现的回归点：这张卡片①不在 CARD_SELECTOR 名单里（自定义类名），
+           ②链接是普通视频页、不带任何分区特征 —— scanTypedCards 和 fullScan 都收不到它，
+           只有"从封面徽标反推卡片"这条路能收到。旁边的 noBadgeCard 是同结构但没徽标，
+           用来确认这条路不会误伤。 -->
+      <div class="weird-promo-wrap" data-w="238" data-h="248">
+        <div class="promo-box-unknown" id="badgeOnly" data-w="238" data-h="224">
+          <div class="cover-container" data-w="238" data-h="134">
+            <a href="//www.bilibili.com/video/BV1OnlyBadge/"><img src="bo.jpg"></a>
+            <div class="badge"><span class="floor-title">赛事</span></div>
+          </div>
+          <div class="info-container" data-w="238" data-h="90">
+            <p class="title" title="只有徽标能认出来的推广">只有徽标能认出来的推广</p>
+          </div>
+        </div>
+      </div>
+      <div class="weird-promo-wrap" data-w="238" data-h="248">
+        <div class="promo-box-unknown" id="noBadgeCard" data-w="238" data-h="224">
+          <div class="cover-container" data-w="238" data-h="134">
+            <a href="//www.bilibili.com/video/BV1NoBadge/"><img src="nb.jpg"></a>
+          </div>
+          <div class="info-container" data-w="238" data-h="90">
+            <p class="title" title="没有徽标的普通卡片">没有徽标的普通卡片</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- 真实顶栏（2026-09 抓首页服务端 HTML 核对过的结构）+ 几个"陷阱"：
+       ① 导航项是 .channel-link 的 <a>；② 右侧入口带一个 [class*="badge"] 的数字角标；
+       ③ 顶栏里塞一个 [class*="ad-report"] 的推广位（实测顶栏里确实会出现推广位）。
+       反馈：播放页开了「广告」之后顶栏被整块遮住 —— 任何路径都不许碰顶栏，这一组专用来看住它。 -->
+  <div class="bili-header bili-header--large" id="realHeader">
+    <div class="bili-header__menu is-zh bili-header__bar" id="headerBar" data-w="1401" data-h="64">
+      <div class="left-entry is-zh menu-left" id="headerLeftEntry" data-w="600" data-h="64">
+        <div class="left-entry-main">
+          <div class="v-popover-wrap left-entry__item home-page-entry">
+            <a href="//www.bilibili.com" class="left-entry__item-trigger">首页</a>
+          </div>
+          <div class="v-popover-wrap left-entry__item">
+            <a href="//www.bilibili.com/v/match/" class="channel-link" id="navMatchLink">赛事</a>
+          </div>
+          <div class="v-popover-wrap left-entry__item">
+            <a href="//live.bilibili.com/" class="channel-link" id="navLiveLink">直播</a>
+          </div>
+        </div>
+        <a class="default-entry" href="//www.bilibili.com/anime/">番剧</a>
+      </div>
+      <div class="center-search-container" id="headerSearch" data-w="500" data-h="40">
+        <div class="nav-search"><input class="nav-search-input" placeholder="搜索"></div>
+      </div>
+      <div class="right-entry" id="headerRightEntry" data-w="300" data-h="64">
+        <div class="right-entry__item">
+          <a href="//message.bilibili.com/" class="right-entry__item-trigger">
+            <img src="msg.png"><span class="right-entry-badge badge">1</span>
+          </a>
+        </div>
+        <div class="right-entry__item">
+          <a href="//www.bilibili.com/v/match/" class="right-entry__item-trigger">赛事</a>
+        </div>
+      </div>
+      <!-- 顶栏里的推广位（陷阱③）：任何扫描路径都不许遮它 -->
+      <div class="ad-report strip-ad left-banner" id="headerAd" data-w="300" data-h="60">
+        <a class="ad-report-inner" href="//cm.bilibili.com/header"><img src="ha.png"></a>
+      </div>
+    </div>
+  </div>
+
+  <!-- 实测条幅广告（真机：888×74，长在左栏 .left-container.scroll-sticky 里）：
+       里面那个 <a class="ad-report-inner"> 在真机上只有 888×0 ——
+       以前它会被当成一个独立广告位，遮出一条 888×22 的细线（真机实拍：4 块广告出了 12 个遮罩）。 -->
+  <div class="left-container" id="leftCol" data-w="888" data-h="600">
+    <div class="ad-report strip-ad left-banner" id="stripAd" data-w="888" data-h="74">
+      <a class="ad-report-inner" id="stripAdInner" href="//cm.bilibili.com/strip">
+        <div class="strip-ad-inner" data-w="888" data-h="74"></div><img src="strip.png">
+      </a>
+    </div>
+  </div>
+
+  <!-- 站内搜索结果页的卡片（结构照抄 2026-09 的 search.bilibili.com）：
            .bili-video-card__info--bottom > a.bili-video-card__info--owner
              > span.bili-video-card__info--author（名字在 span 里，没有 title 属性）
              + span.bili-video-card__info--date -->
@@ -634,6 +928,143 @@ async function main() {
   check('切回首页后恢复屏蔽', blocked('c1'), $('c1').className);
   await pushSettings({ keywords: [], blockOnSearch: true, blockOnSpace: false });
 
+  console.log('\n[9c] 播放页广告位与 UP 主信息块（v1.5.1 回归点）');
+  // 反馈：播放页的广告怎么都屏蔽不掉。实测原因是这两块广告既不在视频卡片类名里、
+  // 又没有标题，通用识别一条都收不上来，所以「广告」开关对它们完全无效。
+  dom.reconfigure({ url: 'https://www.bilibili.com/video/BV1mW6tCfdTradk' });
+  // 顺带换掉屏蔽词：值没变的设置变更不会触发重扫，URL 换了必须靠这次变更重新扫一遍
+  await pushSettings({ mode: 'mask', keywords: ['不该命中的词'], whitelist: [], blockTypes: {}, matchUpName: false });
+  check('广告开关关着时，两块广告都不被屏蔽',
+    !blocked('slide_ad') && !blocked('adRight'), $('slide_ad').className + ' / ' + $('adRight').className);
+  check('UP 主信息块不会被当成卡片（播放页不会被判成 UP 主页）',
+    $('upInfo').dataset.bfCard !== '1' && !blocked('upInfo'), $('upInfo').className);
+
+  await pushSettings({ blockTypes: { ad: true } });
+  check('打开「广告」后，播放器贴片广告被屏蔽', blocked('slide_ad'), $('slide_ad').className);
+  check('打开「广告」后，右栏广告卡片被屏蔽', blocked('adRight'), $('adRight').className);
+  check('两块广告都判为 ad（不会被排在 TYPES 前面的「活动」抢走）',
+    $('slide_ad').dataset.bfType === 'ad' && $('adRight').dataset.bfType === 'ad',
+    $('slide_ad').dataset.bfType + '/' + $('adRight').dataset.bfType);
+  check('贴片广告只生成一块遮罩，文案按分区设置走',
+    $('slide_ad').querySelectorAll(':scope > .bf-mask').length === 1 &&
+    maskText($('slide_ad')).indexOf('广告') !== -1, maskText($('slide_ad')));
+  check('【关键】嵌套的 .ad-report.link / .ad-report-inner 不会变成第二张卡片重复遮蔽',
+    !$('slide_ad').querySelector('.ad-report-inner').classList.contains('bf-blocked') &&
+    !$('adRight').querySelector('.ad-report-inner').classList.contains('bf-blocked') &&
+    $('slide_ad').querySelectorAll('.bf-mask').length === 1);
+  check('【关键】真实结构（.slide-gg / .van-slide.item-box / .ad-report.link / .gg-pic / .close-btn）整块都被收进遮罩宿主里',
+    $('slide_ad').contains($('slide_ad').querySelector('.slide-gg')) &&
+    $('slide_ad').contains($('slide_ad').querySelector('.van-slide.item-box')) &&
+    $('slide_ad').contains($('slide_ad').querySelector('.ad-report.link')) &&
+    $('slide_ad').contains($('slide_ad').querySelector('.gg-pic')) &&
+    $('slide_ad').contains($('slide_ad').querySelector('.close-btn')) &&
+    $('slide_ad').classList.contains('bf-blocked'));
+  check('广告角标与关闭按钮所在的里层没有被各自遮一次',
+    !$('slide_ad').querySelector('.slide-gg').classList.contains('bf-blocked') &&
+    !$('slide_ad').querySelector('.item').classList.contains('bf-blocked') &&
+    !$('slide_ad').querySelector('.gg-pic').classList.contains('bf-blocked'));
+
+  await pushSettings({ blockTypes: {}, keywords: ['剧透'] });
+  check('【回归】播放页不受「UP 个人主页」开关影响，关键词照常屏蔽',
+    blocked('c1'), $('c1').className);
+
+  await pushSettings({ mode: 'hide', hideKeepSlot: true, blockTypes: { ad: true } });
+  check('完全隐藏（保留位置）时广告位只隐身、不改动布局',
+    $('slide_ad').classList.contains('bf-hide-slot') && !$('slide_ad').classList.contains('bf-hide'),
+    $('slide_ad').className);
+  await pushSettings({ mode: 'hide', hideKeepSlot: false });
+  check('完全隐藏（移除位置）时广告位整块收起',
+    $('slide_ad').classList.contains('bf-hide') && win.getComputedStyle($('slide_ad')).display === 'none',
+    $('slide_ad').className);
+
+  await pushSettings({ mode: 'mask', hideKeepSlot: true, blockTypes: { ad: false }, keywords: [] });
+  check('关掉「广告」后两块广告都恢复原状',
+    !blocked('slide_ad') && !blocked('adRight') && !$('slide_ad').querySelector('.bf-mask') &&
+    !$('adRight').querySelector('.bf-mask'), $('slide_ad').className + ' / ' + $('adRight').className);
+  dom.reconfigure({ url: 'https://www.bilibili.com/' });
+
+  console.log('\n[9d] 右栏广告卡的"整卡外壳"（v1.5.2 回归点）');
+  // 反馈原文：右栏广告「只有一部分被挡住」—— 图片那块遮住了，
+  // 卡片下方的标题 / UP 名 / 「广告」角标还露在外面（这些挂在外层容器上）。
+  check('广告开关关着时，广告卡与外壳都不被屏蔽',
+    !blocked('adWrap') && !blocked('adRight2'), $('adWrap').className + ' / ' + $('adRight2').className);
+
+  await pushSettings({ blockTypes: { ad: true } });
+  check('【关键】遮住的是整卡外壳，不是只遮里面那块图片',
+    blocked('adWrap') && $('adWrap').dataset.bfType === 'ad', $('adWrap').className + ' / ' + $('adWrap').dataset.bfType);
+  check('【关键】外壳被遮住后，里面的广告位不再重复生成第二块遮罩',
+    !blocked('adRight2') && $('adWrap').querySelectorAll('.bf-mask').length === 1 &&
+    !$('adRight2').querySelector(':scope > .bf-mask'), $('adRight2').className);
+  check('卡片下方的标题与 UP 名都在被遮住的那一块里面（不会再露出来）',
+    !!$('adWrap').querySelector('.info .title') && !!$('adWrap').querySelector('.info .upname'));
+  check('【安全阀】广告和真实卡片同处一个列表时，只遮广告、不越过列表容器',
+    !blocked('adList') && !blocked('adListCard') && !$('adList').classList.contains('bf-hide'),
+    $('adList').className + ' / ' + $('adListCard').className);
+  check('【安全阀】播放器那层容器（1130×640）不会被当成"整卡外壳"收进来',
+    $('slide_ad').classList.contains('bf-blocked') && !blocked('slideAd') &&
+    !$('slideAd').querySelector(':scope > .bf-mask'), $('slideAd').className);
+
+  await pushSettings({ mode: 'mask', hideKeepSlot: true, blockTypes: { ad: false } });
+  check('关掉「广告」后外壳与广告位都恢复原状',
+    !blocked('adWrap') && !blocked('adRight2') && !blocked('adRight3') && !$('adWrap').querySelector('.bf-mask'),
+    $('adWrap').className + ' / ' + $('adRight2').className);
+
+  console.log('\n[9e] 播放器里的活动横幅（v1.5.2 回归点）');
+  // 这块横幅不属于任何已知视频卡片类名，而且图片块与文案块是分开的两个兄弟节点，
+  // 只按链接或只按图片识别都会漏掉一半（反馈：横幅广告屏蔽不掉）。
+  check('广告开关关着时，横幅不被屏蔽',
+    !blocked('playerBanner') && !$('playerBanner').querySelector('.bf-mask'), $('playerBanner').className);
+  check('同名类名但结构不同（没有文案行）的 .inside-wrp 不会被误伤',
+    $('otherInsideWrp').dataset.bfCard !== '1' && !blocked('otherInsideWrp'), $('otherInsideWrp').className);
+
+  await pushSettings({ blockTypes: { ad: true } });
+  check('打开「广告」后整块横幅被屏蔽（左边文案区 + 右边图片区一起）',
+    blocked('playerBanner'), $('playerBanner').className);
+  check('横幅判为 ad 类型', $('playerBanner').dataset.bfType === 'ad', $('playerBanner').dataset.bfType);
+  check('横幅只生成一块遮罩，文案按分区设置走',
+    $('playerBanner').querySelectorAll('.bf-mask').length === 1 &&
+    maskText($('playerBanner')).indexOf('广告') !== -1, maskText($('playerBanner')));
+  check('【关键】横幅内部的文案块与图片块不会被各自当成一张卡片重复处理',
+    !$('playerBanner').querySelector('.inside-bg').classList.contains('bf-blocked') &&
+    !$('playerBanner').querySelector('.hinter-msg').classList.contains('bf-blocked'));
+  check('横幅旁边的同名容器依然没被牵连', !blocked('otherInsideWrp'));
+
+  await pushSettings({ mode: 'hide', hideKeepSlot: false });
+  check('完全隐藏模式下横幅整块收起',
+    $('playerBanner').classList.contains('bf-hide') &&
+    win.getComputedStyle($('playerBanner')).display === 'none', $('playerBanner').className);
+
+  await pushSettings({ mode: 'mask', hideKeepSlot: true, blockTypes: { ad: false } });
+  check('关掉「广告」后横幅恢复原状（遮罩被移除、隐藏类被撤掉）',
+    !blocked('playerBanner') && !$('playerBanner').querySelector('.bf-mask') &&
+    !$('playerBanner').classList.contains('bf-hide'), $('playerBanner').className);
+
+  console.log('\n[9f] 弹幕列表里的推广弹幕（v1.5.3 回归点）');
+  // 反馈：播放器右边的广告「把弹幕列表算进去了」，而且「上面会有一些像素露在外面」。
+  // 实测两个原因：① 收敛规则会一路收进弹幕列表面板；② 广告位本身是行内 <a>，
+  // 行内盒上放绝对定位遮罩会错位（overflow:hidden 对行内盒也不生效），
+  // 于是遮罩缩成一条细线、底下的图片和文字照样露出来。
+  check('广告开关关着时，推广弹幕不被屏蔽',
+    !blocked('dmAd') && !$('dmAd').querySelector('.bf-mask'), $('dmAd').className);
+
+  await pushSettings({ blockTypes: { ad: true } });
+  check('推广弹幕被屏蔽', blocked('dmAd'), $('dmAd').className);
+  check('【关键】遮罩宿主不是行内元素（行内盒上放遮罩会错位成一条线）',
+    win.getComputedStyle($('dmAd')).display.indexOf('inline') !== 0,
+    'display=' + win.getComputedStyle($('dmAd')).display);
+  check('【关键】弹幕列表面板本身绝没有被遮掉',
+    !blocked('danmubox') && !$('danmubox').classList.contains('bf-hide') &&
+    !$('danmubox').querySelector(':scope > .bf-mask'), $('danmubox').className);
+  check('面板里的普通弹幕也没受影响',
+    !$('danmubox').querySelector('.danmaku-item.bf-blocked') &&
+    !$('danmubox').querySelector('.danmaku-item .bf-mask'));
+  check('推广弹幕只生成一块遮罩（里面的图片块不会各遮一次）',
+    $('dmAd').querySelectorAll('.bf-mask').length === 1 && !blocked('dmAdImg'),
+    String($('dmAd').querySelectorAll('.bf-mask').length));
+  await pushSettings({ blockTypes: { ad: false } });
+  check('关掉「广告」后推广弹幕恢复',
+    !blocked('dmAd') && !$('dmAd').querySelector('.bf-mask'), $('dmAd').className);
+
   console.log('\n[10] 完全隐藏模式：收敛被顶上来填空的"空占位项"');
   // 遮蔽模式下不应动任何占位项（遮蔽保留占位，不会有东西被顶上来）
   await pushSettings({ mode: 'mask', keywords: ['剧透'] });
@@ -889,8 +1320,128 @@ async function main() {
   check('赛事卡片的类型标记为 match（不是 live）', $('tMatch').dataset.bfType === 'match', $('tMatch').dataset.bfType);
   check('赛事卡片的遮蔽文案带上分区名「赛事」', maskText($('tMatch')).indexOf('赛事') !== -1, maskText($('tMatch')));
 
+  console.log('\n[10g-2] 赛事推广换个写法也得认（v1.5.4 回归点）');
+  // 反馈：赛事以前修好过，后来又屏蔽不了，而且只有赛事不行。
+  // 这类卡片唯一的身份标识就是封面角标（链接是直播间，跟普通直播卡片一样），
+  // 所以角标读不到 / 文案换同义词，都会让它掉回按链接判定 → 算成直播 → 「赛事」开关没反应。
+  check('徽标容器被改名（.cover-tag）后仍能读出角标并判为 match',
+    blocked('tMatchRenamed') && $('tMatchRenamed').dataset.bfType === 'match',
+    $('tMatchRenamed').dataset.bfType || $('tMatchRenamed').className);
+  check('徽标写成同义词「电竞」也判为 match',
+    blocked('tMatchAlias') && $('tMatchAlias').dataset.bfType === 'match',
+    $('tMatchAlias').dataset.bfType || $('tMatchAlias').className);
+  check('赛事类型认得了电竞直播间路径 /blanc/',
+    win.BF_TYPES.filter((t) => t.key === 'match')[0].href.test('//live.bilibili.com/blanc/22637263'),
+    String(win.BF_TYPES.filter((t) => t.key === 'match')[0].href));
+  check('赛事类型认得徽标同义词表（赛事 / 电竞 / 比赛）',
+    (win.BF_TYPES.filter((t) => t.key === 'match')[0].badges || []).indexOf('电竞') !== -1);
+  check('普通视频卡片的长标题不会被当成角标（长度上限 6 字）',
+    !blocked('c1') && $('c1').dataset.bfType !== 'match', $('c1').dataset.bfType || '(无类型)');
+
   await pushSettings({ blockTypes: {} });
   check('全部关掉后都恢复显示', blockedList() === '(无)', blockedList());
+
+  console.log('\n[9g] 顶栏 / 导航绝不能被屏蔽（v1.5.8 回归点）');
+  // 反馈：播放页开了「广告」之后，顶栏的入口被整块遮住。
+  // 这里把全部开关都打开、再加关键词，看顶栏是不是依然一点没动。
+  await pushSettings({
+    mode: 'mask', hideKeepSlot: true, keywords: ['测试', '首页', '赛事', '直播'], whitelist: [],
+    blockTypes: { ad: true, live: true, match: true, bangumi: true, other: true }
+  });
+  check('【关键】顶栏整体没有被遮（顶栏里的推广位也不遮）',
+    !blocked('realHeader') && !blocked('headerBar') && !blocked('headerAd') &&
+    !blocked('headerLeftEntry') && !blocked('headerRightEntry') && !blocked('headerSearch') &&
+    doc.querySelectorAll('.bili-header .bf-mask').length === 0,
+    '顶栏内遮罩数=' + doc.querySelectorAll('.bili-header .bf-mask').length);
+  check('【关键】导航项一个都没被打上屏蔽类',
+    !blocked('navMatchLink') && !blocked('navLiveLink') &&
+    !doc.querySelector('.bili-header .bf-blocked'),
+    doc.querySelector('.bili-header .bf-blocked') ? doc.querySelector('.bili-header .bf-blocked').className : '(无)');
+  check('顶栏里带 badge 类名的数字角标没有触发徽标驱动发现',
+    !doc.querySelector('#realHeader [class*="badge"]').classList.contains('bf-blocked') &&
+    !doc.querySelector('#realHeader [class*="badge"] .bf-mask'));
+  check('【安全阀】完全隐藏模式下顶栏也不会被当成空壳收走',
+    !$('realHeader').classList.contains('bf-hide') && !$('realHeader').classList.contains('bf-hide-slot') &&
+    win.getComputedStyle($('realHeader')).display !== 'none',
+    $('realHeader').className);
+  await pushSettings({ blockTypes: {}, keywords: [] });
+
+  console.log('\n[9h] 一块广告只允许一个遮罩（v1.5.8 真机复现的回归点）');
+  // 真机实测：AD_SLOT_SELECTOR 会同时命中嵌套的多个元素——
+  // 条幅广告是 .ad-report.strip-ad.left-banner > .ad-report-inner，
+  // 右栏广告卡是 .video-card-ad-small > .ad-report > .ad-report-inner > .ad-floor-cover。
+  // 以前每个节点各算一次目标，4 块广告出了 12 个遮罩，其中还有 888×22 / 350×14 这种"一条线"的
+  // 退化遮罩（反馈里的"遮罩不到位""悬停显示不对"）。现在只处理最外层那一个节点。
+  await pushSettings({ mode: 'mask', hideKeepSlot: true, keywords: [], whitelist: [], blockTypes: { ad: true } });
+  const adMasks = Array.from(doc.querySelectorAll('.bf-mask'));
+  check('【关键】实测条幅广告只被遮一次，里面的 888×0 链接不会被单独再遮一条线',
+    blocked('stripAd') && $('stripAd').querySelectorAll(':scope > .bf-mask').length === 1 &&
+    !blocked('stripAdInner') && !$('stripAdInner').querySelector(':scope > .bf-mask'),
+    $('stripAd').className + ' / 内部遮罩=' + $('stripAd').querySelectorAll('.bf-mask').length +
+    ' / 内层链接=' + $('stripAdInner').className);
+  check('【关键】没有"一条线"的退化遮罩（每个遮罩宿主都量得出高度）',
+    adMasks.every((m) => m.parentElement.getBoundingClientRect().height > 0),
+    adMasks.map((m) => (m.parentElement.className || '') + '@' + Math.round(m.parentElement.getBoundingClientRect().height)).slice(0, 6).join(' | '));
+  check('右栏广告卡内部的 .ad-report / 图片块没有被单独标记',
+    !$('realAd').querySelector('.ad-report').classList.contains('bf-blocked') &&
+    !$('realAd').querySelector('.b-img').classList.contains('bf-blocked') &&
+    $('realAd').querySelectorAll('.bf-mask').length === 1,
+    $('realAd').querySelector('.ad-report').className + ' / 遮罩数=' + $('realAd').querySelectorAll('.bf-mask').length);
+  check('【安全阀】播放器容器本身永远不会被我们打上任何类',
+    !doc.querySelector('.video-pod-above-modules__inner.bf-blocked, .video-pod-above-modules__inner.bf-hide, .video-pod-above-modules.bf-hide, #bilibili-player.bf-hide, #bilibili-player.bf-blocked'));
+  await pushSettings({ blockTypes: {} });
+
+  console.log('\n[10g-3] 实测结构：赛事推广楼层卡片 + 右栏广告同层装着弹幕列表（v1.5.5 回归点）');
+  check('未打开「赛事」时，实测赛事卡片不被屏蔽', !blocked('realMatch'), $('realMatch').className);
+  await pushSettings({ blockTypes: { match: true } });
+  check('【关键】实测赛事卡片（链接是普通视频）也能被「赛事」开关屏蔽',
+    blocked('realMatch'), $('realMatch').className);
+  check('实测赛事卡片判为 match，而不是掉回 live/other',
+    $('realMatch').dataset.bfType === 'match', $('realMatch').dataset.bfType);
+  check('实测赛事卡片被遮的是卡片本体（不是只遮封面链接）',
+    $('realMatch').classList.contains('bf-blocked') &&
+    !!$('realMatch').querySelector(':scope > .bf-mask') &&
+    !$('realMatch').querySelector('.cover-container').classList.contains('bf-blocked'));
+  check('角标文案没被当成标题（标题仍是 EP04 那一串）',
+    $('realMatch').dataset.bfKey === 'type:match');
+
+  await pushSettings({ blockTypes: { ad: true } });
+  check('右栏实测广告卡被整块屏蔽', blocked('realAd'), $('realAd').className);
+  check('【关键】同层的弹幕列表面板绝没有被一起遮住',
+    !blocked('danmukuBox') && !blocked('podInner') &&
+    !$('podInner').classList.contains('bf-hide') &&
+    !$('podInner').querySelector(':scope > .bf-mask'),
+    $('podInner').className + ' / ' + $('danmukuBox').className);
+  check('广告卡只生成一块遮罩（里面的 .ad-report / 图片块不各自遮一次）',
+    $('realAd').querySelectorAll('.bf-mask').length === 1 &&
+    !$('realAd').querySelector('.ad-report').classList.contains('bf-blocked') &&
+    !$('realAd').querySelector('.b-img').classList.contains('bf-blocked'),
+    String($('realAd').querySelectorAll('.bf-mask').length));
+  check('【安全阀】同层里那个空的广告占位不会被遮（遮了就是凭空多一个提示框）',
+    !blocked('slideAdEmpty'), $('slideAdEmpty').className);
+  await pushSettings({ blockTypes: {} });
+  check('关掉后赛事卡片与右栏广告都恢复',
+    !blocked('realMatch') && !blocked('realAd'), $('realMatch').className + ' / ' + $('realAd').className);
+
+  console.log('\n[10g-4] 徽标驱动发现 + 弹幕/播放器区域保护（并入 1.5.6 那两处修复）');
+  // ① 徽标驱动发现：这张推广卡片既不在 CARD_SELECTOR 名单里、链接也不带任何分区特征
+  //    （普通视频链接）—— 只有"从封面徽标反推卡片"这条路能收到它。
+  await pushSettings({ blockTypes: { match: true } });
+  check('【关键】只有徽标可认的推广卡片也能被发现并屏蔽',
+    blocked('badgeOnly') && $('badgeOnly').dataset.bfType === 'match',
+    $('badgeOnly').className + ' / ' + ($('badgeOnly').dataset.bfType || '(无类型)'));
+  check('徽标驱动发现不误伤：同结构但没有徽标的卡片不动',
+    !blocked('noBadgeCard'), $('noBadgeCard').className);
+
+  // ② 弹幕/播放器区域保护：完全隐藏（移除位置）时收敛"外层空壳"，
+  //    绝不能把装着弹幕列表的父层一起收走 —— 实测广告与弹幕列表是同一父层下的兄弟节点。
+  await pushSettings({ mode: 'hide', hideKeepSlot: false, blockTypes: { ad: true }, keywords: [] });
+  check('【关键】广告被隐藏后，装着弹幕列表的父层没有被一起收敛',
+    $('realAd').classList.contains('bf-hide') &&
+    !$('podInner').classList.contains('bf-hide') &&
+    win.getComputedStyle($('podInner')).display !== 'none',
+    $('realAd').className + ' / ' + $('podInner').className);
+  await pushSettings({ mode: 'mask', hideKeepSlot: true, blockTypes: {} });
 
   // [10h] 懒加载插入的推广卡片：只配置屏蔽词、分区开关全关，也应该被自动扫到并屏蔽
   await pushSettings({ mode: 'mask', hideKeepSlot: true, keywords: ['我准备好了'], blockTypes: {} });

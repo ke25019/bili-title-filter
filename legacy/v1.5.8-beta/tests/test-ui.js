@@ -170,7 +170,10 @@ async function testOptions() {
     doc.getElementById('mask-text').value === '根据您的屏蔽词已将此视频屏蔽',
     doc.getElementById('mask-text').value);
   check('预览文案与设置一致', doc.getElementById('preview-text').textContent === '根据您的屏蔽词已将此视频屏蔽');
-  check('统计已加载', /累计屏蔽 12 个/.test(doc.getElementById('stats-text').textContent), doc.getElementById('stats-text').textContent);
+  // 统计是异步取回来的（runtime.sendMessage 回调），机器负载高时 120ms 不够 ——
+  // 用轮询等待，避免出现"多跑几个测试套件就偶发失败"的假红
+  const statsOk2 = await waitFor(() => /累计屏蔽 12 个/.test(doc.getElementById('stats-text').textContent));
+  check('统计已加载', statsOk2, doc.getElementById('stats-text').textContent);
 
   console.log('\n[B2] 页脚版本号必须跟 manifest 一致（回归：以前写死成 v1.0.0）');
   const footText = doc.querySelector('.foot').textContent;

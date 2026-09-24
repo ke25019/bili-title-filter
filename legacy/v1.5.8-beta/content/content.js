@@ -33,6 +33,83 @@
    * 页面选择器
    * ------------------------------------------------------------------ */
 
+  /**
+   * 广告位容器（实测结构，逐字来自使用者贴的 Copy outerHTML）：
+   *   - 播放器区的贴片广告（"gg" 就是"广告"，B 站自己这么命名）：
+   *     #slide_ad.slide-ad-exp > .slide-gg > .van-slide.item-box > .item
+   *       > .ad-report.link > a.ad-report-inner > img
+   *       + img.gg-pic（广告角标） + .close-btn > i.van-icon-guanbi（关闭按钮）
+   *   - 右栏广告卡片：
+   *     .video-card-ad-small > .ad-report-inner > a.ad-report > .ad-floor-cover-img > img
+   *
+   * 为什么要单独列出来：这些块既不在下面那套视频卡片类名里、又**没有标题**，
+   * 所以走不了「命中链接 + 标题 + 封面」的通用识别 —— 实测一个都收不上来，
+   * 「广告」分区开关对它们完全无效（有人反馈过：播放页广告怎么都屏蔽不掉）。
+   * 注意这里**不并入 CARD_SELECTOR**：广告位本身往往只装着图片，
+   * 而卡片上的标题、UP 名、「广告」角标挂在外层容器上，只遮广告位等于没遮干净
+   * （反馈原文：只有一部分被挡住）。所以广告位统一走 scanAdSlots()，
+   * 由 adSlotTarget() 先把它收到「整卡外壳」再处理。
+   */
+  var AD_SLOT_SELECTOR = [
+    '#slide_ad',
+    '.slide-ad-exp',
+    '.slide-gg',
+    '.slide-ad',
+    '.video-card-ad-small',
+    '[class*="ad-report"]',
+    '[class*="ad-floor"]'
+  ].join(',');
+
+  /**
+   * 「整卡外壳」的尺寸上限：广告位往上收的时候，超过这个尺寸就停。
+   * 取 600×560 的依据：右栏广告卡实测 350 宽、连标题一起约 250 高；
+   * 而播放器那层的容器是 1130×640 起步 —— 宽度这条上限本身就挡住了
+   * "把整个播放器当成广告卡遮掉"这种最坏情况。
+   */
+  var AD_FRAME_MAX_W = 600;
+  var AD_FRAME_MAX_H = 640;
+
+  /**
+   * 「整卡外壳」允许的子元素个数上限。广告卡一般只有"图片块 + 文字块"两三个子节点，
+   * 而弹幕列表、推荐流这类面板动辄几十个 —— 这条是防止一路收进面板里的兜底判据。
+   */
+  var AD_FRAME_MAX_CHILDREN = 6;
+
+  /**
+   * 这些容器里装的是页面功能（弹幕列表、播放器），不是"卡片外面那层空壳"。
+   * 只要某一层命中了它们、或者里面装着它们，这一层就绝不能再被当成空壳一起隐藏。
+   *
+   * 实测（2026-09 播放页，层级逐层核对过）：
+   *   .right-container > .right-container-inner
+   *     ├ .video-pod-above-modules > .video-pod-above-modules__inner
+   *     │     ├ #danmukuBox.danmaku-box > .danmaku-wrap   ← 弹幕列表
+   *     │     └ #slide_ad.slide-ad-exp                    ← 贴片广告
+   *     └ .rcmd-tab
+   *          ├ .recommend-list-v1 > .rec-list > .video-page-card-small …
+   *          └ .ad-report.ad-floor-exp.right-bottom-banner
+   * 也就是：广告和弹幕列表是同一层父级下的兄弟节点。屏蔽广告时若一路往上
+   * 把父层当空壳隐藏，弹幕列表就会跟着一起没了。
+   *
+   * 这条判据来自另一位贡献者发的 1.5.6 构建（他当时的做法是保护这些区域），
+   * 与本文件里「整卡外壳」那套规则互补：那套管遮罩遮哪一块，这套管完全隐藏时
+   * 别把功能区域一起收走。
+   */
+  var PROTECTED_REGION_SELECTOR = [
+    '#danmukuBox',
+    '.danmaku-box',
+    '.danmaku-wrap',
+    /* 只认「弹幕列表这个面板」的类名，不认单条弹幕（danmaku-item 这类）：
+       弹幕列表里的推广条本身就是一条弹幕，它得能当广告卡被遮（仓库用例有这一条）。 */
+    '[class*="danmaku-list"]',
+    '[class*="danmaku-panel"]',
+    '[class*="danmaku-container"]',
+    '#bilibili-player',
+    '.bpx-player-container',
+    '.bilibili-player',
+    '.video-pod-above-modules',
+    '.video-pod-above-modules__inner'
+  ].join(',');
+
   /** 视频 / 推广卡片容器（已知类名，实测于 2025 年 B 站首页 / 搜索页 / 播放页） */
   var CARD_SELECTOR = [
     '.bili-video-card',
@@ -55,9 +132,14 @@
     '.bili-note-card',
     '.bili-article-card',
     '.bili-opus-card',
-    /* 注意：.floor-card / .floor-card-inner 是"楼层里的卡片"，其真实结构
-       （实测）是 .floor-card-inner > 封面 + 标题，由通用识别用
-       「命中链接 + 标题 + 封面」定位，因此不写死在这里。 */
+    /* 分区推广楼层的卡片本体（实测结构：.floor-card > .floor-card-inner）。
+       以前特意不写死在这里，靠「命中链接 + 标题 + 封面」的通用识别来收 ——
+       但那只有在这张卡片的链接命中某个分区时才成立。实测 2026-09 的赛事推广卡片
+       链接变成了**普通视频**（//www.bilibili.com/video/BV1TbbC65EZ9/），
+       没有任何分区链接特征，于是通用识别一个都收不到，卡片从来没进过屏蔽流程
+       （反馈里「赛事」开关点了没反应、而且只有赛事不行，就是这个原因）。
+       楼层卡片的结构和尺寸都很稳定（实测 238×224），按类名收最可靠。 */
+    '.floor-card-inner',
     '.anime-list-item'
   ].join(',');
 
@@ -100,7 +182,19 @@
   /** 横幅 / 轮播属于"板块推广位"，只由板块级开关负责，卡片级不碰 */
   var BANNER_EXCLUDE = '.carousel-area, .carousel-container, [class*="carousel"], [class*="banner"]';
 
-  /** 顶栏 / 导航区域：分区识别时必须跳过，否则会把「直播」入口当成直播卡片 */
+  /**
+   * 顶栏 / 导航区域。**任何屏蔽路径都不许碰这里**：
+   * 它既不是视频卡片也不是推广位，是站点自己的导航，遮住它就是"把首页/番剧/直播这些入口挡住了"
+   * （反馈过：播放页开了「广告」之后顶栏被遮）。
+   *
+   * 除了老的类名，这里补上了 2026-09 实测到的现役顶栏结构（抓首页服务端 HTML 核对过）：
+   *   .bili-header.bili-header--large > .bili-header__menu.bili-header__bar
+   *     > .left-entry > .left-entry-main > .left-entry__item.v-popover-wrap > a.left-entry__item-trigger
+   *     > .center-search-container > .nav-search-input …
+   *     > .right-entry > .right-entry__item …
+   * 导航项是 .channel-link（88 个），所以老的 .default-entry / .nav-link 其实已经不在了，
+   * 只留老类名会漏掉现役结构。
+   */
   var NAV_EXCLUDE = [
     'header',
     'nav',
@@ -125,6 +219,17 @@
     '.v-popup-wrap',
     '.popover',
     '.bili-dropdown',
+    /* 现役顶栏（实测 2026-09） */
+    '.bili-header__menu',
+    '.bili-header__bar',
+    '.bili-header__banner',
+    '.left-entry-main',
+    '.left-entry__item',
+    '.left-entry__item-trigger',
+    '.right-entry__item',
+    '.nav-search',
+    '.nav-search-input',
+    '.header-upload-entry',
     /* 实测补充：这两个区域里藏着 0×0 的隐藏推广链接，曾被误判成卡片 */
     '.header-channel',
     '.palette-button-outer',
@@ -136,6 +241,14 @@
     '.passport',
     '.bili-login'
   ].join(',');
+
+  /**
+   * 这个元素是不是落在"绝对不许动"的站点区域里（顶栏 / 导航 / 登录面板）。
+   * 所有屏蔽路径（关键词、分区、广告位、徽标发现、外层空壳收敛）都要先过这一关。
+   */
+  function isChromeRegion(el) {
+    return !!(el && el.closest && el.closest(NAV_EXCLUDE));
+  }
 
   /** 卡片容器语义提示（仅作为最末位的兜底提示，不再作为主要判据） */
   var CARD_HINT_RE = /card|item|module|entry|video|live|bangumi|pgc|media|floor|short|cover/i;
@@ -310,9 +423,55 @@
    *   1) resolveCardTarget 会在**封面链接**上就找到"标题 + 封面"，把封面链接当成一整张卡片；
    *   2) getTitle 会拿「番剧」两个字去比对屏蔽词，卡片真正的标题被彻底忽略。
    */
+  /**
+   * 徽标外面那层容器（`.badge` 这类）。B 站换过一次类名（反馈里「赛事」第二次失效
+   * 就是这个原因），所以这里连同义类名一起认；两条兜底在 isBadgeLabel 里。
+   */
+  var BADGE_WRAP_SELECTOR = '.badge, [class*="badge"], [class*="cover-tag"], [class*="corner"]';
+
+  /** 徽标所在的容器（`.badge` 这种） */
+  var BADGE_SELECTOR = '.badge, [class*="badge"]';
+
+  /**
+   * 徽标的兜底来源：B 站改过一次这层容器的类名，只认 .badge 的话，
+   * 「赛事」这类卡片就会掉回按链接判定（赛事卡片的链接是直播间 → 被算成直播），
+   * 结果「赛事」开关点了没反应（反馈过两次）。
+   * 封面上那个短文案（实测都很短：番剧/国创/综艺/电影/课堂/直播/赛事…）
+   * 只要落在封面区域里、且不超过 6 个字，就仍然当徽标用；
+   * 长度这一条是为了不把真正的标题（「赛事直播预约」这种）当成徽标。
+   */
+  var BADGE_FALLBACK_SELECTOR = [
+    '.floor-title',
+    '[class*="floor-title"]',
+    '[class*="cover-tag"]',
+    '[class*="cover"] [class*="tag"]',
+    '[class*="corner"]'
+  ].join(',');
+
+  var BADGE_COVER_SELECTOR = '.cover-container, [class*="cover"], [class*="pic"], [class*="img"]';
+
+  var BADGE_MAX_LEN = 6;
+
+  function cleanText(el) {
+    return ((el && el.textContent) || '').replace(/\s+/g, '').trim();
+  }
+
+  /**
+   * 这个元素是不是"封面角标"（而不是卡片标题）。
+   *
+   * 判据一：在外面那层徽标容器里。
+   * 判据二（兜底）：落在封面区域里、而且文案很短 —— 实测徽标文案都是
+   * 番剧/国创/综艺/电影/课堂/直播/赛事 这种 2~3 个字，而卡片标题不会长在封面上。
+   * 为什么必须认出来：`.floor-title` 同时是"标题选择器"，一旦被当成标题，
+   * 通用识别会在封面这一层就认定"标题 + 封面都有了"，于是只遮住封面那一块，
+   * 卡片下方的标题和 UP 名留在页面上（就是"只挡住一半"那个老问题）。
+   */
   function isBadgeLabel(el) {
     if (!el || !el.closest) return false;
-    return !!el.closest('.badge, [class*="badge"], [class*="tag-label"]');
+    if (el.closest(BADGE_WRAP_SELECTOR)) return true;
+    if (!el.closest(BADGE_COVER_SELECTOR)) return false;
+    var t = cleanText(el);
+    return !!t && t.length <= BADGE_MAX_LEN;
   }
 
   function getTitle(card) {
@@ -581,23 +740,233 @@
     }
     return false;
   }
-
-  /**
-   * 卡片封面左上角的分区徽标文字。
-   *
-   * B 站把「这张推广属于哪个分区」直接标在封面上（实测文案：番剧、国创、综艺、电影、
-   * 课堂、直播、赛事…），这是最可靠的判据 —— 光看链接分不出来：
-   *   - 番剧 / 国创 / 综艺 / 电影的推广卡片，链接全都是 //www.bilibili.com/bangumi/play/epXXXX
-   *   - 赛事卡片多半是「直播预约」，链接是 live.bilibili.com 的直播间
-   * 按链接判定就会出现「开番剧把国创、综艺、电影一起屏蔽」「赛事开关点了没反应」。
-   */
-  var BADGE_SELECTOR = '.badge, [class*="badge"]';
-
+  /** 卡片封面左上角的分区徽标文字（判据与兜底见上方 isBadgeLabel 的注释） */
   function getBadgeText(card) {
     var box = card.querySelector(BADGE_SELECTOR);
-    if (!box) return '';
-    var el = box.querySelector('.floor-title') || box;
-    return (el.textContent || '').replace(/\s+/g, '').trim();
+    if (box) {
+      var el = box.querySelector('.floor-title') || box;
+      var t = cleanText(el);
+      if (t) return t;
+    }
+    var marks = card.querySelectorAll(BADGE_FALLBACK_SELECTOR);
+    for (var i = 0; i < marks.length && i < 4; i++) {
+      var m = marks[i];
+      var txt = cleanText(m);
+      if (!txt || txt.length > BADGE_MAX_LEN) continue;
+      if (!m.closest(BADGE_COVER_SELECTOR)) continue;   // 必须在封面区域内
+      return txt;
+    }
+    return '';
+  }
+
+  /** 这个容器本身是不是广告位（判据见 AD_SLOT_SELECTOR 与下方 PLAYER_BANNER_INNER_SELECTOR） */
+  function isAdSlot(el) {
+    if (!el || !el.matches) return false;
+    if (el.matches(AD_SLOT_SELECTOR)) return true;
+    if (isPlayerBannerHost(el)) return true;
+    // 「整卡外壳」的身份由 scanAdSlots 在认出来的时候明确标上（bfAdFrame）。
+    // 不写成"里面装着广告位就算" —— 那样整个推荐流、整个播放器都可能被认成广告卡。
+    return el.dataset ? el.dataset.bfAdFrame === '1' : false;
+  }
+
+  /** 量到的尺寸是不是"一张卡片"的量级（拿不到尺寸时一律按否处理） */
+  function isCardSizedBox(el, maxW, maxH) {
+    var r = el.getBoundingClientRect ? el.getBoundingClientRect() : null;
+    if (!r || !r.width || !r.height) return false;
+    return r.width <= maxW && r.height <= maxH;
+  }
+
+  /**
+   * 广告位的"整卡外壳"。
+   *
+   * 反馈：右栏广告卡只挡住了一部分 —— 图片那块被遮住了，卡片下方的标题、
+   * UP 名和「广告」角标还露在页面上。原因是这些文字挂在外层容器上，
+   * 而那个外层容器的类名不在任何已知列表里（写死类名必然漏）。
+   * 这里的做法是从广告位向上收，收到"仍然只装着这一块广告"的最外层。
+   *
+   * 停止条件（任一条命中就停，宁可少收一层也不错收一屏）：
+   *   ① 这一层是"面板/列表"（弹幕列表、评论区、推荐流、播放器…）——
+   *      反馈里"把弹幕列表算进去了"就是这么来的
+   *   ② 这一层里还有别的广告位（当前广告位之外的）→ 停。实测右栏就是这个形状：
+   *      .video-pod-above-modules__inner 里同时装着 #danmukuBox（弹幕列表）、
+   *      空的 #slide_ad 和真正的广告 .video-card-ad-small —— 只有这条能拦住它，
+   *      否则遮罩会连弹幕列表一起盖住
+   *   ③ 这一层里还有别的真卡片（有标题或有封面）→ 到了推荐列表
+   *   ④ 子元素个数超过 6 —— 广告卡只有两三个子节点，列表不会只有这么少
+   *   ⑤ 尺寸超过 600×640 —— 播放器那层自然被挡住
+   * 另外：行内元素（`<a class="ad-report">` 这种）不能当遮罩宿主，见 blockTargetFor。
+   */
+  /** 量得出尺寸吗（0×0 的中间层多半是行内盒或 display:contents 的包装层，不该当宿主，也不该终止向上收） */
+  function hasMeasurableBox(el) {
+    var r = el.getBoundingClientRect ? el.getBoundingClientRect() : null;
+    return !!(r && r.width && r.height);
+  }
+
+  function findAdCardFrame(slot) {
+    var frame = slot;
+    var cur = slot.parentElement;
+    // 最多 5 层：广告位的嵌套链实测可以到 .ad-report-link > .item > .van-slide-item-box > .slide-ad > #slide_ad
+    // 这么深，层数切太浅会让同一条链上的不同节点各自收到不同的一层，结果套出好几块遮罩
+    for (var i = 0; cur && cur !== document.body && cur !== document.documentElement && i < 5; i++) {
+      // 行内盒 / 量不到尺寸的包装层既不能当遮罩宿主，也不该让收敛就此停住 → 跳过它继续往上
+      if (isInlineBox(cur) || !hasMeasurableBox(cur)) { cur = cur.parentElement; continue; }
+      if (!isAdFrameCandidate(cur, slot)) break;
+      frame = cur;
+      cur = cur.parentElement;
+    }
+    return frame;
+  }
+
+  /**
+   * 页面上的"面板/列表"：广告卡再往外收就一定会把无关内容卷进来
+   * （实测反馈：播放器右边那块广告一往上收就把弹幕列表算进去了）。
+   * 注意只认"面板容器"的类名，不认单条弹幕（`danmaku-item` 这类）——
+   * 弹幕列表里的推广条本身就是一条弹幕，它得能当广告卡。
+   */
+  var AD_FRAME_PANEL_RE = /danmubox|danmaku-(list|box|container|wrap|panel)|comment|reply|recommend|player|right-container|video-info|toolbar|activity-plat|feed-list|video-list/i;
+
+  function isAdFramePanel(el) {
+    // 自身就是广告位（例如弹幕列表里那条推广）→ 不算面板
+    if (el.matches && el.matches(AD_SLOT_SELECTOR)) return false;
+    var cls = typeof el.className === 'string' ? el.className : '';
+    var id = el.id || '';
+    return AD_FRAME_PANEL_RE.test(cls) || AD_FRAME_PANEL_RE.test(id);
+  }
+
+  /** 像不像一张真卡片：有标题或有封面。只有"顺带匹配上"的空壳子元素才两条都不占 */
+  function looksLikeRealCard(el) {
+    if (findTitleEl(el)) return true;
+    return hasCoverInside(el);
+  }
+
+  function isAdFrameCandidate(box, slot) {
+    if (!box.querySelectorAll) return false;
+    // ⓪ 页面功能区域（弹幕列表 / 播放器 / .video-pod-above-modules*）永远不能当广告外壳。
+    //    实测：右栏 .video-pod-above-modules__inner 里同时装着弹幕列表和广告，
+    //    少了这一条，一旦同层没有第二块广告位（例如广告没加载），收敛就会越过 __inner
+    //    落到 .video-pod-above-modules 上，把弹幕列表一起隐掉（1.5.7 后的回归点）。
+    if (box.matches && box.matches(PROTECTED_REGION_SELECTOR)) return false;
+    if (box.querySelector(PROTECTED_REGION_SELECTOR)) return false;
+    // ⓪-2 顶栏 / 导航同样绝不能被当成广告外壳收走：实测顶栏里也会出现推广位，
+    //      一旦被收，首页/番剧/直播这些入口就跟着被遮住（反馈过的 bug）。
+    if (box.matches && box.matches(NAV_EXCLUDE)) return false;
+    if (box.querySelector && box.querySelector(NAV_EXCLUDE)) return false;
+    if (isPlayerBannerHost(box) || (box.matches && box.matches(PLAYER_BANNER_INNER_SELECTOR))) return false;
+    if (box.querySelector(PLAYER_BANNER_INNER_SELECTOR)) return false;   // 里面装着播放器横幅 → 别越过去
+    if (isAdFramePanel(box)) return false;                             // ①
+    if (box.children.length > AD_FRAME_MAX_CHILDREN) return false;      // ④
+
+    // ② 别的广告位：只看"既不是当前广告位的祖先、也不是它的后代"的那种。
+    //    祖先（比如 .video-card-ad-small 之于里面的 .ad-report）和后代都属于同一块广告，
+    //    真正的信号是"同一层里还有另一块广告位"—— 实测右栏就是这样：
+    //    .video-pod-above-modules__inner 里既有弹幕列表，又有空的 #slide_ad 和真广告卡。
+    var ads = box.querySelectorAll(AD_SLOT_SELECTOR);
+    for (var k = 0; k < ads.length; k++) {
+      var other = ads[k];
+      if (slot.contains(other) || other.contains(slot)) continue;
+      return false;
+    }
+
+    var cards = box.querySelectorAll(CARD_SELECTOR);                   // ③
+    for (var i = 0; i < cards.length; i++) {
+      if (slot.contains(cards[i])) continue;        // 广告位自己（含它的后代）
+      if (!looksLikeRealCard(cards[i])) continue;   // 只匹配到类名的空壳子元素，不算
+      return false;
+    }
+    return isCardSizedBox(box, AD_FRAME_MAX_W, AD_FRAME_MAX_H);   // ⑤
+  }
+
+  /**
+   * 遮罩宿主必须是块级元素。
+   *
+   * 实测反馈：「上面会有一些像素露在外面」——广告位常常是行内元素
+   * （`<a class="ad-report">`、`<span class="ad-floor">` 这类），
+   * 行内盒上放绝对定位的遮罩会错位，而且 `overflow:hidden` 对行内盒不生效，
+   * 于是遮罩变成一条细线、底下的图片和文字照样露出来。
+   * 所以先往上找到第一个块级祖先再动手；找不到（或找到的是面板）就交给上层判断。
+   */
+  function isInlineBox(el) {
+    if (!el || !el.getComputedStyle) return false;
+    var d = '';
+    try { d = (el.ownerDocument.defaultView || window).getComputedStyle(el).display || ''; } catch (e) { return false; }
+    if (d.indexOf('inline') !== 0) return false;
+    return d !== 'inline-block' && d !== 'inline-flex' && d !== 'inline-grid';
+  }
+
+  function blockTargetFor(el) {
+    var cur = el;
+    for (var i = 0; i < 3 && cur && cur !== document.body; i++) {
+      if (!isInlineBox(cur)) return cur;
+      cur = cur.parentElement;
+    }
+    return el;
+  }
+
+  /**
+   * 播放器里的活动横幅（实测结构，来自使用者贴的 Copy outerHTML）：
+   *   .inside-wrp > .left  > .l-inside > .hinter-msg
+   *                                              ↑ 文案「开学季，把兴趣玩出名堂！」
+   *                > .right > .inside-bg.clickable > .b-img > img
+   *                                              ↑ src 形如
+   *                              //i2.hdslb.com/bfs/activity-plat/static/…/xxx.jpg@640w_200h_!web-video-activity-cover.avif
+   *
+   * 为什么不把 .inside-wrp 直接写进 CARD_SELECTOR：这个类名太通用（B 站多处活动位都在用），
+   * 写死会让别的页面上的同名容器也被当成卡片。所以判据带上结构，而且扫描时是
+   * 「先扫全部 .inside-wrp，再用结构判据筛」（不用 :has()，也没绑定 .right 这一层 ——
+   * 实测里 onreadystatechange 式的中间层很容易变，绑定死了就会漏），
+   * 整块一起处理 —— 只藏右边图片的话，左边那行文案会留在页面上（等于没屏蔽干净）。
+   */
+  var PLAYER_BANNER_INNER_SELECTOR = '.inside-wrp > .right > .inside-bg';
+
+  /** 从横幅的图片块回到整块横幅容器（.inside-wrp），并确认它确实是这块横幅 */
+  function playerBannerHostOf(el) {
+    if (!el || !el.closest) return null;
+    var host = el.closest('.inside-wrp');
+    if (!host) return null;
+    if (!isPlayerBannerHost(host)) return null;   // 结构不对 → 不是这块横幅
+    return host;
+  }
+
+  /**
+   * 这块 .inside-wrp 是不是播放器里的活动横幅：
+   * 正常判据是「有文案行 .hinter-msg + 有图片块 .inside-bg」；
+   * 兜底判据是「里面有走 /bfs/activity-plat/ 的活动图」——
+   * B 站这类活动位的图片都来自活动平台，文案行的类名偶尔会变。
+   */
+  function isPlayerBannerHost(el) {
+    if (!el || !el.matches || !el.matches('.inside-wrp')) return false;
+    if (el.querySelector('.inside-bg') && el.querySelector('.hinter-msg')) return true;
+    return !!el.querySelector('img[src*="activity-plat"]');
+  }
+
+  /**
+   * 一个广告位应该处理哪一块：
+   *   - 播放器活动横幅的图片块 → 整块横幅（.inside-wrp）
+   *   - 其它广告位 → 先找块级宿主（行内元素不能放遮罩），再往上收成"整卡外壳"
+   */
+  function adSlotTarget(el) {
+    if (!el || !el.matches) return null;
+    if (isChromeRegion(el)) return null;   // 顶栏 / 导航里的推广位同样不碰（宁可不屏蔽）
+    var banner = playerBannerHostOf(el);
+    if (banner) return banner;
+    if (el.matches(PLAYER_BANNER_INNER_SELECTOR)) return null;
+    if (el.matches('.inside-wrp')) return isPlayerBannerHost(el) ? el : null;
+    if (!el.matches(AD_SLOT_SELECTOR)) return null;
+    var host = blockTargetFor(el);
+    if (!host || isInlineBox(host)) return null;   // 找不到块级宿主 → 宁可不遮，也别遮成一条线
+    var frame = findAdCardFrame(host);
+    // 宿主必须是"能量出尺寸的块"：实测条幅广告里那个 <a class="ad-report-inner"> 是 888×0，
+    // 把遮罩放在它上面就会变成一条细线（反馈里"遮罩不到位"的来源之一）。
+    // 这种时候退回广告位本身；广告位自己也量不出尺寸就干脆不遮。
+    if (!hasMeasurableBox(frame)) {
+      if (hasMeasurableBox(el)) return el;
+      if (hasMeasurableBox(host)) return host;
+      return null;
+    }
+    // 绝对不许碰装着播放器的那一层：遮罩/隐藏它会让播放器塌掉（实测隐藏模式下视频从
+    // 888×500 缩成 320×180），B 站还有"白屏检测"，塌了可能触发它自己刷新页面
+    if (containsPlayer(frame)) return hasMeasurableBox(el) && !containsPlayer(el) ? el : null;
+    return frame;
   }
 
   /**
@@ -606,12 +975,80 @@
    * 「其他推广」只在该卡片没有命中任何具体分区时才生效，
    * 这样关掉某个分区开关时不会又被兜底规则抓回来。
    */
+  /**
+   * 这个广告位里现在有没有真内容。
+   * 实测右栏的 #slide_ad 经常只是一个注释占位（`<div id="slide_ad"><!----></div>`），
+   * 这种空位不该被遮 —— 遮了就是凭空多出一个"已按分区设置屏蔽此推广"的提示框。
+   */
+  function hasVisibleAdContent(el) {
+    if (!el) return false;
+    if (el.querySelector && el.querySelector('img[src], picture, iframe, canvas, video')) return true;
+    return cleanText(el).length > 0;
+  }
+
+  /** 元素速写：TAG.class#id 实测尺寸 —— 诊断日志里用来描述结构 */
+  function describeEl(el) {
+    if (!el) return '(无)';
+    var cls = typeof el.className === 'string' ? el.className.trim() : '';
+    var r = el.getBoundingClientRect ? el.getBoundingClientRect() : { width: 0, height: 0 };
+    return el.tagName + (cls ? '.' + cls.split(/\s+/).join('.') : '') + (el.id ? '#' + el.id : '') +
+      ' ' + Math.round(r.width) + '×' + Math.round(r.height);
+  }
+
+  /** 这个元素里装着播放器吗（<video> 或播放器容器）—— 装着就绝不能遮/隐藏 */
+  function containsPlayer(el) {
+    if (!el || !el.querySelector) return false;
+    return !!(el.matches && (el.matches('#bilibili-player, .bpx-player-container, .bilibili-player')) ||
+      el.querySelector('video, #bilibili-player, .bpx-player-container, .bilibili-player'));
+  }
+
+  /** 从元素往上最多 4 层的结构链（诊断用） */
+  function describeChain(el, depth) {
+    var out = [];
+    var cur = el;
+    for (var i = 0; i < (depth || 4) && cur && cur !== document.body; i++) {
+      out.push(describeEl(cur));
+      cur = cur.parentElement;
+    }
+    return out.join(' < ');
+  }
+
+  /** 卡片里第一个链接的 host + path（诊断用，判断"这张卡到底链到哪"） */
+  function firstHrefOf(card) {
+    var a = card.querySelector('a[href]');
+    if (!a) return '(无链接)';
+    return (a.getAttribute('href') || '').replace(/^\/\//, 'https://').split('?')[0];
+  }
+
+  /**
+   * 这一类认得的所有徽标写法（badge + badges），同义写法都算
+   */
+
+  function typeBadges(t) {
+    var out = [];
+    if (t.badge) out.push(t.badge);
+    if (t.badges && t.badges.length) {
+      for (var i = 0; i < t.badges.length; i++) {
+        if (out.indexOf(t.badges[i]) === -1) out.push(t.badges[i]);
+      }
+    }
+    return out;
+  }
+
   function detectType(card) {
+    // 广告位容器的身份由类名直接确定，不再往下猜：
+    // 广告里常混着 /topic-detail、活动页之类的链接，按链接判定会被排在
+    // 「广告」前面的类型抢走（TYPES 里 activity 在 ad 之前），点「广告」开关就没反应。
+    if (isAdSlot(card)) return 'ad';
+
     var badge = getBadgeText(card);
     if (badge) {
       for (var b = 0; b < TYPES.length; b++) {
         var bt = TYPES[b];
-        if (bt.badge && badge.indexOf(bt.badge) !== -1) return bt.key;
+        var words = typeBadges(bt);
+        for (var w = 0; w < words.length; w++) {
+          if (badge.indexOf(words[w]) !== -1) return bt.key;
+        }
       }
     }
     var hits = matchSpecificTypes(card);
@@ -949,6 +1386,13 @@
   }
 
   function applyBlock(card, action) {
+    // 兜底：顶栏 / 导航 / 登录面板绝不允许被打上屏蔽类（上面 processCard 已经拦了一道，
+    // 这里再拦一道，防止将来新增路径绕过）
+    if (isChromeRegion(card)) return;
+    // 兜底：装着播放器的容器绝不能被打上屏蔽类（遮罩/隐藏它会让播放器塌掉，
+    // 而 B 站有白屏检测，塌了可能触发它自己刷新页面 —— 反馈里"播放时页面重新加载"）
+    if (containsPlayer(card)) return;
+
     var wasBlocked = card.dataset.bfState === 'blocked';
     var already = wasBlocked && card.dataset.bfKey === action.key;
 
@@ -989,6 +1433,10 @@
     sessionBlocked += 1;
     bumpStat(1);
     log('已屏蔽：', action.key, getTitle(card));
+    if (action.type === 'ad' || isAdSlot(card)) {
+      // 调试日志里带上"遮的是哪一层"和它的实测尺寸，方便日后核对广告位结构变化
+      log('广告位遮罩宿主：', describeChain(card, 2));
+    }
   }
 
   /**
@@ -1029,6 +1477,15 @@
    * 注意：完全没有任何卡片的容器也算"可以越过"，但它不能同时含有真实文字内容。
    */
   function containerFullyHidden(el) {
+    // 0) 容器里装着页面功能（弹幕列表 / 播放器 / 顶栏导航）→ 永远不算"空壳"。
+    //    实测：播放页的 .video-pod-above-modules__inner 同时装着弹幕列表和贴片广告，
+    //    少了这一条，隐藏广告时会顺着空壳往上把弹幕列表也隐掉。
+    if (el.matches && el.matches(PROTECTED_REGION_SELECTOR)) return false;
+    if (el.querySelector && el.querySelector(PROTECTED_REGION_SELECTOR)) return false;
+    // 顶栏 / 导航同理：完全隐藏模式下收敛空壳时绝不能把顶栏一起隐掉
+    if (el.matches && el.matches(NAV_EXCLUDE)) return false;
+    if (el.querySelector && el.querySelector(NAV_EXCLUDE)) return false;
+
     // 1) 容器里所有卡片都必须已经被我们隐藏
     var cards = el.querySelectorAll(CARD_SELECTOR);
     for (var i = 0; i < cards.length; i++) {
@@ -1129,8 +1586,27 @@
     return true;
   }
 
-  function processCard(card) {
-    if (isNestedCard(card)) return;
+  /** 祖先里有没有"真的被遮住了"的卡片（只处理过的标记不算，见 scanAdSlots 的说明） */
+  function insideBlockedCard(el) {
+    var p = el.parentElement;
+    return !!(p && p.closest('[data-bf-state="blocked"]'));
+  }
+
+  function processCard(card, opts) {
+    // opts.ad：广告位专用，绕过 isNestedCard（它看的是"祖先处理过没有"，
+    // 而没被屏蔽的卡片也会带上那个标记，会把广告位永久卡住）
+    if (!(opts && opts.ad) && isNestedCard(card)) return;
+
+    // 顶栏 / 导航 / 登录面板：任何路径都不许屏蔽。
+    // 反馈过：播放页开了「广告」之后顶栏的入口被整块遮住 —— 所以这一关放在最前面，
+    // 关键词、分区开关、广告位、徽标发现、外层空壳收敛全都必须过它。
+    if (isChromeRegion(card)) {
+      if (card.dataset.bfState === 'blocked') {
+        log('顶栏/导航区域，撤销屏蔽：', describeEl(card));
+        clearBlock(card);
+      }
+      return;
+    }
 
     if (!settings.enabled) {
       clearBlock(card);
@@ -1152,7 +1628,31 @@
 
     var type = detectType(card);
 
+    // 诊断：每张卡片第一次被看到时打一行，说明「角标文案 → 判定成哪一类 → 链接到哪」；
+    // 广告位则带上"当前「广告」开关是开还是关"和往上三层的结构链。
+    // 反馈里"某个开关点了没反应"基本都是这几者之一变了，有这一行就不用靠猜
+    //（需要先在设置页打开「输出调试日志到控制台」）。只打一次，避免每次扫描刷屏。
+    if (settings.debug && card.dataset.bfSeen !== '1') {
+      card.dataset.bfSeen = '1';
+      var seenBadge = getBadgeText(card);
+      if (seenBadge) {
+        log('卡片角标诊断：角标「' + seenBadge + '」→ 判定为 ' + type + '（' + typeLabel(type) + '）' +
+          '｜链接 ' + firstHrefOf(card));
+      } else if (type === 'ad') {
+        log('广告位诊断：判定为广告，「广告」开关当前是' +
+          (settings.blockTypes && settings.blockTypes.ad ? '开' : '关') +
+          '｜' + describeChain(card, 3));
+      }
+    }
+
     if (settings.blockTypes && settings.blockTypes[type]) {
+      // 空广告位不遮：实测右栏的 #slide_ad 常常只有一个注释占位（<!---->），
+      // 遮了就是凭空多出一个提示框
+      if (type === 'ad' && !hasVisibleAdContent(card)) {
+        log('广告位当前是空的，跳过：', describeEl(card));
+        clearBlock(card);
+        return;
+      }
       applyBlock(card, { key: 'type:' + type, kind: 'type', type: type });
       return;
     }
@@ -1201,6 +1701,9 @@
     for (var i = 0; i < anchors.length && handled < 300; i++) {
       var a = anchors[i];
       if (isExcludedAnchor(a)) continue;
+      // 广告位里的链接交给 scanAdSlots 处理；这里若还按链接往上猜，
+      // 会因为"列表容器里恰好有标题和封面"而一路猜到列表容器上，把整列推荐一起遮掉
+      if (a.closest && a.closest(AD_SLOT_SELECTOR)) continue;
       if (a.closest && a.closest(BANNER_EXCLUDE)) continue;   // 横幅交给板块级开关
       var href = a.getAttribute('href') || '';
       var hit = null;
@@ -1220,15 +1723,134 @@
     }
   }
 
+  /**
+   * 徽标驱动的卡片发现（第三条发现路径）。
+   *
+   * 为什么要有这一条：scanTypedCards 只认「卡片里的链接」，fullScan 只认已知类名。
+   * 可首页「赛事」这类模块的推广卡片是直接跳视频页 / 活动页的，链接里既没有
+   * /match/ 也没有 /esports/，类名也可能不在名单里 —— 整类卡片就永远扫不到，
+   * 开关点了没反应（反馈过两次，而且每次都只有赛事这一类）。
+   * 而分类阶段最可靠的判据恰好是封面徽标，所以发现阶段也用一次徽标：
+   * 从徽标往上找到"同时含封面与标题"的那一层，全程复用安全阀，推不出来就跳过。
+   *
+   * 这一条来自另一位贡献者发的 1.5.6 构建（他当时的写法是 scanBadgeCards），
+   * 与本文件里把 .floor-card-inner 写进卡片名单的做法互补：那条管已知楼层结构，
+   * 这条管"徽标认得出来、但结构或链接都不认识"的卡片。
+   */
+  function resolveBadgeCard(box, hrefRe) {
+    var known = box.closest(CARD_SELECTOR);
+    if (known && !isAdSlot(known)) return isSafeCardTarget(known, hrefRe) ? known : null;
+
+    var scope = box;
+    for (var i = 0; i < 6 && scope && scope !== document.body; i++) {
+      if (scope !== box && hasTitleInside(scope) && hasCoverInside(scope) &&
+          isSafeCardTarget(scope, hrefRe)) {
+        return scope;
+      }
+      scope = scope.parentElement;
+    }
+    return null;
+  }
+
+  function scanBadgeCards() {
+    if (!settings.enabled) return;
+    var boxes = document.querySelectorAll(BADGE_SELECTOR);
+    var handled = 0;
+    for (var i = 0; i < boxes.length && handled < 200; i++) {
+      var box = boxes[i];
+      if (box.closest && box.closest('.bf-mask')) continue;
+      if (isExcludedAnchor(box)) continue;                        // 顶栏 / 登录区域
+      if (box.closest && box.closest(BANNER_EXCLUDE)) continue;    // 首页轮播交给板块级开关
+      if (box.closest && box.closest(AD_SLOT_SELECTOR)) continue;  // 广告位的身份由 isAdSlot 直接认定
+
+      var label = box.querySelector('.floor-title') || box;
+      var badge = cleanText(label);
+      if (!badge || badge.length > 8) continue;
+
+      var hit = null;
+      for (var b = 0; b < TYPES.length; b++) {
+        var words = typeBadges(TYPES[b]);
+        for (var w = 0; w < words.length; w++) {
+          if (badge.indexOf(words[w]) !== -1) { hit = TYPES[b]; break; }
+        }
+        if (hit) break;
+      }
+      if (!hit) continue;
+
+      var card = resolveBadgeCard(box, hit.href || /(?!)/);
+      if (!card) continue;   // 无法确认是一张卡片 → 宁可不屏蔽
+      if (!card.matches || !card.matches(CARD_SELECTOR)) trackedCards.add(card);
+      if (card.dataset.bfState === 'blocked') continue;
+      if (insideBlockedCard(card)) continue;
+      processCard(card);
+      handled++;
+    }
+  }
+
+  /**
+   * 广告扫描：广告位既不在 CARD_SELECTOR 里、又常常把标题挂在外面，
+   * 所以单独一趟，统一先收成"要处理的那一块"（见 adSlotTarget）再交给 processCard。
+   *
+   * **一块广告只处理最外层那一个节点**：AD_SLOT_SELECTOR 会同时命中嵌套的多个元素
+   * （实测一条条幅广告是这样：`.ad-report.strip-ad.left-banner` > `.ad-report-inner`；
+   * 右栏广告卡是 `.video-card-ad-small` > `.ad-report` > `.ad-report-inner` > `.ad-floor-cover`）。
+   * 以前每个节点各算一次目标，于是同一块广告被标了好几次、遮罩里套遮罩 ——
+   * 实测遮蔽模式下 4 块广告出了 12 个遮罩，其中还包含 888×22、350×14 这种"一条线"的退化遮罩
+   * （反馈里"遮罩不到位""悬停显示不对"就是这个）。现在不是最外层的广告节点直接跳过。
+   *
+   * 收出来的块同样记进 trackedCards：它们不是 CARD_SELECTOR 匹配到的卡片，
+   * 关掉「广告」开关时要靠这份记录恢复原状。
+   */
+  var AD_ANY_SELECTOR = AD_SLOT_SELECTOR + ',' + PLAYER_BANNER_INNER_SELECTOR + ',.inside-wrp';
+
+  /** 这个广告节点是不是"最外层的那一个"（祖先里还有广告节点就说明不是） */
+  function isOutermostAdNode(el) {
+    var p = el.parentElement;
+    if (!p || !p.closest) return true;
+    return !p.closest(AD_ANY_SELECTOR);
+  }
+
+  function scanAdSlots() {
+    if (!settings.enabled) return;
+    var hasKeywords = !!(settings.keywords && settings.keywords.length);
+    // 没开广告开关、也没屏蔽词时不用扫；但开着调试日志时仍然扫一遍，
+    // 否则"广告认出来了但开关没开"这条诊断永远不会打印（反馈里就是这么卡住的）
+    if (!(settings.blockTypes && settings.blockTypes.ad) && !hasKeywords && !settings.debug) return;
+
+    var nodes = document.querySelectorAll(AD_ANY_SELECTOR);
+    var seen = [];
+    for (var i = 0; i < nodes.length; i++) {
+      var slot = nodes[i];
+      if (isChromeRegion(slot)) continue;   // 顶栏 / 导航里的东西一律跳过（反馈过的 bug：顶栏被遮）
+      if (!isOutermostAdNode(slot)) continue;   // 同一块广告只处理最外层，避免重复遮罩
+      var target = adSlotTarget(slot);
+      if (!target) continue;
+      // 外壳的身份明确标出来（见 isAdSlot）：光看类名认不出来，也不能靠"里面装着广告"来猜
+      if (target !== slot && target.dataset) target.dataset.bfAdFrame = '1';
+      if (seen.indexOf(target) !== -1) continue;   // 嵌套的广告位会收敛到同一块，只处理一次
+      seen.push(target);
+      trackedCards.add(target);
+      if (target.dataset.bfState === 'blocked') continue;   // 已屏蔽，跳过
+      // 广告位要绕过 isNestedCard：那个判断看的是"祖先有没有被处理过（data-bf-card）"，
+      // 而 clearBlock 会给没屏蔽的卡片也打上这个标记 —— 页面上一旦有容器被误判成卡片，
+      // 里面的广告位就永远轮不到处理（实测反馈里横幅怎么都不屏蔽，就是这条卡住的）。
+      // 真正被遮住的祖先仍然要跳过，否则会在遮罩里再套一块遮罩。
+      if (insideBlockedCard(target)) continue;
+      processCard(target, { ad: true });
+    }
+  }
+
   function scanAll(force) {
     fullScan(force);
     scanTypedCards();
+    scanBadgeCards();
+    scanAdSlots();
 
     // 设置变更时，把通用识别找到过的卡片也重新判定一遍（否则关掉开关后无法恢复）
     if (force && trackedCards.size) {
       trackedCards.forEach(function (card) {
         if (!card.isConnected) { trackedCards.delete(card); return; }
-        if (!card.matches || !card.matches(CARD_SELECTOR)) processCard(card);
+        if (!card.matches || !card.matches(CARD_SELECTOR)) processCard(card, { ad: isAdSlot(card) });
       });
     }
 
@@ -1292,6 +1914,9 @@
       return;
     }
     if (node.querySelector && node.querySelector(CARD_SELECTOR)) pendingFullScan = true;
+    // 广告位与播放器活动横幅都是懒加载进来的，也不在 CARD_SELECTOR 里，同样要能被发现
+    else if (node.querySelector && node.querySelector(AD_SLOT_SELECTOR)) pendingFullScan = true;
+    else if (node.querySelector && node.querySelector(PLAYER_BANNER_INNER_SELECTOR)) pendingFullScan = true;
     // 懒加载进来的推广卡片（.floor-card-inner 这类）不在 CARD_SELECTOR 里，
     // 只能靠"里面有没有分区链接"来发现，否则要等到用户滚动才会被扫到
     else if (containsTypedAnchor(node)) pendingFullScan = true;

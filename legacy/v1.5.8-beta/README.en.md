@@ -4,9 +4,9 @@ An extension I wrote for myself to filter Bilibili. Add a few keywords and the v
 
 Manifest V3, works in Edge and Chrome, plain JavaScript with no runtime dependencies.
 
-![version](https://img.shields.io/badge/version-1.6.0-orange)
+![version](https://img.shields.io/badge/version-1.5.8--beta-orange)
 ![browser](https://img.shields.io/badge/Edge%20%7C%20Chrome-Chromium-00aeec)
-![tests](https://img.shields.io/badge/tests-283%20passed-brightgreen)
+![tests](https://img.shields.io/badge/tests-345%20passed-brightgreen)
 
 ---
 
@@ -124,7 +124,7 @@ npm install
 npm test
 ```
 
-283 checks covering the blocking logic, category detection, both hiding behaviours, the settings pages and the background stats.
+345 checks covering the blocking logic, category detection, both hiding behaviours, the settings pages and the background stats.
 
 The mock DOM and its sizes were measured on the real site (utility-class structures like `.floor-card-inner > .cover-container + .pb-16.px-12 > p.title`, the `.vui_carousel` banner, the 0×0 hidden links inside `.palette-button-inner`, and so on).
 
@@ -154,22 +154,6 @@ Bilibili is a single-page app, so scrolling and navigating re-render cards. The 
 ## Changelog
 
 Newest first. This is what changed and why — including the parts I got wrong.
-
-### 1.6.0
-
-**This release simply promotes the `v1.5.0-beta` code to stable** — the code is identical, only the version number differs (`manifest` now reads 1.6.0).
-
-**It also announces that, due to technical limitations, support for blocking ads on the player page is cancelled.** The player's right-hand ad and the banner ad below the player that the 1.5.1–1.5.8 line tried to block will not ship — that implementation kept failing on real pages (masks covering only part of the ad, masks collapsing into a thin line, the danmaku list being dragged in, masks even landing on the site header, and finally trouble with the player's layout and page reloads). I judged it cannot be made reliable with the technical ability I have, and shipping a version that gets in the way is worse than not shipping it. Those releases (v1.5.1-beta through v1.5.8-beta) are marked "deprecated, unmaintained" on GitHub.
-
-So 1.6.0 is exactly the 1.5.0 feature set:
-
-- Block by title keyword (regex, case sensitivity, uploader matching)
-- Eighteen promo-category switches plus an "other promos" catch-all, and a separate switch for the home-page carousel banner
-- Two blocking styles: mask (reveals on hover) and hide (keeps the slot by default)
-- Uploader whitelist and per-page switches (search pages on by default, uploader pages off, login pages never blocked)
-- A draggable in-page panel, dark-mode support, Chinese and English locales
-
-> The change log and code of 1.5.1–1.5.8 remain in the entries below and in the `legacy/` snapshots. One thing to be clear about: **if you want ads on the player page blocked, 1.6.0 cannot do it** — that is exactly the capability being cancelled here.
 
 ### 1.5.8
 
