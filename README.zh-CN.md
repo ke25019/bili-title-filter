@@ -4,7 +4,7 @@
 
 Manifest V3，Edge 和 Chrome 都能装，纯 JavaScript，没有运行时依赖。
 
-![version](https://img.shields.io/badge/version-1.5.6--beta-orange)
+![version](https://img.shields.io/badge/version-1.5.7--beta-orange)
 ![browser](https://img.shields.io/badge/Edge%20%7C%20Chrome-Chromium-00aeec)
 ![tests](https://img.shields.io/badge/tests-337%20passed-brightgreen)
 
@@ -154,6 +154,12 @@ B 站是单页应用，滚动和切页会让卡片重新渲染，所以统计的
 ## 更新记录
 
 按时间倒序。这里记的是每次改了什么、为什么改，包括我自己搞错的地方。
+
+### 1.5.7
+
+**版本号统一到 1.5.7：内容与 1.5.6-beta 那版完全相同，只有编号不同。** 1.5.6 发布时 main 里的版本号被改回了 1.5.6，标签、发布包和 main 的编号各说各话；这一版把三处统一到 1.5.7，后续以 1.5.7 为准（已经装了 1.5.6-beta 的不用换，包内代码一致）。
+
+下面那条 1.5.6 记录写的就是这份代码的内容（并入的两处修复 + 补回的两块 + 本轮的越层防护）。
 
 ### 1.5.6
 

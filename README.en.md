@@ -4,7 +4,7 @@ An extension I wrote for myself to filter Bilibili. Add a few keywords and the v
 
 Manifest V3, works in Edge and Chrome, plain JavaScript with no runtime dependencies.
 
-![version](https://img.shields.io/badge/version-1.5.6--beta-orange)
+![version](https://img.shields.io/badge/version-1.5.7--beta-orange)
 ![browser](https://img.shields.io/badge/Edge%20%7C%20Chrome-Chromium-00aeec)
 ![tests](https://img.shields.io/badge/tests-337%20passed-brightgreen)
 
@@ -154,6 +154,12 @@ Bilibili is a single-page app, so scrolling and navigating re-render cards. The 
 ## Changelog
 
 Newest first. This is what changed and why — including the parts I got wrong.
+
+### 1.5.7
+
+**The version number is unified as 1.5.7: the content is identical to the 1.5.6-beta build, only the number differs.** When 1.5.6 was published the number inside main had been reverted to 1.5.6, leaving the tag, the release asset and main each saying something different; this release unifies all three as 1.5.7, which is the number to use from now on (if you already installed 1.5.6-beta there is no need to switch — the code is the same).
+
+The 1.5.6 entry below describes exactly this code (the two merged fixes, the two restored features and this round's layer guard).
 
 ### 1.5.6
 
