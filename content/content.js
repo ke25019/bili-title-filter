@@ -98,7 +98,11 @@
     '#danmukuBox',
     '.danmaku-box',
     '.danmaku-wrap',
-    '[class*="danmaku"]',
+    /* 只认「弹幕列表这个面板」的类名，不认单条弹幕（danmaku-item 这类）：
+       弹幕列表里的推广条本身就是一条弹幕，它得能当广告卡被遮（仓库用例有这一条）。 */
+    '[class*="danmaku-list"]',
+    '[class*="danmaku-panel"]',
+    '[class*="danmaku-container"]',
     '#bilibili-player',
     '.bpx-player-container',
     '.bilibili-player',
@@ -806,6 +810,12 @@
 
   function isAdFrameCandidate(box, slot) {
     if (!box.querySelectorAll) return false;
+    // ⓪ 页面功能区域（弹幕列表 / 播放器 / .video-pod-above-modules*）永远不能当广告外壳。
+    //    实测：右栏 .video-pod-above-modules__inner 里同时装着弹幕列表和广告，
+    //    少了这一条，一旦同层没有第二块广告位（例如广告没加载），收敛就会越过 __inner
+    //    落到 .video-pod-above-modules 上，把弹幕列表一起隐掉（1.5.7 后的回归点）。
+    if (box.matches && box.matches(PROTECTED_REGION_SELECTOR)) return false;
+    if (box.querySelector(PROTECTED_REGION_SELECTOR)) return false;
     if (isPlayerBannerHost(box) || (box.matches && box.matches(PLAYER_BANNER_INNER_SELECTOR))) return false;
     if (box.querySelector(PLAYER_BANNER_INNER_SELECTOR)) return false;   // 里面装着播放器横幅 → 别越过去
     if (isAdFramePanel(box)) return false;                             // ①

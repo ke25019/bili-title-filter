@@ -167,6 +167,8 @@ That build also dropped everything done after 1.5.2, which caused two visible pr
 - **The banner ad below the player was not blocked** (the brand creative inside `#slide_ad` and the activity banner `.inside-wrp`) — that build carried none of that code. It is restored against the measured markup: `#slide_ad.slide-ad-exp > .slide-gg > .van-slide.item-box > …`; for the activity banner both the image block `.inside-bg` and the wording line `.hinter-msg` must be present (Bilibili has renamed that wrapper, so there is a fallback for images served from `/bfs/activity-plat/`).
 - **The right-column ad's mask did not cover enough** — only the ad slot itself was covered, leaving the card's title, uploader name and the "block this promo" button visible. The mask now walks up to the **whole ad card**: it stops at the outermost element that still holds only that one ad, judged by having no other real card, no second ad slot (ancestors/descendants do not count, they belong to the same ad) and a size still on the scale of a card (≤600×640 — the player's own 1130-wide layer can therefore never be taken for an ad card). When the ad slot itself is an inline element (such as `<a class="ad-report">`), it is first resolved to a block-level host, otherwise the mask collapses into a thin line and the content underneath stays visible.
 
+- **The ad-shell collapse no longer crosses `.video-pod-above-modules`** (the regression fixed in this round): the 1.5.7 region protection only listed `.video-pod-above-modules__inner`, so when that layer holds no second ad slot (an ad that has not loaded yet, for instance) the collapse kept climbing to `.video-pod-above-modules` and took the whole layer holding the danmaku list with it. That collapse now shares the same "never an empty shell" list as the card collapse, and only panel-level danmaku class names are protected (`danmaku-list` / `danmaku-panel` / `danmaku-container`) — a single danmaku item (`danmaku-item`) can still be an ad card, because a promo danmaku inside the list has to be blockable on its own.
+
 Also: an empty ad placeholder such as `#slide_ad` (holding only a comment) is no longer covered, so no notice box appears out of nowhere; and the fixed wait in the "stats loaded" test became polling, removing a flaky false failure.
 
 ### 1.5.5
@@ -356,7 +358,7 @@ First version: block by title keyword, two blocking styles, nine promo categorie
 
 ## Contributors
 
-- [@dacta-yzy](https://github.com/dacta-yzy) wrote the uploader whitelist and the home-page carousel banner blocking (v1.3.1 / v1.3.2)
+- [@dacta-yzy](https://github.com/dacta-yzy) wrote the uploader whitelist and the home-page carousel banner blocking (v1.3.1 / v1.3.2), and reported and pushed on two families of breakage (the play-page ad sharing a parent with the danmaku list, and the esports card discovery; v1.5.6 / v1.5.7)
 - [@ziye081220](https://github.com/ziye081220) reported the login page being blocked by the promo rule (fixed in 1.5.0)
 
 ---
