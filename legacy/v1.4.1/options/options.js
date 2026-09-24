@@ -72,10 +72,6 @@
     $('show-btn').checked = !!settings.showHeaderButton;
     $('debug').checked = !!settings.debug;
 
-    // 页面级开关：搜索结果页默认开，UP 个人主页默认关
-    $('block-on-search').checked = settings.blockOnSearch !== false;
-    $('block-on-space').checked = settings.blockOnSpace === true;
-
     Array.prototype.forEach.call(document.querySelectorAll('#theme button'), function (b) {
       b.classList.toggle('is-active', b.dataset.value === settings.theme);
     });
@@ -297,16 +293,6 @@
     $('match-up').addEventListener('change', function () { save({ matchUpName: $('match-up').checked }, true); });
     $('show-btn').addEventListener('change', function () { save({ showHeaderButton: $('show-btn').checked }, true); });
     $('debug').addEventListener('change', function () { save({ debug: $('debug').checked }, true); });
-
-    // 页面级开关
-    $('block-on-search').addEventListener('change', function () {
-      save({ blockOnSearch: $('block-on-search').checked }, true);
-      toast($('block-on-search').checked ? '搜索结果页也会屏蔽' : '搜索结果页不再屏蔽');
-    });
-    $('block-on-space').addEventListener('change', function () {
-      save({ blockOnSpace: $('block-on-space').checked }, true);
-      toast($('block-on-space').checked ? 'UP 个人主页也会屏蔽' : 'UP 个人主页不再屏蔽');
-    });
 
     $('kw-add').addEventListener('click', addKeywordFromInput);
     $('kw-input').addEventListener('keydown', function (e) {

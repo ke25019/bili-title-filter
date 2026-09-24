@@ -105,9 +105,6 @@ async function main() {
     Object.keys(store.sync.bfSettings.blockTypes).length === 18 &&
     Object.values(store.sync.bfSettings.blockTypes).every((v) => v === false));
   check('默认不屏蔽首页顶部轮播横幅', store.sync.bfSettings.blockBanner === false);
-  check('默认在搜索结果页屏蔽、在 UP 个人主页不屏蔽',
-    store.sync.bfSettings.blockOnSearch === true && store.sync.bfSettings.blockOnSpace === false,
-    store.sync.bfSettings.blockOnSearch + '/' + store.sync.bfSettings.blockOnSpace);
   check('默认 UP 白名单为空',
     Array.isArray(store.sync.bfSettings.whitelist) && store.sync.bfSettings.whitelist.length === 0,
     JSON.stringify(store.sync.bfSettings.whitelist));

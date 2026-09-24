@@ -601,39 +601,6 @@ async function main() {
   await pushSettings({ mode: 'mask' });
   check('横幅开关与分区开关互不影响', !blocked('c4') && !blocked('c8'));
 
-  console.log('\n[9b] 页面级开关：搜索结果页 / UP 个人主页 / 登录页');
-  await pushSettings({ mode: 'mask', keywords: ['剧透'], whitelist: [], blockTypes: {}, blockOnSearch: true, blockOnSpace: false });
-  check('首页照常屏蔽', blocked('c1'), $('c1').className);
-
-  dom.reconfigure({ url: 'https://search.bilibili.com/all?keyword=x' });
-  await pushSettings({ keywords: ['剧透'] });
-  check('搜索结果页：默认开着，照常屏蔽', blocked('c1'), $('c1').className);
-  await pushSettings({ blockOnSearch: false });
-  check('关掉「站内搜索结果页」后，搜索页不再屏蔽', !blocked('c1') && !$('c1').querySelector('.bf-mask'), $('c1').className);
-  await pushSettings({ blockOnSearch: true });
-
-  dom.reconfigure({ url: 'https://space.bilibili.com/12345' });
-  await pushSettings({ keywords: ['剧透'] });
-  check('UP 个人主页：默认关，不屏蔽', !blocked('c1'), $('c1').className);
-  await pushSettings({ blockOnSpace: true });
-  check('打开「UP 个人主页」后照常屏蔽', blocked('c1'), $('c1').className);
-  await pushSettings({ blockOnSpace: false });
-
-  dom.reconfigure({ url: 'https://passport.bilibili.com/login' });
-  await pushSettings({ keywords: ['剧透'], blockOnSearch: true, blockOnSpace: true });
-  check('【回归】登录页一律不屏蔽（反馈：登录页被「其他推广」整块挡住）', !blocked('c1'), $('c1').className);
-  const otherType = win.BF_TYPES.filter((t) => t.key === 'other')[0];
-  check('登录页链接不再被「其他推广」当成推广链接',
-    !otherType.href.test('//passport.bilibili.com/login') && otherType.href.test('//live.bilibili.com/1'),
-    'passport=' + otherType.href.test('//passport.bilibili.com/login'));
-
-  dom.reconfigure({ url: 'https://www.bilibili.com/' });
-  // 顺带把 blockOnSpace 改回默认值，保证这次设置变更一定触发重扫
-  // （内容脚本对"值没变"的设置变更会跳过重扫，测试里不能依赖它）
-  await pushSettings({ keywords: ['剧透'], blockOnSpace: false });
-  check('切回首页后恢复屏蔽', blocked('c1'), $('c1').className);
-  await pushSettings({ keywords: [], blockOnSearch: true, blockOnSpace: false });
-
   console.log('\n[10] 完全隐藏模式：收敛被顶上来填空的"空占位项"');
   // 遮蔽模式下不应动任何占位项（遮蔽保留占位，不会有东西被顶上来）
   await pushSettings({ mode: 'mask', keywords: ['剧透'] });

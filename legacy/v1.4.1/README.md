@@ -1,9 +1,9 @@
 # B站屏蔽助手 · BiliTitleFilter
 
 [![License: PolyForm Noncommercial](https://img.shields.io/badge/License-PolyForm_Noncommercial-orange.svg)](https://polyformproject.org/licenses/noncommercial/1.0.0/)
-![version](https://img.shields.io/badge/version-1.4.2-orange)
+![version](https://img.shields.io/badge/version-1.4.1-orange)
 ![browser](https://img.shields.io/badge/Edge%20%7C%20Chrome-Chromium-00aeec)
-![tests](https://img.shields.io/badge/tests-283%20passed-brightgreen)
+![tests](https://img.shields.io/badge/tests-268%20passed-brightgreen)
 
 一个 B 站网页端扩展：给不想看的视频标题加几个关键词，它们就从页面上消失；也能按分区屏蔽直播、番剧这类推广内容。
 
@@ -43,7 +43,6 @@ Details and the FAQ live in the two documents linked above.
 - 18 类分区推广可以整类屏蔽（番剧、国创、综艺、电影这些是分开的），另有「其他推广」兜底，以及一个单独的开关用来屏蔽首页顶部的大轮播横幅
 - B 站页面里有一个可以拖着走的悬浮面板
 - 跟随 B 站深色模式
-- 页面级开关：站内搜索结果页默认屏蔽、UP 个人主页默认不屏蔽，登录页一律不屏蔽
 - 扩展包内含**简体中文与英文**两种语言（`_locales/`，manifest 用 `__MSG_` 占位）——扩展商店就是读这套配置来决定显示哪些语言选项的
 
 - Block by title keyword, with regex, case sensitivity and uploader matching
@@ -53,9 +52,9 @@ Details and the FAQ live in the two documents linked above.
 - A draggable panel inside the page
 - Follows Bilibili's dark mode
 
-纯原生 JavaScript，没有运行时依赖。测试用 jsdom 跑，一共 283 项。
+纯原生 JavaScript，没有运行时依赖。测试用 jsdom 跑，一共 268 项。
 
-Plain JavaScript, no runtime dependencies. The tests run on jsdom — 283 checks in total.
+Plain JavaScript, no runtime dependencies. The tests run on jsdom — 268 checks in total.
 
 ---
 

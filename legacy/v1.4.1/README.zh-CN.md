@@ -4,9 +4,9 @@
 
 Manifest V3，Edge 和 Chrome 都能装，纯 JavaScript，没有运行时依赖。
 
-![version](https://img.shields.io/badge/version-1.4.2-orange)
+![version](https://img.shields.io/badge/version-1.4.1-orange)
 ![browser](https://img.shields.io/badge/Edge%20%7C%20Chrome-Chromium-00aeec)
-![tests](https://img.shields.io/badge/tests-283%20passed-brightgreen)
+![tests](https://img.shields.io/badge/tests-268%20passed-brightgreen)
 
 ---
 
@@ -49,12 +49,6 @@ Chrome 用 `chrome://extensions/`，步骤一样。
 **完全隐藏** —— 视频直接不显示了。这里我默认按最早那版（v1.0.0）的做法来：只把内容藏起来、**位置留空**。这样页面不会重排，也不会把 B 站末尾那些空的骨架占位块顶到内容中间来。
 
 如果你更想要紧凑的效果，可以在面板里关掉「隐藏时保留原位置」，卡片就会整个从布局里拿掉，后面的内容往前补位。两种都行，看你习惯哪个。
-
----
-
-## 在哪些页面生效
-
-设置页里可以单独决定两个页面要不要屏蔽：**站内搜索结果页**（search.bilibili.com）默认开，**UP 个人主页**（space.bilibili.com）默认关。登录页（`passport.bilibili.com`）一律不屏蔽 —— 那块登录卡片里的链接会命中推广域名规则，早先版本会把整个登录面板挡掉。
 
 ---
 
@@ -124,7 +118,7 @@ npm install
 npm test
 ```
 
-一共 283 项校验，覆盖屏蔽逻辑、分区识别、两种隐藏行为、设置页交互和后台统计。
+一共 268 项校验，覆盖屏蔽逻辑、分区识别、两种隐藏行为、设置页交互和后台统计。
 
 测试里的模拟 DOM 和尺寸都是从真实页面上量出来的（`.floor-card-inner > .cover-container + .pb-16.px-12 > p.title` 这种工具类结构、`.vui_carousel` 包裹的轮播、`.palette-button-inner` 里 0×0 的隐藏链接等等）。
 
@@ -154,17 +148,6 @@ B 站是单页应用，滚动和切页会让卡片重新渲染，所以统计的
 ## 更新记录
 
 按时间倒序。这里记的是每次改了什么、为什么改，包括我自己搞错的地方。
-
-### 1.4.2
-
-**修掉登录页被「其他推广」整块挡住的问题**（感谢 [@ziye081220](https://github.com/ziye081220) 反馈）。B 站的登录在 `passport.bilibili.com`，登录卡片里的链接正好命中「其他推广」的域名规则，于是整块登录面板被当成推广屏蔽掉。现在：登录页（`passport.bilibili.com`，以及路径里带 `login` 的页面）一律不屏蔽；`passport` 也从「其他推广」的域名规则里排除；`login` 相关区域加入了卡片扫描的排除名单。
-
-**新增两个页面级开关**（设置页「在哪些页面生效」）：
-
-- **站内搜索结果页**（search.bilibili.com）：默认**开**，跟以前一样照常屏蔽
-- **UP 个人主页**（space.bilibili.com）：默认**关** —— 主页上大多是 TA 自己的作品，默认不动它，需要的时候可以打开
-
-登录页不受这两个开关影响，永远不屏蔽。
 
 ### 1.4.1
 
@@ -285,12 +268,6 @@ B 站是单页应用，滚动和切页会让卡片重新渲染，所以统计的
 ### 1.0.0
 
 第一个版本：按标题屏蔽词屏蔽视频，两种屏蔽方式，9 类分区推广，页面内面板，深色模式。
-
----
-
-## 贡献者
-
-- [@ziye081220](https://github.com/ziye081220)：反馈了「登录页被其他推广整块屏蔽」这个 bug（1.4.2 修复）
 
 ---
 

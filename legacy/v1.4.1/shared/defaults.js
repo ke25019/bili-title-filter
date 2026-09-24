@@ -159,7 +159,7 @@
       label: '其他推广',
       badge: '',
       desc: '兜底：跳往站内其它频道、客户端下载或站外链接的推广卡片（不含上面已分类的分区）',
-      href: /\/\/(?!www|space|passport|i0|i1|i2|s1|s2|static|api|grpc)[a-z0-9-]+\.bilibili\.com|\/blackboard\/|\/festival\/|\/topic\/|\/platform\/|\/read\/|\/cheese\/|\/anime\/|\/guochuang\/|\/variety\/|\/documentary\/|\/movie\/|\/tv\/|\/bangumi\/|\/audio\/|\/manga\/|\/v\/[a-z]/i,
+      href: /\/\/(?!www|space|i0|i1|i2|s1|s2|static|api|grpc)[a-z0-9-]+\.bilibili\.com|\/blackboard\/|\/festival\/|\/topic\/|\/platform\/|\/read\/|\/cheese\/|\/anime\/|\/guochuang\/|\/variety\/|\/documentary\/|\/movie\/|\/tv\/|\/bangumi\/|\/audio\/|\/manga\/|\/v\/[a-z]/i,
       cls: ''
     }
   ];
@@ -228,16 +228,6 @@
 
     /** 是否在 B 站标题栏附近显示快捷面板入口 */
     showHeaderButton: true,
-
-    /**
-     * 页面级开关：在这些页面上要不要屏蔽。
-     *   站内搜索结果页（search.bilibili.com）：默认开
-     *   UP 个人主页（space.bilibili.com）：默认关 —— 主页上大多是 UP 自己的作品，
-     *   顺手把整页按关键词筛一遍容易误伤，所以默认不动它
-     * 另外登录页（passport.bilibili.com 或路径里带 login）一律不屏蔽，不受这两个开关影响。
-     */
-    blockOnSearch: true,
-    blockOnSpace: false,
 
     /** 是否在控制台输出调试日志 */
     debug: false

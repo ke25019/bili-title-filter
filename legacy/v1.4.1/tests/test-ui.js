@@ -230,22 +230,6 @@ async function testOptions() {
     JSON.stringify(store.sync.bfSettings.keywords) === JSON.stringify(['剧透', '标题党', '营销号']),
     JSON.stringify(store.sync.bfSettings.keywords));
 
-  console.log('\n[B1b] 页面级开关（站内搜索 / UP 个人主页）');
-  check('设置页有「站内搜索结果页」开关', !!doc.getElementById('block-on-search'));
-  check('设置页有「UP 个人主页」开关', !!doc.getElementById('block-on-space'));
-  check('默认：搜索页开、UP 个人主页关',
-    doc.getElementById('block-on-search').checked === true && doc.getElementById('block-on-space').checked === false,
-    doc.getElementById('block-on-search').checked + '/' + doc.getElementById('block-on-space').checked);
-  doc.getElementById('block-on-space').click();
-  await sleep(60);
-  check('打开「UP 个人主页」会保存', store.sync.bfSettings.blockOnSpace === true, String(store.sync.bfSettings.blockOnSpace));
-  doc.getElementById('block-on-search').click();
-  await sleep(60);
-  check('关掉「站内搜索结果页」会保存', store.sync.bfSettings.blockOnSearch === false, String(store.sync.bfSettings.blockOnSearch));
-  doc.getElementById('block-on-search').click();
-  await sleep(60);
-  check('再打开又回到开', store.sync.bfSettings.blockOnSearch === true);
-
   console.log('\n[B2] UP 白名单（设置页）');
   check('设置页有 UP 白名单区域',
     !!doc.getElementById('wl-input') && !!doc.getElementById('wl-chips') && !!doc.getElementById('wl-bulk'));

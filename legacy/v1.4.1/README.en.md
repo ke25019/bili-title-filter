@@ -4,9 +4,9 @@ An extension I wrote for myself to filter Bilibili. Add a few keywords and the v
 
 Manifest V3, works in Edge and Chrome, plain JavaScript with no runtime dependencies.
 
-![version](https://img.shields.io/badge/version-1.4.2-orange)
+![version](https://img.shields.io/badge/version-1.4.1-orange)
 ![browser](https://img.shields.io/badge/Edge%20%7C%20Chrome-Chromium-00aeec)
-![tests](https://img.shields.io/badge/tests-283%20passed-brightgreen)
+![tests](https://img.shields.io/badge/tests-268%20passed-brightgreen)
 
 ---
 
@@ -49,12 +49,6 @@ Uploaders on the list are **never blocked** — keywords and category switches h
 **Hide** — the video simply isn't shown. By default I do it the way the very first version (v1.0.0) did: only the content is hidden and **the slot is kept**. That way the page doesn't reflow, and Bilibili's empty skeleton placeholders at the end of the grid don't get pulled into the middle of the feed.
 
 If you'd rather have things compact, turn off "keep the original slot" in the panel and the card is removed from the layout entirely, with the following content moving up. Either one is fine, pick whichever you prefer.
-
----
-
-## Where it applies
-
-The settings page has two per-page switches: **in-site search results** (search.bilibili.com) is on by default, **uploader profile pages** (space.bilibili.com) is off by default. The login page (`passport.bilibili.com`) is never blocked - the links inside the login card match the promo domain rule, which used to hide the whole login panel.
 
 ---
 
@@ -124,7 +118,7 @@ npm install
 npm test
 ```
 
-283 checks covering the blocking logic, category detection, both hiding behaviours, the settings pages and the background stats.
+268 checks covering the blocking logic, category detection, both hiding behaviours, the settings pages and the background stats.
 
 The mock DOM and its sizes were measured on the real site (utility-class structures like `.floor-card-inner > .cover-container + .pb-16.px-12 > p.title`, the `.vui_carousel` banner, the 0×0 hidden links inside `.palette-button-inner`, and so on).
 
@@ -154,17 +148,6 @@ Bilibili is a single-page app, so scrolling and navigating re-render cards. The 
 ## Changelog
 
 Newest first. This is what changed and why — including the parts I got wrong.
-
-### 1.4.2
-
-**The login page is no longer blocked by the "other promos" rule** (thanks to [@ziye081220](https://github.com/ziye081220) for the report). Bilibili signs you in on `passport.bilibili.com`, and the links inside the login card matched the catch-all promo domain rule, so the whole login panel got masked as a promo. Now the login page (`passport.bilibili.com`, and any path containing `login`) is never blocked, `passport` is excluded from the catch-all domain rule, and login-related containers are excluded from card scanning.
-
-**Two new per-page switches** (settings page, "Where it applies"):
-
-- **In-site search results** (search.bilibili.com): **on** by default, blocking works there as before
-- **Uploader profile pages** (space.bilibili.com): **off** by default - those pages are mostly the uploader's own work, so nothing is touched unless you turn it on
-
-The login page ignores both switches and is never blocked.
 
 ### 1.4.1
 
@@ -285,12 +268,6 @@ Category blocking did nothing before this, because it relied on class names alon
 ### 1.0.0
 
 First version: block by title keyword, two blocking styles, nine promo categories, in-page panel, dark mode.
-
----
-
-## Contributors
-
-- [@ziye081220](https://github.com/ziye081220) reported the login page being blocked by the promo rule (fixed in 1.4.2)
 
 ---
 

@@ -128,13 +128,7 @@
     /* 实测补充：这两个区域里藏着 0×0 的隐藏推广链接，曾被误判成卡片 */
     '.header-channel',
     '.palette-button-outer',
-    '.palette-button-inner',
-    /* 登录相关区域：登录卡片里的链接会命中「其他推广」的域名规则，
-       把整块登录面板当成推广屏蔽掉（有人反馈过），这里明确排除 */
-    '[class*="login"]',
-    '[id*="login"]',
-    '.passport',
-    '.bili-login'
+    '.palette-button-inner'
   ].join(',');
 
   /** 卡片容器语义提示（仅作为最末位的兜底提示，不再作为主要判据） */
@@ -1108,37 +1102,10 @@
     else card.classList.remove('bf-compact');
   }
 
-  /**
-   * 当前页面要不要屏蔽。
-   *
-   * - 登录页一律不屏蔽：B 站的登录在 passport.bilibili.com（也可能挂在路径带 login 的页面上），
-   *   那块登录卡片里的链接会命中「其他推广」的域名规则，于是整块登录面板被当成推广屏蔽掉
-   *   （有人反馈过这个 bug）。登录页本来也没有视频可筛，直接跳过。
-   * - 站内搜索结果页：按开关，默认开。
-   * - UP 个人主页：按开关，默认关（主页上大多是 TA 自己的作品，默认不动）。
-   */
-  function shouldBlockOnThisPage() {
-    var host = (location.hostname || '').toLowerCase();
-    var path = (location.pathname || '').toLowerCase();
-
-    if (host === 'passport.bilibili.com' || host === 'passport.bilibili.cn') return false;
-    if (/(^|\/)login(\/|$|\.)/.test(path) || path.indexOf('/login') !== -1) return false;
-
-    if (host === 'search.bilibili.com') return settings.blockOnSearch !== false;
-    if (host === 'space.bilibili.com') return settings.blockOnSpace === true;
-    return true;
-  }
-
   function processCard(card) {
     if (isNestedCard(card)) return;
 
     if (!settings.enabled) {
-      clearBlock(card);
-      return;
-    }
-
-    // 页面级开关：搜索页 / UP 主页 / 登录页（登录页永远不屏蔽）
-    if (!shouldBlockOnThisPage()) {
       clearBlock(card);
       return;
     }
