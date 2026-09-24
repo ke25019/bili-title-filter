@@ -75,37 +75,6 @@
    */
   var AD_FRAME_MAX_CHILDREN = 6;
 
-  /**
-   * 这些容器里装的是页面功能（弹幕列表、播放器），不是"卡片外面那层空壳"。
-   * 只要某一层命中了它们、或者里面装着它们，这一层就绝不能再被当成空壳一起隐藏。
-   *
-   * 实测（2026-09 播放页，层级逐层核对过）：
-   *   .right-container > .right-container-inner
-   *     ├ .video-pod-above-modules > .video-pod-above-modules__inner
-   *     │     ├ #danmukuBox.danmaku-box > .danmaku-wrap   ← 弹幕列表
-   *     │     └ #slide_ad.slide-ad-exp                    ← 贴片广告
-   *     └ .rcmd-tab
-   *          ├ .recommend-list-v1 > .rec-list > .video-page-card-small …
-   *          └ .ad-report.ad-floor-exp.right-bottom-banner
-   * 也就是：广告和弹幕列表是同一层父级下的兄弟节点。屏蔽广告时若一路往上
-   * 把父层当空壳隐藏，弹幕列表就会跟着一起没了。
-   *
-   * 这条判据来自另一位贡献者发的 1.5.6 构建（他当时的做法是保护这些区域），
-   * 与本文件里「整卡外壳」那套规则互补：那套管遮罩遮哪一块，这套管完全隐藏时
-   * 别把功能区域一起收走。
-   */
-  var PROTECTED_REGION_SELECTOR = [
-    '#danmukuBox',
-    '.danmaku-box',
-    '.danmaku-wrap',
-    '[class*="danmaku"]',
-    '#bilibili-player',
-    '.bpx-player-container',
-    '.bilibili-player',
-    '.video-pod-above-modules',
-    '.video-pod-above-modules__inner'
-  ].join(',');
-
   /** 视频 / 推广卡片容器（已知类名，实测于 2025 年 B 站首页 / 搜索页 / 播放页） */
   var CARD_SELECTOR = [
     '.bili-video-card',
@@ -1404,12 +1373,6 @@
    * 注意：完全没有任何卡片的容器也算"可以越过"，但它不能同时含有真实文字内容。
    */
   function containerFullyHidden(el) {
-    // 0) 容器里装着页面功能（弹幕列表 / 播放器）→ 永远不算"空壳"。
-    //    实测：播放页的 .video-pod-above-modules__inner 同时装着弹幕列表和贴片广告，
-    //    少了这一条，隐藏广告时会顺着空壳往上把弹幕列表也隐掉。
-    if (el.matches && el.matches(PROTECTED_REGION_SELECTOR)) return false;
-    if (el.querySelector && el.querySelector(PROTECTED_REGION_SELECTOR)) return false;
-
     // 1) 容器里所有卡片都必须已经被我们隐藏
     var cards = el.querySelectorAll(CARD_SELECTOR);
     for (var i = 0; i < cards.length; i++) {
@@ -1637,70 +1600,6 @@
   }
 
   /**
-   * 徽标驱动的卡片发现（第三条发现路径）。
-   *
-   * 为什么要有这一条：scanTypedCards 只认「卡片里的链接」，fullScan 只认已知类名。
-   * 可首页「赛事」这类模块的推广卡片是直接跳视频页 / 活动页的，链接里既没有
-   * /match/ 也没有 /esports/，类名也可能不在名单里 —— 整类卡片就永远扫不到，
-   * 开关点了没反应（反馈过两次，而且每次都只有赛事这一类）。
-   * 而分类阶段最可靠的判据恰好是封面徽标，所以发现阶段也用一次徽标：
-   * 从徽标往上找到"同时含封面与标题"的那一层，全程复用安全阀，推不出来就跳过。
-   *
-   * 这一条来自另一位贡献者发的 1.5.6 构建（他当时的写法是 scanBadgeCards），
-   * 与本文件里把 .floor-card-inner 写进卡片名单的做法互补：那条管已知楼层结构，
-   * 这条管"徽标认得出来、但结构或链接都不认识"的卡片。
-   */
-  function resolveBadgeCard(box, hrefRe) {
-    var known = box.closest(CARD_SELECTOR);
-    if (known && !isAdSlot(known)) return isSafeCardTarget(known, hrefRe) ? known : null;
-
-    var scope = box;
-    for (var i = 0; i < 6 && scope && scope !== document.body; i++) {
-      if (scope !== box && hasTitleInside(scope) && hasCoverInside(scope) &&
-          isSafeCardTarget(scope, hrefRe)) {
-        return scope;
-      }
-      scope = scope.parentElement;
-    }
-    return null;
-  }
-
-  function scanBadgeCards() {
-    if (!settings.enabled) return;
-    var boxes = document.querySelectorAll(BADGE_SELECTOR);
-    var handled = 0;
-    for (var i = 0; i < boxes.length && handled < 200; i++) {
-      var box = boxes[i];
-      if (box.closest && box.closest('.bf-mask')) continue;
-      if (isExcludedAnchor(box)) continue;                        // 顶栏 / 登录区域
-      if (box.closest && box.closest(BANNER_EXCLUDE)) continue;    // 首页轮播交给板块级开关
-      if (box.closest && box.closest(AD_SLOT_SELECTOR)) continue;  // 广告位的身份由 isAdSlot 直接认定
-
-      var label = box.querySelector('.floor-title') || box;
-      var badge = cleanText(label);
-      if (!badge || badge.length > 8) continue;
-
-      var hit = null;
-      for (var b = 0; b < TYPES.length; b++) {
-        var words = typeBadges(TYPES[b]);
-        for (var w = 0; w < words.length; w++) {
-          if (badge.indexOf(words[w]) !== -1) { hit = TYPES[b]; break; }
-        }
-        if (hit) break;
-      }
-      if (!hit) continue;
-
-      var card = resolveBadgeCard(box, hit.href || /(?!)/);
-      if (!card) continue;   // 无法确认是一张卡片 → 宁可不屏蔽
-      if (!card.matches || !card.matches(CARD_SELECTOR)) trackedCards.add(card);
-      if (card.dataset.bfState === 'blocked') continue;
-      if (insideBlockedCard(card)) continue;
-      processCard(card);
-      handled++;
-    }
-  }
-
-  /**
    * 广告扫描：广告位既不在 CARD_SELECTOR 里、又常常把标题挂在外面，
    * 所以单独一趟，统一先收成"要处理的那一块"（见 adSlotTarget）再交给 processCard。
    *
@@ -1738,7 +1637,6 @@
   function scanAll(force) {
     fullScan(force);
     scanTypedCards();
-    scanBadgeCards();
     scanAdSlots();
 
     // 设置变更时，把通用识别找到过的卡片也重新判定一遍（否则关掉开关后无法恢复）

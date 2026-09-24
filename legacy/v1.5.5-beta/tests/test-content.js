@@ -420,32 +420,6 @@ const HTML = `<!DOCTYPE html><html><head><style id="page-style">#swipeSlot{displ
         </div>
       </div>
 
-      <!-- 徽标驱动发现的回归点：这张卡片①不在 CARD_SELECTOR 名单里（自定义类名），
-           ②链接是普通视频页、不带任何分区特征 —— scanTypedCards 和 fullScan 都收不到它，
-           只有"从封面徽标反推卡片"这条路能收到。旁边的 noBadgeCard 是同结构但没徽标，
-           用来确认这条路不会误伤。 -->
-      <div class="weird-promo-wrap" data-w="238" data-h="248">
-        <div class="promo-box-unknown" id="badgeOnly" data-w="238" data-h="224">
-          <div class="cover-container" data-w="238" data-h="134">
-            <a href="//www.bilibili.com/video/BV1OnlyBadge/"><img src="bo.jpg"></a>
-            <div class="badge"><span class="floor-title">赛事</span></div>
-          </div>
-          <div class="info-container" data-w="238" data-h="90">
-            <p class="title" title="只有徽标能认出来的推广">只有徽标能认出来的推广</p>
-          </div>
-        </div>
-      </div>
-      <div class="weird-promo-wrap" data-w="238" data-h="248">
-        <div class="promo-box-unknown" id="noBadgeCard" data-w="238" data-h="224">
-          <div class="cover-container" data-w="238" data-h="134">
-            <a href="//www.bilibili.com/video/BV1NoBadge/"><img src="nb.jpg"></a>
-          </div>
-          <div class="info-container" data-w="238" data-h="90">
-            <p class="title" title="没有徽标的普通卡片">没有徽标的普通卡片</p>
-          </div>
-        </div>
-      </div>
-
       <!-- 站内搜索结果页的卡片（结构照抄 2026-09 的 search.bilibili.com）：
            .bili-video-card__info--bottom > a.bili-video-card__info--owner
              > span.bili-video-card__info--author（名字在 span 里，没有 title 属性）
@@ -1321,26 +1295,6 @@ async function main() {
   await pushSettings({ blockTypes: {} });
   check('关掉后赛事卡片与右栏广告都恢复',
     !blocked('realMatch') && !blocked('realAd'), $('realMatch').className + ' / ' + $('realAd').className);
-
-  console.log('\n[10g-4] 徽标驱动发现 + 弹幕/播放器区域保护（并入 1.5.6 那两处修复）');
-  // ① 徽标驱动发现：这张推广卡片既不在 CARD_SELECTOR 名单里、链接也不带任何分区特征
-  //    （普通视频链接）—— 只有"从封面徽标反推卡片"这条路能收到它。
-  await pushSettings({ blockTypes: { match: true } });
-  check('【关键】只有徽标可认的推广卡片也能被发现并屏蔽',
-    blocked('badgeOnly') && $('badgeOnly').dataset.bfType === 'match',
-    $('badgeOnly').className + ' / ' + ($('badgeOnly').dataset.bfType || '(无类型)'));
-  check('徽标驱动发现不误伤：同结构但没有徽标的卡片不动',
-    !blocked('noBadgeCard'), $('noBadgeCard').className);
-
-  // ② 弹幕/播放器区域保护：完全隐藏（移除位置）时收敛"外层空壳"，
-  //    绝不能把装着弹幕列表的父层一起收走 —— 实测广告与弹幕列表是同一父层下的兄弟节点。
-  await pushSettings({ mode: 'hide', hideKeepSlot: false, blockTypes: { ad: true }, keywords: [] });
-  check('【关键】广告被隐藏后，装着弹幕列表的父层没有被一起收敛',
-    $('realAd').classList.contains('bf-hide') &&
-    !$('podInner').classList.contains('bf-hide') &&
-    win.getComputedStyle($('podInner')).display !== 'none',
-    $('realAd').className + ' / ' + $('podInner').className);
-  await pushSettings({ mode: 'mask', hideKeepSlot: true, blockTypes: {} });
 
   // [10h] 懒加载插入的推广卡片：只配置屏蔽词、分区开关全关，也应该被自动扫到并屏蔽
   await pushSettings({ mode: 'mask', hideKeepSlot: true, keywords: ['我准备好了'], blockTypes: {} });
