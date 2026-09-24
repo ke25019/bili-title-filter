@@ -355,71 +355,6 @@ const HTML = `<!DOCTYPE html><html><head><style id="page-style">#swipeSlot{displ
         </div>
       </div>
 
-      <!-- 实测（2026-09，使用者贴的 Copy outerHTML）的赛事推广楼层卡片：
-           链接是**普通视频**（//www.bilibili.com/video/BVxxxx/），没有任何分区链接特征，
-           所以「命中链接 + 标题 + 封面」的通用识别一个都收不到 ——
-           卡片住在 .floor-card-inner 里，只能靠类名收（v1.5.5 回归点）。
-           这颗角标（.badge > svg + span.floor-title）一直都是好的。 -->
-      <div class="floor-card single-card" id="realMatchHost" data-w="238" data-h="248">
-        <div class="floor-card-inner" id="realMatch" data-w="238" data-h="224">
-          <div class="cover-container" data-w="238" data-h="134">
-            <a href="//www.bilibili.com/video/BV1TbbC65EZ9/" target="_blank"
-               data-mod="partition_recommend.content" data-idx="click">
-              <div class="cover-shim" data-w="238" data-h="134">
-                <picture class="v-img cover"><img src="//i2.hdslb.com/bfs/archive/real.jpg@672w_378h_1c" alt=""></picture>
-              </div>
-              <div class="badge"><svg class="icon icon-title" viewBox="0 0 1024 1024"></svg><span class="floor-title">赛事</span></div>
-              <div class="bili-video-card__mask">
-                <div class="bili-video-card__stats">
-                  <div class="bili-video-card__stats--left"><span class="bili-video-card__stats--item">69.0万</span></div>
-                  <div class="bili-video-card__stats--right"><span>22:53</span></div>
-                </div>
-              </div>
-            </a>
-          </div>
-          <div class="pb-16 px-12 flex flex-col items-start info-container" data-w="238" data-h="90">
-            <p title="《上野中下辅都尽力啦2》 EP04——上野篇" class="title">
-              <a href="//www.bilibili.com/video/BV1TbbC65EZ9/" class="font-medium"><span>《上野中下辅都尽力啦2》 EP04——上野篇</span></a>
-            </p>
-            <p><a href="//space.bilibili.com/392836434" class="sub-title items-center flex hover">哔哩哔哩王者荣耀赛事</a></p>
-          </div>
-          <div class="layer"></div>
-          <div class="layer tiny"></div>
-        </div>
-      </div>
-
-      <!-- 实测（2026-09）播放器右栏那一块：弹幕列表、空的 #slide_ad 和真广告
-           三者同住一个父层 .video-pod-above-modules__inner。
-           广告卡是 .video-card-ad-small > .video-card-ad-small-inner > .ad-report > a.ad-report-inner。
-           遮罩绝不能越过那个父层，否则弹幕列表会被一起盖住（反馈原文："把弹幕列表算进去了"）。 -->
-      <div class="video-pod-above-modules__inner" id="podInner" data-w="350" data-h="900">
-        <div id="danmukuBox" class="danmaku-box" data-w="350" data-h="500">
-          <div class="danmaku-wrap"><div class="bpx-player-dm-container"><div class="danmaku-item">普通弹幕</div></div></div>
-        </div>
-        <div id="slideAdEmpty" class="slide-ad-exp" data-loc-id="2626"><!-- 空占位 --></div>
-        <div class="video-card-ad-small" id="realAd" data-w="350" data-h="180">
-          <div class="video-card-ad-small-inner" data-w="350" data-h="180">
-            <div class="ad-report" data-w="350" data-h="160">
-              <a class="ad-report-inner" target="_blank" data-loc-id="4331"
-                 href="//cm.bilibili.com/cm/api/fees/pc/sync/v2?msg=a%7C4331%2Cb%7Cbilibili&amp;ts=1790260087232&amp;spm_id_from=333.788.right_bottom.adfloor-4330.click">
-                <div class="vcd" data-w="350" data-h="160">
-                  <div class="cover" data-w="160" data-h="100">
-                    <div class="b-img" data-w="160" data-h="100"><img src="//i2.hdslb.com/bfs/archive/ad.jpg@336w_190h" class="b-img__inner"></div>
-                    <div class="badge"><svg class="badge-icon" viewBox="0 0 16 16"></svg></div>
-                  </div>
-                  <div class="info" data-w="190" data-h="100">
-                    <div class="title" title="解决存储焦虑？不妨试试移动固态！">解决存储焦虑？不妨试试移动固态！</div>
-                    <div class="upname"><div class="upname-link"><span class="name">穿灰袍的安久</span></div></div>
-                    <div class="playinfo">3.5万</div>
-                  </div>
-                </div>
-              </a>
-            </div>
-            <div class="ad-feedback-menu feedback-menu new-style"><span class="ad-feedback-menu-reference"></span></div>
-          </div>
-        </div>
-      </div>
-
       <!-- 站内搜索结果页的卡片（结构照抄 2026-09 的 search.bilibili.com）：
            .bili-video-card__info--bottom > a.bili-video-card__info--owner
              > span.bili-video-card__info--author（名字在 span 里，没有 title 属性）
@@ -1263,38 +1198,6 @@ async function main() {
 
   await pushSettings({ blockTypes: {} });
   check('全部关掉后都恢复显示', blockedList() === '(无)', blockedList());
-
-  console.log('\n[10g-3] 实测结构：赛事推广楼层卡片 + 右栏广告同层装着弹幕列表（v1.5.5 回归点）');
-  check('未打开「赛事」时，实测赛事卡片不被屏蔽', !blocked('realMatch'), $('realMatch').className);
-  await pushSettings({ blockTypes: { match: true } });
-  check('【关键】实测赛事卡片（链接是普通视频）也能被「赛事」开关屏蔽',
-    blocked('realMatch'), $('realMatch').className);
-  check('实测赛事卡片判为 match，而不是掉回 live/other',
-    $('realMatch').dataset.bfType === 'match', $('realMatch').dataset.bfType);
-  check('实测赛事卡片被遮的是卡片本体（不是只遮封面链接）',
-    $('realMatch').classList.contains('bf-blocked') &&
-    !!$('realMatch').querySelector(':scope > .bf-mask') &&
-    !$('realMatch').querySelector('.cover-container').classList.contains('bf-blocked'));
-  check('角标文案没被当成标题（标题仍是 EP04 那一串）',
-    $('realMatch').dataset.bfKey === 'type:match');
-
-  await pushSettings({ blockTypes: { ad: true } });
-  check('右栏实测广告卡被整块屏蔽', blocked('realAd'), $('realAd').className);
-  check('【关键】同层的弹幕列表面板绝没有被一起遮住',
-    !blocked('danmukuBox') && !blocked('podInner') &&
-    !$('podInner').classList.contains('bf-hide') &&
-    !$('podInner').querySelector(':scope > .bf-mask'),
-    $('podInner').className + ' / ' + $('danmukuBox').className);
-  check('广告卡只生成一块遮罩（里面的 .ad-report / 图片块不各自遮一次）',
-    $('realAd').querySelectorAll('.bf-mask').length === 1 &&
-    !$('realAd').querySelector('.ad-report').classList.contains('bf-blocked') &&
-    !$('realAd').querySelector('.b-img').classList.contains('bf-blocked'),
-    String($('realAd').querySelectorAll('.bf-mask').length));
-  check('【安全阀】同层里那个空的广告占位不会被遮（遮了就是凭空多一个提示框）',
-    !blocked('slideAdEmpty'), $('slideAdEmpty').className);
-  await pushSettings({ blockTypes: {} });
-  check('关掉后赛事卡片与右栏广告都恢复',
-    !blocked('realMatch') && !blocked('realAd'), $('realMatch').className + ' / ' + $('realAd').className);
 
   // [10h] 懒加载插入的推广卡片：只配置屏蔽词、分区开关全关，也应该被自动扫到并屏蔽
   await pushSettings({ mode: 'mask', hideKeepSlot: true, keywords: ['我准备好了'], blockTypes: {} });

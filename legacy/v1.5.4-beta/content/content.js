@@ -97,14 +97,9 @@
     '.bili-note-card',
     '.bili-article-card',
     '.bili-opus-card',
-    /* 分区推广楼层的卡片本体（实测结构：.floor-card > .floor-card-inner）。
-       以前特意不写死在这里，靠「命中链接 + 标题 + 封面」的通用识别来收 ——
-       但那只有在这张卡片的链接命中某个分区时才成立。实测 2026-09 的赛事推广卡片
-       链接变成了**普通视频**（//www.bilibili.com/video/BV1TbbC65EZ9/），
-       没有任何分区链接特征，于是通用识别一个都收不到，卡片从来没进过屏蔽流程
-       （反馈里「赛事」开关点了没反应、而且只有赛事不行，就是这个原因）。
-       楼层卡片的结构和尺寸都很稳定（实测 238×224），按类名收最可靠。 */
-    '.floor-card-inner',
+    /* 注意：.floor-card / .floor-card-inner 是"楼层里的卡片"，其真实结构
+       （实测）是 .floor-card-inner > 封面 + 标题，由通用识别用
+       「命中链接 + 标题 + 封面」定位，因此不写死在这里。 */
     '.anime-list-item'
   ].join(',');
 
@@ -721,13 +716,9 @@
    * 停止条件（任一条命中就停，宁可少收一层也不错收一屏）：
    *   ① 这一层是"面板/列表"（弹幕列表、评论区、推荐流、播放器…）——
    *      反馈里"把弹幕列表算进去了"就是这么来的
-   *   ② 这一层里还有别的广告位（当前广告位之外的）→ 停。实测右栏就是这个形状：
-   *      .video-pod-above-modules__inner 里同时装着 #danmukuBox（弹幕列表）、
-   *      空的 #slide_ad 和真正的广告 .video-card-ad-small —— 只有这条能拦住它，
-   *      否则遮罩会连弹幕列表一起盖住
-   *   ③ 这一层里还有别的真卡片（有标题或有封面）→ 到了推荐列表
-   *   ④ 子元素个数超过 6 —— 广告卡只有两三个子节点，列表不会只有这么少
-   *   ⑤ 尺寸超过 600×640 —— 播放器那层自然被挡住
+   *   ② 这一层里还有别的真卡片（有标题或有封面）→ 到了推荐列表
+   *   ③ 子元素个数超过 6 —— 广告卡只有两三个子节点，列表不会只有这么少
+   *   ④ 尺寸超过 600×640 —— 播放器那层自然被挡住
    * 另外：行内元素（`<a class="ad-report">` 这种）不能当遮罩宿主，见 blockTargetFor。
    */
   /** 量得出尺寸吗（0×0 的中间层多半是行内盒或 display:contents 的包装层，不该当宿主，也不该终止向上收） */
@@ -778,26 +769,15 @@
     if (isPlayerBannerHost(box) || (box.matches && box.matches(PLAYER_BANNER_INNER_SELECTOR))) return false;
     if (box.querySelector(PLAYER_BANNER_INNER_SELECTOR)) return false;   // 里面装着播放器横幅 → 别越过去
     if (isAdFramePanel(box)) return false;                             // ①
-    if (box.children.length > AD_FRAME_MAX_CHILDREN) return false;      // ④
+    if (box.children.length > AD_FRAME_MAX_CHILDREN) return false;      // ③
 
-    // ② 别的广告位：只看"既不是当前广告位的祖先、也不是它的后代"的那种。
-    //    祖先（比如 .video-card-ad-small 之于里面的 .ad-report）和后代都属于同一块广告，
-    //    真正的信号是"同一层里还有另一块广告位"—— 实测右栏就是这样：
-    //    .video-pod-above-modules__inner 里既有弹幕列表，又有空的 #slide_ad 和真广告卡。
-    var ads = box.querySelectorAll(AD_SLOT_SELECTOR);
-    for (var k = 0; k < ads.length; k++) {
-      var other = ads[k];
-      if (slot.contains(other) || other.contains(slot)) continue;
-      return false;
-    }
-
-    var cards = box.querySelectorAll(CARD_SELECTOR);                   // ③
+    var cards = box.querySelectorAll(CARD_SELECTOR);
     for (var i = 0; i < cards.length; i++) {
       if (slot.contains(cards[i])) continue;        // 广告位自己（含它的后代）
       if (!looksLikeRealCard(cards[i])) continue;   // 只匹配到类名的空壳子元素，不算
-      return false;
+      return false;                                 // ②
     }
-    return isCardSizedBox(box, AD_FRAME_MAX_W, AD_FRAME_MAX_H);   // ⑤
+    return isCardSizedBox(box, AD_FRAME_MAX_W, AD_FRAME_MAX_H);   // ④
   }
 
   /**
@@ -886,17 +866,6 @@
    * 「其他推广」只在该卡片没有命中任何具体分区时才生效，
    * 这样关掉某个分区开关时不会又被兜底规则抓回来。
    */
-  /**
-   * 这个广告位里现在有没有真内容。
-   * 实测右栏的 #slide_ad 经常只是一个注释占位（`<div id="slide_ad"><!----></div>`），
-   * 这种空位不该被遮 —— 遮了就是凭空多出一个"已按分区设置屏蔽此推广"的提示框。
-   */
-  function hasVisibleAdContent(el) {
-    if (!el) return false;
-    if (el.querySelector && el.querySelector('img[src], picture, iframe, canvas, video')) return true;
-    return cleanText(el).length > 0;
-  }
-
   /** 元素速写：TAG.class#id 实测尺寸 —— 诊断日志里用来描述结构 */
   function describeEl(el) {
     if (!el) return '(无)';
@@ -906,7 +875,8 @@
       ' ' + Math.round(r.width) + '×' + Math.round(r.height);
   }
 
-  /** 从元素往上最多 4 层的结构链（诊断用） */  function describeChain(el, depth) {
+  /** 从元素往上最多 4 层的结构链（诊断用） */
+  function describeChain(el, depth) {
     var out = [];
     var cur = el;
     for (var i = 0; i < (depth || 4) && cur && cur !== document.body; i++) {
@@ -1504,33 +1474,27 @@
 
     var type = detectType(card);
 
-    // 诊断：每张卡片第一次被看到时打一行，说明「角标文案 → 判定成哪一类 → 链接到哪」；
-    // 广告位则带上"当前「广告」开关是开还是关"和往上三层的结构链。
-    // 反馈里"某个开关点了没反应"基本都是这几者之一变了，有这一行就不用靠猜
-    //（需要先在设置页打开「输出调试日志到控制台」）。只打一次，避免每次扫描刷屏。
+    // 诊断：分区推广卡片第一次被看到时，把「角标文案 → 判定成哪一类 → 卡片链到哪」
+    // 打进控制台。反馈里"某个分区开关点了没反应"基本都是这三者之一变了，
+    // 有了这一行就不用靠猜（需要先在设置页打开「输出调试日志到控制台」）。
     if (settings.debug && card.dataset.bfSeen !== '1') {
       card.dataset.bfSeen = '1';
       var seenBadge = getBadgeText(card);
       if (seenBadge) {
         log('卡片角标诊断：角标「' + seenBadge + '」→ 判定为 ' + type + '（' + typeLabel(type) + '）' +
           '｜链接 ' + firstHrefOf(card));
-      } else if (type === 'ad') {
-        log('广告位诊断：判定为广告，「广告」开关当前是' +
-          (settings.blockTypes && settings.blockTypes.ad ? '开' : '关') +
-          '｜' + describeChain(card, 3));
       }
     }
 
     if (settings.blockTypes && settings.blockTypes[type]) {
-      // 空广告位不遮：实测右栏的 #slide_ad 常常只有一个注释占位（<!---->），
-      // 遮了就是凭空多出一个提示框
-      if (type === 'ad' && !hasVisibleAdContent(card)) {
-        log('广告位当前是空的，跳过：', describeEl(card));
-        clearBlock(card);
-        return;
-      }
       applyBlock(card, { key: 'type:' + type, kind: 'type', type: type });
       return;
+    }
+
+    // 广告位认出来了、但「广告」开关没开 —— 这一条以前完全没有痕迹，
+    // 反馈里"广告怎么都不屏蔽"就很难判断到底是没认出来还是开关没开
+    if (type === 'ad') {
+      log('发现广告位，但「广告」开关是关的：', describeChain(card, 3));
     }
 
     var hit = matcher ? matcher(getTitle(card)) : null;
@@ -1609,9 +1573,7 @@
   function scanAdSlots() {
     if (!settings.enabled) return;
     var hasKeywords = !!(settings.keywords && settings.keywords.length);
-    // 没开广告开关、也没屏蔽词时不用扫；但开着调试日志时仍然扫一遍，
-    // 否则"广告认出来了但开关没开"这条诊断永远不会打印（反馈里就是这么卡住的）
-    if (!(settings.blockTypes && settings.blockTypes.ad) && !hasKeywords && !settings.debug) return;
+    if (!(settings.blockTypes && settings.blockTypes.ad) && !hasKeywords) return;   // 没开广告开关、也没屏蔽词 → 不用扫
 
     var nodes = document.querySelectorAll(AD_SLOT_SELECTOR + ',' + PLAYER_BANNER_INNER_SELECTOR + ',.inside-wrp');
     var seen = [];

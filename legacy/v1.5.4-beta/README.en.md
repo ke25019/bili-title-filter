@@ -4,9 +4,9 @@ An extension I wrote for myself to filter Bilibili. Add a few keywords and the v
 
 Manifest V3, works in Edge and Chrome, plain JavaScript with no runtime dependencies.
 
-![version](https://img.shields.io/badge/version-1.5.5--beta-orange)
+![version](https://img.shields.io/badge/version-1.5.4--beta-orange)
 ![browser](https://img.shields.io/badge/Edge%20%7C%20Chrome-Chromium-00aeec)
-![tests](https://img.shields.io/badge/tests-334%20passed-brightgreen)
+![tests](https://img.shields.io/badge/tests-324%20passed-brightgreen)
 
 ---
 
@@ -124,7 +124,7 @@ npm install
 npm test
 ```
 
-334 checks covering the blocking logic, category detection, both hiding behaviours, the settings pages and the background stats.
+324 checks covering the blocking logic, category detection, both hiding behaviours, the settings pages and the background stats.
 
 The mock DOM and its sizes were measured on the real site (utility-class structures like `.floor-card-inner > .cover-container + .pb-16.px-12 > p.title`, the `.vui_carousel` banner, the 0×0 hidden links inside `.palette-button-inner`, and so on).
 
@@ -154,18 +154,6 @@ Bilibili is a single-page app, so scrolling and navigating re-render cards. The 
 ## Changelog
 
 Newest first. This is what changed and why — including the parts I got wrong.
-
-### 1.5.5
-
-**First, a correction to 1.5.4: esports cards did not break because a badge class was renamed — I got that wrong.** The real card's outerHTML shows the actual cause: **its link became an ordinary video** (`<a href="//www.bilibili.com/video/BV1TbbC65EZ9/">`). The card lives in `.floor-card-inner`, a class name that was deliberately *not* added to the card list back then, relying instead on the generic "promo link + title + cover" detection — and that detection only ever fires for cards whose link matches some category. Once the link is a plain video, no category signal matches it, so **the card was never collected at all**: the "esports" switch did nothing, while every other category (whose links still carry a signal) kept working. The badge was healthy all along (`.badge > svg + span.floor-title` reading 赛事).
-
-The fix: `.floor-card-inner` joined the card list (measured structure `.floor-card > .floor-card-inner`, 238×224, very stable), so these floor cards no longer depend on their link being recognisable. The badge hardening shipped in 1.5.4 (synonym class names, the 电竞/比赛 wordings, `/blanc/`, the short-cover-label fallback) stays — it addresses a different failure mode, not this one.
-
-**The right-column ad no longer "counts the danmaku list in".** The measured shape is that `.video-pod-above-modules__inner` holds, in one layer, the danmaku list `#danmukuBox`, an **empty** ad placeholder `#slide_ad` (containing only `<!---->`) and the real ad card `.video-card-ad-small`. The previous version dropped the "stop if this layer holds another ad slot" rule so that an ad card's title layer could be reached — and that let the mask cross the parent layer and cover the danmaku list. The rule is back and written more precisely: **only ad slots that are neither ancestors nor descendants of the current slot count**, since both belong to the same ad. Measured, this stops exactly at `.video-card-ad-small`.
-
-**Empty ad slots no longer grow a notice box**: a placeholder such as `#slide_ad` that holds nothing but a comment is now skipped (previously enabling "ads" put a "blocked by category" box over empty space).
-
-**Diagnostics now print once per card**: the first time a card is seen it logs "badge → category → link", and an ad slot logs "judged as an ad, switch currently on/off" plus its three-level structure chain. Also, with debug on, the ad scan runs even when the "ads" switch is off and no keywords are set — otherwise the "ad recognised but switch off" diagnostic could never print, which is exactly where the report got stuck.
 
 ### 1.5.4
 
