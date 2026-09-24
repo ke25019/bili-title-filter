@@ -167,3 +167,19 @@ html.bf-dark {
 .bf-ph-muted {
   visibility: hidden !important;
 }
+
+/* ---------- 顶栏永远压在我们所有东西之上 ----------
+   我们的遮罩是 position:absolute + z-index:20。而 B 站顶栏（视频页是
+   .bili-header.bili-header--fixed）的 z-index 是 auto：两者不在同一个层叠层里比较，
+   谁在后面谁压住谁 —— 深链进来的视频页里，左栏的条幅广告
+   （.ad-report.strip-ad.left-banner，实测 888×74，外面套着 .left-container.scroll-sticky）
+   一旦滚动贴到顶部，它的遮罩就会盖在顶栏上，把首页/番剧/直播这些入口挡掉
+   （反馈过的 bug：开了「广告」之后导航栏被遮）。
+   所以这里明确把顶栏的层叠顺序抬到我们的遮罩之上。只动 z-index，不改布局与外观；
+   顶栏自己的下拉/弹层都在它内部，仍然照常显示在最上面。 */
+.bili-header,
+.mini-header,
+#biliMainHeader,
+.international-header {
+  z-index: 2000 !important;
+}

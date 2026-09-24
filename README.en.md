@@ -6,7 +6,7 @@ Manifest V3, works in Edge and Chrome, plain JavaScript with no runtime dependen
 
 ![version](https://img.shields.io/badge/version-1.5.8--beta-orange)
 ![browser](https://img.shields.io/badge/Edge%20%7C%20Chrome-Chromium-00aeec)
-![tests](https://img.shields.io/badge/tests-341%20passed-brightgreen)
+![tests](https://img.shields.io/badge/tests-345%20passed-brightgreen)
 
 ---
 
@@ -124,7 +124,7 @@ npm install
 npm test
 ```
 
-341 checks covering the blocking logic, category detection, both hiding behaviours, the settings pages and the background stats.
+345 checks covering the blocking logic, category detection, both hiding behaviours, the settings pages and the background stats.
 
 The mock DOM and its sizes were measured on the real site (utility-class structures like `.floor-card-inner > .cover-container + .pb-16.px-12 > p.title`, the `.vui_carousel` banner, the 0×0 hidden links inside `.palette-button-inner`, and so on).
 
@@ -169,7 +169,15 @@ The three things:
 
 > **This version fixes a bug (still numbered 1.5.8)**: with "ads" enabled on the video page, **the site header got covered** — the 首页 / 番剧 / 直播 / 游戏中心 entries and the message, feed and favourites icons on the right must never be touched. The cause is that the header also carries promo slots (measured: `.ad-report.strip-ad.left-banner` lives in the header), so walking up to the "whole ad card" could take the header with it; and the old exclusion classes (`.default-entry`, `.nav-link`, `.channel-entry`) **no longer exist in the current header** (measured: `.bili-header__menu` / `.bili-header__bar` / `.left-entry__item` / `.channel-link` / `.nav-search`), so the exclusion never applied. The **header / navigation / login panel** is now an "absolutely untouchable" region: keywords, category switches, ad slots, badge discovery and the shell collapse **all have to pass that gate**, and the measured header class names were added. Four new regression cases (real header structure, a promo slot inside the header, a numeric `badge` element, and hide mode) bring the suite to **341 checks**.
 
-> **This version also cut the package size by 55%** (108.4 KB → **49.2 KB**): README / AGENTS are no longer shipped (about 97 KB of pure documentation, kept in full in the repository), and packaged copies drop comments, blank lines and leading indentation while the repository sources stay untouched (those comments are the measurement record). `tools/pack.mjs` makes packaging repeatable and **validates syntax at every step** — it caught two stripping mistakes on the spot (a block-comment continuation not starting with `*`, and a comment sharing a line with its function), which kept a broken build from ever being shipped.
+> **Another round of fixes (still numbered 1.5.8), this time measured in a real browser.** Once permission was granted I drove the repository's isolated instance (dedicated profile, `--disable-sync`, never touching the everyday Edge) and came back with three conclusive findings:
+
+> 1. **One ad was being masked several times**: four ad blocks produced **twelve masks**, because `AD_SLOT_SELECTOR` matches several nested elements at once (the strip ad is `.ad-report.strip-ad.left-banner` > `.ad-report-inner`; the right-column card is `.video-card-ad-small` > `.ad-report` > `.ad-report-inner` > `.ad-floor-cover`), and every node computed its own target. Those included **degenerate "thin line" masks (888×22, 350×14)** — the inner `.ad-report-inner` measures 888×0 on the real page — which is exactly where "the mask doesn't cover properly / hover doesn't show it" came from. Only the outermost ad node is processed now, and a target must have a measurable height or we fall back to the ad slot itself. Re-measured after the fix: **three ad blocks, three masks, zero degenerate masks**.
+> 2. **The header got covered**: our mask uses `z-index: 20` while the header (`.bili-header.bili-header--fixed` on video pages) has `z-index: auto`, so they are not compared in the same stacking layer — whoever comes later wins. Once the left-column strip ad (888×74, wrapped in `.left-container.scroll-sticky`) sticks to the top while scrolling, its mask paints over the navigation. The header's `z-index` is now explicitly raised above everything of ours (stacking order only, no visual change); combined with the previous release's six-path "header is untouchable" gate, the header can no longer be reached.
+> 3. **One more guard around the player**: any target that contains a `<video>` or the player container is never masked or hidden (measured: pulling the player's own layer into a hide collapsed the video from 888×500 to 320×180, and Bilibili runs a "white screen" self-check that may reload the page — the likely path behind the reported "the page reloads when playback starts").
+
+> Four new regression cases (strip ad masked only once, no degenerate masks, no per-element marking inside the right-column card, player containers never touched) bring the suite to **345 checks**.
+
+> **This version also cut the package size by 55%** (108.4 KB → **49.2 KB**): README / AGENTS are no longer shipped (about 97 KB of pure documentation, kept in full in the repository), and packaged copies drop comments, blank lines and leading indentation while the repository sources stay untouched (those comments are the measurement record). `tools/pack.mjs` makes packaging repeatable and **validates syntax at every step** — it caught two stripping mistakes on the spot (a block-comment continuation not starting with `*`, and a comment sharing a line with its function) plus one case of binary PNG icons being rewritten as text, which kept a broken build from ever being shipped.
 
 ### 1.5.7
 

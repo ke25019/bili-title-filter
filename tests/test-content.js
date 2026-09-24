@@ -486,6 +486,17 @@ const HTML = `<!DOCTYPE html><html><head><style id="page-style">#swipeSlot{displ
     </div>
   </div>
 
+  <!-- 实测条幅广告（真机：888×74，长在左栏 .left-container.scroll-sticky 里）：
+       里面那个 <a class="ad-report-inner"> 在真机上只有 888×0 ——
+       以前它会被当成一个独立广告位，遮出一条 888×22 的细线（真机实拍：4 块广告出了 12 个遮罩）。 -->
+  <div class="left-container" id="leftCol" data-w="888" data-h="600">
+    <div class="ad-report strip-ad left-banner" id="stripAd" data-w="888" data-h="74">
+      <a class="ad-report-inner" id="stripAdInner" href="//cm.bilibili.com/strip">
+        <div class="strip-ad-inner" data-w="888" data-h="74"></div><img src="strip.png">
+      </a>
+    </div>
+  </div>
+
   <!-- 站内搜索结果页的卡片（结构照抄 2026-09 的 search.bilibili.com）：
            .bili-video-card__info--bottom > a.bili-video-card__info--owner
              > span.bili-video-card__info--author（名字在 span 里，没有 title 属性）
@@ -1354,6 +1365,31 @@ async function main() {
     win.getComputedStyle($('realHeader')).display !== 'none',
     $('realHeader').className);
   await pushSettings({ blockTypes: {}, keywords: [] });
+
+  console.log('\n[9h] 一块广告只允许一个遮罩（v1.5.8 真机复现的回归点）');
+  // 真机实测：AD_SLOT_SELECTOR 会同时命中嵌套的多个元素——
+  // 条幅广告是 .ad-report.strip-ad.left-banner > .ad-report-inner，
+  // 右栏广告卡是 .video-card-ad-small > .ad-report > .ad-report-inner > .ad-floor-cover。
+  // 以前每个节点各算一次目标，4 块广告出了 12 个遮罩，其中还有 888×22 / 350×14 这种"一条线"的
+  // 退化遮罩（反馈里的"遮罩不到位""悬停显示不对"）。现在只处理最外层那一个节点。
+  await pushSettings({ mode: 'mask', hideKeepSlot: true, keywords: [], whitelist: [], blockTypes: { ad: true } });
+  const adMasks = Array.from(doc.querySelectorAll('.bf-mask'));
+  check('【关键】实测条幅广告只被遮一次，里面的 888×0 链接不会被单独再遮一条线',
+    blocked('stripAd') && $('stripAd').querySelectorAll(':scope > .bf-mask').length === 1 &&
+    !blocked('stripAdInner') && !$('stripAdInner').querySelector(':scope > .bf-mask'),
+    $('stripAd').className + ' / 内部遮罩=' + $('stripAd').querySelectorAll('.bf-mask').length +
+    ' / 内层链接=' + $('stripAdInner').className);
+  check('【关键】没有"一条线"的退化遮罩（每个遮罩宿主都量得出高度）',
+    adMasks.every((m) => m.parentElement.getBoundingClientRect().height > 0),
+    adMasks.map((m) => (m.parentElement.className || '') + '@' + Math.round(m.parentElement.getBoundingClientRect().height)).slice(0, 6).join(' | '));
+  check('右栏广告卡内部的 .ad-report / 图片块没有被单独标记',
+    !$('realAd').querySelector('.ad-report').classList.contains('bf-blocked') &&
+    !$('realAd').querySelector('.b-img').classList.contains('bf-blocked') &&
+    $('realAd').querySelectorAll('.bf-mask').length === 1,
+    $('realAd').querySelector('.ad-report').className + ' / 遮罩数=' + $('realAd').querySelectorAll('.bf-mask').length);
+  check('【安全阀】播放器容器本身永远不会被我们打上任何类',
+    !doc.querySelector('.video-pod-above-modules__inner.bf-blocked, .video-pod-above-modules__inner.bf-hide, .video-pod-above-modules.bf-hide, #bilibili-player.bf-hide, #bilibili-player.bf-blocked'));
+  await pushSettings({ blockTypes: {} });
 
   console.log('\n[10g-3] 实测结构：赛事推广楼层卡片 + 右栏广告同层装着弹幕列表（v1.5.5 回归点）');
   check('未打开「赛事」时，实测赛事卡片不被屏蔽', !blocked('realMatch'), $('realMatch').className);

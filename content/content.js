@@ -954,7 +954,19 @@
     if (!el.matches(AD_SLOT_SELECTOR)) return null;
     var host = blockTargetFor(el);
     if (!host || isInlineBox(host)) return null;   // 找不到块级宿主 → 宁可不遮，也别遮成一条线
-    return findAdCardFrame(host);
+    var frame = findAdCardFrame(host);
+    // 宿主必须是"能量出尺寸的块"：实测条幅广告里那个 <a class="ad-report-inner"> 是 888×0，
+    // 把遮罩放在它上面就会变成一条细线（反馈里"遮罩不到位"的来源之一）。
+    // 这种时候退回广告位本身；广告位自己也量不出尺寸就干脆不遮。
+    if (!hasMeasurableBox(frame)) {
+      if (hasMeasurableBox(el)) return el;
+      if (hasMeasurableBox(host)) return host;
+      return null;
+    }
+    // 绝对不许碰装着播放器的那一层：遮罩/隐藏它会让播放器塌掉（实测隐藏模式下视频从
+    // 888×500 缩成 320×180），B 站还有"白屏检测"，塌了可能触发它自己刷新页面
+    if (containsPlayer(frame)) return hasMeasurableBox(el) && !containsPlayer(el) ? el : null;
+    return frame;
   }
 
   /**
@@ -981,6 +993,13 @@
     var r = el.getBoundingClientRect ? el.getBoundingClientRect() : { width: 0, height: 0 };
     return el.tagName + (cls ? '.' + cls.split(/\s+/).join('.') : '') + (el.id ? '#' + el.id : '') +
       ' ' + Math.round(r.width) + '×' + Math.round(r.height);
+  }
+
+  /** 这个元素里装着播放器吗（<video> 或播放器容器）—— 装着就绝不能遮/隐藏 */
+  function containsPlayer(el) {
+    if (!el || !el.querySelector) return false;
+    return !!(el.matches && (el.matches('#bilibili-player, .bpx-player-container, .bilibili-player')) ||
+      el.querySelector('video, #bilibili-player, .bpx-player-container, .bilibili-player'));
   }
 
   /** 从元素往上最多 4 层的结构链（诊断用） */
@@ -1370,6 +1389,9 @@
     // 兜底：顶栏 / 导航 / 登录面板绝不允许被打上屏蔽类（上面 processCard 已经拦了一道，
     // 这里再拦一道，防止将来新增路径绕过）
     if (isChromeRegion(card)) return;
+    // 兜底：装着播放器的容器绝不能被打上屏蔽类（遮罩/隐藏它会让播放器塌掉，
+    // 而 B 站有白屏检测，塌了可能触发它自己刷新页面 —— 反馈里"播放时页面重新加载"）
+    if (containsPlayer(card)) return;
 
     var wasBlocked = card.dataset.bfState === 'blocked';
     var already = wasBlocked && card.dataset.bfKey === action.key;
@@ -1769,9 +1791,25 @@
    * 广告扫描：广告位既不在 CARD_SELECTOR 里、又常常把标题挂在外面，
    * 所以单独一趟，统一先收成"要处理的那一块"（见 adSlotTarget）再交给 processCard。
    *
+   * **一块广告只处理最外层那一个节点**：AD_SLOT_SELECTOR 会同时命中嵌套的多个元素
+   * （实测一条条幅广告是这样：`.ad-report.strip-ad.left-banner` > `.ad-report-inner`；
+   * 右栏广告卡是 `.video-card-ad-small` > `.ad-report` > `.ad-report-inner` > `.ad-floor-cover`）。
+   * 以前每个节点各算一次目标，于是同一块广告被标了好几次、遮罩里套遮罩 ——
+   * 实测遮蔽模式下 4 块广告出了 12 个遮罩，其中还包含 888×22、350×14 这种"一条线"的退化遮罩
+   * （反馈里"遮罩不到位""悬停显示不对"就是这个）。现在不是最外层的广告节点直接跳过。
+   *
    * 收出来的块同样记进 trackedCards：它们不是 CARD_SELECTOR 匹配到的卡片，
    * 关掉「广告」开关时要靠这份记录恢复原状。
    */
+  var AD_ANY_SELECTOR = AD_SLOT_SELECTOR + ',' + PLAYER_BANNER_INNER_SELECTOR + ',.inside-wrp';
+
+  /** 这个广告节点是不是"最外层的那一个"（祖先里还有广告节点就说明不是） */
+  function isOutermostAdNode(el) {
+    var p = el.parentElement;
+    if (!p || !p.closest) return true;
+    return !p.closest(AD_ANY_SELECTOR);
+  }
+
   function scanAdSlots() {
     if (!settings.enabled) return;
     var hasKeywords = !!(settings.keywords && settings.keywords.length);
@@ -1779,11 +1817,12 @@
     // 否则"广告认出来了但开关没开"这条诊断永远不会打印（反馈里就是这么卡住的）
     if (!(settings.blockTypes && settings.blockTypes.ad) && !hasKeywords && !settings.debug) return;
 
-    var nodes = document.querySelectorAll(AD_SLOT_SELECTOR + ',' + PLAYER_BANNER_INNER_SELECTOR + ',.inside-wrp');
+    var nodes = document.querySelectorAll(AD_ANY_SELECTOR);
     var seen = [];
     for (var i = 0; i < nodes.length; i++) {
       var slot = nodes[i];
       if (isChromeRegion(slot)) continue;   // 顶栏 / 导航里的东西一律跳过（反馈过的 bug：顶栏被遮）
+      if (!isOutermostAdNode(slot)) continue;   // 同一块广告只处理最外层，避免重复遮罩
       var target = adSlotTarget(slot);
       if (!target) continue;
       // 外壳的身份明确标出来（见 isAdSlot）：光看类名认不出来，也不能靠"里面装着广告"来猜
