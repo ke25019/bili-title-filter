@@ -170,17 +170,15 @@ html.bf-dark {
    规则里没有任何"祖先 / 后代"选择器，物理上不可能扩到广告位之外。
 
    三个目标（均为实测值）：
-     #slide_ad / .slide-ad-exp       贴片横幅广告位
-     .ad-report.left-banner          播放器下方那条横幅（实测 880×73 的 <a class="ad-report strip-ad left-banner">）
-     .video-card-ad-small            右栏广告卡
-     .video-page-special-card-small  右栏推荐流里的推广卡（普通推荐卡是 .video-page-card-small）
+     #slide_ad / .slide-ad-exp   贴片横幅广告位
+     .ad-report.left-banner      播放器下方那条横幅（实测 880×73 的 <a class="ad-report strip-ad left-banner">）
+     .video-card-ad-small        右栏广告卡
 
    活动横幅 .inside-wrp 不在这里 —— 那个类名太通用，改由脚本校验结构后再打 .bf-ad-hidden。 */
 html.bf-player-ad #slide_ad,
 html.bf-player-ad .slide-ad-exp,
 html.bf-player-ad .ad-report.left-banner,
-html.bf-player-ad .video-card-ad-small,
-html.bf-player-ad .video-page-special-card-small {
+html.bf-player-ad .video-card-ad-small {
   display: none !important;
 }
 

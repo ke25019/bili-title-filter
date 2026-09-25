@@ -102,17 +102,13 @@
 
   /**
    * 播放器页面上的广告位（全部为实测值）：
-   *   #slide_ad / .slide-ad-exp            贴片横幅广告位
-   *   .ad-report.left-banner               播放器下方那条横幅（实测 <a class="ad-report strip-ad left-banner">，880×73）
-   *   .video-card-ad-small                 右栏广告卡
-   *   .video-page-special-card-small       右栏推荐流里的推广卡（实测：普通推荐卡是 .video-page-card-small，
-   *                                        推广卡带 special；它同时也在 CARD_SELECTOR 里，
-   *                                        所以还要靠 isPlayerAdSlot 拦住"被当卡片盖遮罩"那条路）
+   *   #slide_ad / .slide-ad-exp   贴片横幅广告位
+   *   .ad-report.left-banner      播放器下方那条横幅（实测 <a class="ad-report strip-ad left-banner">，880×73）
+   *   .video-card-ad-small        右栏广告卡
    * 只列广告位**本体**的 id / 专属类名，绝不往上收 —— 1.5.1~1.5.8 的事故全出在上收那一步。
    * 与 content.css 里那条规则一一对应。
    */
-  var PLAYER_AD_SELECTOR = '#slide_ad, .slide-ad-exp, .ad-report.left-banner, ' +
-    '.video-card-ad-small, .video-page-special-card-small';
+  var PLAYER_AD_SELECTOR = '#slide_ad, .slide-ad-exp, .ad-report.left-banner, .video-card-ad-small';
 
   /**
    * 播放器活动横幅（实测结构，由用户从真机元素面板提供）：
@@ -663,13 +659,6 @@
     // 盖遮罩（真机上是行内元素，遮罩会缩成一条细线），甚至继续往上收到装着弹幕面板的父层。
     // 这条路径由 jsdom 回归用例 [18] 复现并锁住。
     return !!a.closest(PLAYER_AD_SELECTOR);
-  }
-
-  /** 这个元素（或它的祖先）是不是播放器页面的广告位 */
-  function isPlayerAdSlot(el) {
-    if (!el || el.nodeType !== 1 || !el.closest) return false;
-    if (el.matches && el.matches(PLAYER_AD_SELECTOR)) return true;
-    return !!el.closest(PLAYER_AD_SELECTOR);
   }
 
   /* ------------------------------------------------------------------
@@ -1253,14 +1242,6 @@
   function processCard(card) {
     if (isNestedCard(card)) return;
 
-    // 播放器页面的广告位整块交给「播放器页面屏蔽」开关负责（完全屏蔽、不盖遮罩），这里直接放行。
-    // 少了这一步，「广告」分区或屏蔽词会给它再盖一层遮罩 —— 实测右栏推广卡
-    // .video-page-special-card-small 本来就在 CARD_SELECTOR 里，以前就是这样被盖成 bf-blocked 的。
-    if (isPlayerAdSlot(card)) {
-      clearBlock(card);
-      return;
-    }
-
     if (!settings.enabled) {
       clearBlock(card);
       return;
@@ -1715,11 +1696,7 @@
     '          <span>屏蔽首页顶部轮播横幅</span>',
     '          <button class="bf-switch bf-switch--sm" id="bf-banner" type="button" role="switch"></button>',
     '        </div>',
-    '        <div class="bf-subrow">',
-    '          <span>屏蔽播放器页面的广告</span>',
-    '          <button class="bf-switch bf-switch--sm" id="bf-player-ad" type="button" role="switch"></button>',
-    '        </div>',
-    '        <div class="bf-hint">播放器页面：把广告位整块收掉（不盖遮罩），不碰播放器、弹幕与顶栏</div>',
+    '        <div class="bf-hint">打开后整块直接隐藏，不影响其它内容</div>',
     '      </div>',
     '      <div class="bf-row">',
     '        <div class="bf-label"><span>界面外观</span></div>',
@@ -2006,11 +1983,6 @@
       updateSettings({ blockBanner: !settings.blockBanner });
     });
 
-    // 播放器页面广告位：独立开关（默认开），整块收掉、不盖遮罩
-    shadow.getElementById('bf-player-ad').addEventListener('click', function () {
-      updateSettings({ blockPlayerAd: settings.blockPlayerAd === false });
-    });
-
     shadow.getElementById('bf-reset-pos').addEventListener('click', resetButtonPos);
 
     shadow.getElementById('bf-open-options').addEventListener('click', function () {
@@ -2138,12 +2110,6 @@
     var bannerBtn = shadow.getElementById('bf-banner');
     bannerBtn.classList.toggle('is-on', !!settings.blockBanner);
     bannerBtn.setAttribute('aria-checked', settings.blockBanner ? 'true' : 'false');
-
-    // 播放器页面广告位：默认开启，所以判据是 !== false
-    var playerAdBtn = shadow.getElementById('bf-player-ad');
-    var playerAdOn = settings.blockPlayerAd !== false;
-    playerAdBtn.classList.toggle('is-on', playerAdOn);
-    playerAdBtn.setAttribute('aria-checked', playerAdOn ? 'true' : 'false');
 
     updateStatsLabel();
   }

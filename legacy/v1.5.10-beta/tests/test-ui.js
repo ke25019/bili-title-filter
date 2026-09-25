@@ -165,7 +165,7 @@ async function testOptions() {
   check('每个分区一个「屏蔽」开关', doc.querySelectorAll('#types input[data-key]').length === 18,
     doc.querySelectorAll('#types input[data-key]').length);
   check('设置页包含「屏蔽首页顶部轮播横幅」', !!doc.getElementById('block-banner'));
-  check('设置页包含「屏蔽播放器页面的广告」开关', !!doc.getElementById('block-player-ad'));
+  check('设置页包含「屏蔽播放器页面的横幅广告」开关', !!doc.getElementById('block-player-ad'));
   check('播放器页面屏蔽默认勾选（默认开启）',
     doc.getElementById('block-player-ad').checked === true,
     String(doc.getElementById('block-player-ad').checked));

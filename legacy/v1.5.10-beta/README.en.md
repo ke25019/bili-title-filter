@@ -4,9 +4,9 @@ An extension I wrote for myself to filter Bilibili. Add a few keywords and the v
 
 Manifest V3, works in Edge and Chrome, plain JavaScript with no runtime dependencies.
 
-![version](https://img.shields.io/badge/version-1.5.11-orange)
+![version](https://img.shields.io/badge/version-1.5.10-orange)
 ![browser](https://img.shields.io/badge/Edge%20%7C%20Chrome-Chromium-00aeec)
-![tests](https://img.shields.io/badge/tests-319%20passed-brightgreen)
+![tests](https://img.shields.io/badge/tests-312%20passed-brightgreen)
 
 ---
 
@@ -68,7 +68,7 @@ There's also an "other promos" catch-all for promo cards that don't fall into an
 
 The home-page carousel has its own switch (off by default). Turning it on hides the whole block outright - it does **not** follow the mask/hide mode, because a banner is not a video card and covering it with an explanation makes no sense. It only affects that one block on the home page and is independent of the checkboxes above.
 
-The ad slots on video pages have their own switch - "Block the ads on playback pages", **on by default**, available both in the in-page panel and on the settings page. It removes the playback page's ad slots outright - the banner below the player, the right-column ad card, the promo card in the right-hand recommendation list (measured: `.video-page-special-card-small`) and the player activity banner (measured: `.inside-wrp`) - **always removed entirely, never masked** (an explanation overlay is pointless on this page, and masks kept going wrong here). It only ever touches the slots themselves: the **player, the danmaku panel and the header are never affected**. Turn it off and the playback page goes back to exactly how it was.
+The ad slots on video pages have their own switch too - "Block the banner ad on playback pages", **on by default**. It removes the playback page's ad slots outright - the banner below the player, the right-column ad card and the player activity banner (measured: `.inside-wrp`) - **always removed entirely, never masked** (an explanation overlay is pointless on this page, and masks kept going wrong here). It only ever touches the slots themselves: the **player, the danmaku panel and the header are never affected**. Turn it off and the playback page goes back to exactly how it was.
 
 I didn't hard-code a single class for detecting promo cards. The order is:
 
@@ -126,7 +126,7 @@ npm install
 npm test
 ```
 
-319 checks covering the blocking logic, category detection, both hiding behaviours, the playback-page ad slots, the settings pages and the background stats.
+312 checks covering the blocking logic, category detection, both hiding behaviours, the playback-page ad slots, the settings pages and the background stats.
 
 The mock DOM and its sizes were measured on the real site (utility-class structures like `.floor-card-inner > .cover-container + .pb-16.px-12 > p.title`, the `.vui_carousel` banner, the 0×0 hidden links inside `.palette-button-inner`, and so on).
 
@@ -156,18 +156,6 @@ Bilibili is a single-page app, so scrolling and navigating re-render cards. The 
 ## Changelog
 
 Newest first. This is what changed and why — including the parts I got wrong.
-
-### 1.5.11 (beta)
-
-**The promo card in the right-hand recommendation list is now part of playback-page blocking, and the in-page panel has a switch for it.**
-
-**The promo card in the right-hand recommendation list** (measured: `.video-page-special-card-small`; ordinary recommendation cards are `.video-page-card-small`) is now handled by the playback-page switch and removed outright. There is a trap here: that class name is **already in `CARD_SELECTOR`**, so adding a CSS rule is not enough — `processCard` would treat it as an ordinary card and the "ads" category or a keyword would cover it with a mask (that `bf-blocked` seen on a real page). So `processCard` gained a "player ad slots pass straight through" test: no mask, no `bf-blocked`, and the playback-page switch removes the whole thing.
-
-On picking the signal: the `data-v-7627ded0` Vue scope ID changes with every Bilibili build, so it is not trustworthy as the main test; "no `.upname` / `.playinfo`" and "links going to `/bubble/home/`" are kept for cross-checking, while the main test stays the class name — the `special` keyword is the most direct distinction.
-
-**The in-page panel gained a "Block the ads on playback pages" switch** (on by default). It is the same setting as the one on the settings page, so changing either works; before this you had to open the settings page, which was inconvenient.
-
-195 → 202 cases (new: the right-column promo card being removed outright, the panel switch existing and defaulting to on, clicking it in the panel turning it off and back on, it losing its selected state when off, the promo card not being masked while the "ads" category is on, and it not being masked when a keyword matches its title) — **312 → 319** in total.
 
 ### 1.5.10 (beta)
 

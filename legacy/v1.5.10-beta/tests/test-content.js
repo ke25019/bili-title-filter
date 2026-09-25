@@ -450,17 +450,6 @@ async function main() {
   check('面板包含 18 种分区选项', !!(shadow && shadow.querySelectorAll('.bf-type').length === 18),
     shadow ? shadow.querySelectorAll('.bf-type').length : 'n/a');
   check('面板包含「屏蔽首页顶部轮播横幅」开关', !!(shadow && shadow.getElementById('bf-banner')));
-  check('面板包含「屏蔽播放器页面的广告」开关', !!(shadow && shadow.getElementById('bf-player-ad')));
-  check('面板里播放器页面广告开关默认是打开的',
-    !!(shadow && shadow.getElementById('bf-player-ad').classList.contains('is-on')));
-  shadow.getElementById('bf-player-ad').click();
-  await sleep(140);
-  check('面板里点一下能关掉播放器页面广告屏蔽', (store.sync.bfSettings || {}).blockPlayerAd === false,
-    JSON.stringify((store.sync.bfSettings || {}).blockPlayerAd));
-  check('关掉后面板开关不再是选中态', !shadow.getElementById('bf-player-ad').classList.contains('is-on'));
-  shadow.getElementById('bf-player-ad').click();
-  await sleep(140);
-  check('再点一下开回来', (store.sync.bfSettings || {}).blockPlayerAd === true);
   check('面板不再包含「整行板块」开关', !(shadow && shadow.getElementById('bf-sections')));
   check('面板包含「重置位置」入口', !!(shadow && shadow.getElementById('bf-reset-pos')));
 
@@ -1044,15 +1033,6 @@ async function main() {
         '</div></div></div>' +
       '</div>' +
       '<div class="video-card-ad-small" id="rightAdCard" data-w="350" data-h="215">右栏广告卡</div>' +
-      // 右栏推荐流里的推广卡：实测类名带 special（普通推荐卡是 .video-page-card-small）。
-      // 它同时也在 CARD_SELECTOR 里，所以光加 CSS 不够 —— 还得在 processCard 里放行，
-      // 否则「广告」分区或屏蔽词会给它盖一层遮罩（实测就是这个 bf-blocked）。
-      '<div class="video-page-special-card-small" id="rightPromoCard" data-w="350" data-h="215">' +
-        '<a href="//www.bilibili.com/bubble/home/act?specialRecommendByOp=1">' +
-          '<div class="cover"><img src="promo.jpg"></div>' +
-          '<h3 class="bili-video-card__info--tit" title="推广卡独有的描述文案">推广卡独有的描述文案</h3>' +
-        '</a>' +
-      '</div>' +
     '</div>' +
     // 播放器下方那条横幅：实测 <a class="ad-report strip-ad left-banner">，880×73
     '<a class="ad-report strip-ad left-banner" id="leftBanner" href="//cm.bilibili.com/c?y=2" data-w="880" data-h="73">' +
@@ -1104,9 +1084,6 @@ async function main() {
     $('activityBanner').classList.contains('bf-ad-hidden') &&
     win.getComputedStyle($('activityBanner')).display === 'none',
     $('activityBanner').className + ' / display=' + win.getComputedStyle($('activityBanner')).display);
-  check('【关键】右栏推荐流里的推广卡（实测 .video-page-special-card-small）整块收掉',
-    win.getComputedStyle($('rightPromoCard')).display === 'none',
-    win.getComputedStyle($('rightPromoCard')).display);
   check('【安全阀】类名也叫 inside-wrp、但没有活动横幅结构 → 绝不能动',
     !$('fakeInside').classList.contains('bf-ad-hidden') &&
     win.getComputedStyle($('fakeInside')).display !== 'none');
@@ -1124,16 +1101,6 @@ async function main() {
   check('【回归】右栏广告卡不会被「广告」分区改成遮罩（播放器页面一律完全屏蔽）',
     !$('rightAdCard').querySelector('.bf-mask') && !$('rightAdCard').classList.contains('bf-blocked'),
     $('rightAdCard').className);
-
-  // 屏蔽词命中推广卡的标题时同样不能盖遮罩 —— 它在 CARD_SELECTOR 里，
-  // 必须走 processCard 里那条「播放器广告位放行」的路
-  await pushSettings({ keywords: ['推广卡独有的描述文案'] });
-  check('【回归】屏蔽词命中右栏推广卡时也不盖遮罩，仍是整块收掉',
-    !$('rightPromoCard').classList.contains('bf-blocked') &&
-    !$('rightPromoCard').querySelector('.bf-mask') &&
-    win.getComputedStyle($('rightPromoCard')).display === 'none',
-    $('rightPromoCard').className);
-  await pushSettings({ keywords: [] });
   await pushSettings({ blockTypes: {} });
 
   // 总开关关闭 → 播放器页面屏蔽一并失效
