@@ -165,10 +165,6 @@ async function testOptions() {
   check('每个分区一个「屏蔽」开关', doc.querySelectorAll('#types input[data-key]').length === 18,
     doc.querySelectorAll('#types input[data-key]').length);
   check('设置页包含「屏蔽首页顶部轮播横幅」', !!doc.getElementById('block-banner'));
-  check('设置页包含「屏蔽播放器页面的横幅广告」开关', !!doc.getElementById('block-player-ad'));
-  check('播放器页面屏蔽默认勾选（默认开启）',
-    doc.getElementById('block-player-ad').checked === true,
-    String(doc.getElementById('block-player-ad').checked));
   check('默认选中「整体遮蔽」', doc.querySelector('input[name="mode"][value="mask"]').checked);
   check('遮蔽文案输入框已填充默认值',
     doc.getElementById('mask-text').value === '根据您的屏蔽词已将此视频屏蔽',
@@ -301,18 +297,6 @@ async function testOptions() {
   bannerBox.dispatchEvent(new win.Event('change', { bubbles: true }));
   await sleep(60);
   check('轮播横幅开关已保存', store.sync.bfSettings.blockBanner === true);
-
-  // 播放器页面屏蔽（独立开关，默认开启）
-  const playerAdBox = doc.getElementById('block-player-ad');
-  check('播放器页面屏蔽未设置过时回显为「开启」', playerAdBox.checked === true);
-  playerAdBox.checked = false;
-  playerAdBox.dispatchEvent(new win.Event('change', { bubbles: true }));
-  await sleep(60);
-  check('关闭播放器页面屏蔽已保存', store.sync.bfSettings.blockPlayerAd === false);
-  playerAdBox.checked = true;
-  playerAdBox.dispatchEvent(new win.Event('change', { bubbles: true }));
-  await sleep(60);
-  check('重新开启播放器页面屏蔽已保存', store.sync.bfSettings.blockPlayerAd === true);
 
   doc.getElementById('types-none').click();
   await sleep(60);

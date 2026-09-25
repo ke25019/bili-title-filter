@@ -100,22 +100,6 @@
   /** 横幅 / 轮播属于"板块推广位"，只由板块级开关负责，卡片级不碰 */
   var BANNER_EXCLUDE = '.carousel-area, .carousel-container, [class*="carousel"], [class*="banner"]';
 
-  /**
-   * 播放器页面的横幅广告位。实测（1.7.0 那轮真机复验）：播放器下方的贴片 / 横幅广告位是
-   * `#slide_ad.slide-ad-exp`，它的**兄弟节点**就是弹幕面板 `#danmukuBox.danmaku-box`。
-   * 这里只列广告位本体（ID + 专属类名），与 content.css 里那条规则一一对应。
-   */
-  var PLAYER_AD_SELECTOR = '#slide_ad, .slide-ad-exp';
-
-  /**
-   * 广告位里一旦出现这些元素，说明选择器打偏了（B 站换了结构），立即放弃屏蔽。
-   * 依据 AGENTS §3「无法确认时宁可不屏蔽」：播放器、弹幕面板、顶栏一个都不能碰。
-   */
-  var PLAYER_AD_FORBIDDEN = [
-    '#danmukuBox', '.danmaku-box', '.bpx-player-container', '.bilibili-player',
-    'video', '.bili-header', '#biliMainHeader', 'header'
-  ].join(', ');
-
   /** 顶栏 / 导航区域：分区识别时必须跳过，否则会把「直播」入口当成直播卡片 */
   var NAV_EXCLUDE = [
     'header',
@@ -638,14 +622,7 @@
   }
 
   function isExcludedAnchor(a) {
-    if (!a || !a.closest) return false;
-    if (a.closest(NAV_EXCLUDE)) return true;
-    // 播放器页面的广告位整块交给「播放器页面屏蔽」开关负责（默认开，直接 display:none）。
-    // 广告位里的落地链接（实测 //cm.bilibili.com/…）正好命中「广告」分区的 href 规则，
-    // 若走"命中链接 → 往上找卡片"这条路，会把 <a class="ad-report-inner"> 自己当成一张卡片
-    // 盖遮罩（真机上是行内元素，遮罩会缩成一条细线），甚至继续往上收到装着弹幕面板的父层。
-    // 这条路径由 jsdom 回归用例 [18] 复现并锁住。
-    return !!a.closest(PLAYER_AD_SELECTOR);
+    return !!(a.closest && a.closest(NAV_EXCLUDE));
   }
 
   /* ------------------------------------------------------------------
@@ -775,59 +752,6 @@
 
     var banner = findHomeBanner();
     if (banner) applyBannerTarget(banner);
-  }
-
-  /**
-   * 播放器页面屏蔽（独立开关，默认开启）：收掉播放器下方的横幅广告位。
-   *
-   * 与首页轮播横幅同一个思路：**不跟随「整体遮蔽 / 完全隐藏」** —— 广告位不是视频卡片，
-   * 盖一块"为什么被屏蔽"的说明没有意义，直接整块收掉。
-   * 真正干活的是 content.css 里 `html.bf-player-ad` 那两条规则，这里只负责开关与安全阀。
-   *
-   * 为什么**不做**「往上收整卡外壳」：1.5.1~1.5.8 那条线的全部事故都出在这一步 ——
-   * 广告位与弹幕面板是同一父层下的兄弟节点，只要往上走就会把弹幕面板、右栏甚至顶栏收走。
-   * 所以本开关只作用于广告位本体，并且在上膛之前先过三道安全阀。
-   */
-  function applyPlayerAdBlock() {
-    var html = document.documentElement;
-    var want = !!settings.enabled && settings.blockPlayerAd !== false && shouldBlockOnThisPage();
-
-    if (!want) {
-      toggleClass(html, 'bf-player-ad', false);
-      return;
-    }
-
-    var found = document.querySelectorAll(PLAYER_AD_SELECTOR);
-    var vw = window.innerWidth || 1280;
-    var vh = window.innerHeight || 800;
-
-    for (var i = 0; i < found.length; i++) {
-      var el = found[i];
-
-      // 安全阀 1：广告位里装着播放器 / 弹幕 / 顶栏 → 选择器打偏了，宁可不屏蔽
-      if (el.querySelector(PLAYER_AD_FORBIDDEN)) {
-        log('播放器广告位里出现了"绝不许动"的元素，放弃屏蔽：', el.className);
-        toggleClass(html, 'bf-player-ad', false);
-        return;
-      }
-
-      // 安全阀 2：命中加载哨兵 → 不能动它，否则影响 B 站继续加载内容
-      if (isLoadSentinel(el)) {
-        log('播放器广告位命中加载哨兵，放弃屏蔽：', el.className);
-        toggleClass(html, 'bf-player-ad', false);
-        return;
-      }
-
-      // 安全阀 3：尺寸异常（AGENTS §3：超过 1200×800 或视口面积 35% 就放弃）
-      var r = el.getBoundingClientRect();
-      if ((r.width > 1200 && r.height > 800) || r.width * r.height > vw * vh * 0.35) {
-        log('播放器广告位尺寸异常，放弃屏蔽：', Math.round(r.width), Math.round(r.height));
-        toggleClass(html, 'bf-player-ad', false);
-        return;
-      }
-    }
-
-    toggleClass(html, 'bf-player-ad', true);
   }
 
   /* ------------------------------------------------------------------
@@ -1312,7 +1236,6 @@
     if (force || now - lastSectionScanAt > 800) {
       lastSectionScanAt = now;
       applyBannerBlock();
-      applyPlayerAdBlock();
       applyPlaceholderCollapse();
     }
   }

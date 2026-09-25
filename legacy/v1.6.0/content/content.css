@@ -155,25 +155,6 @@ html.bf-dark {
   border-radius: 8px;
 }
 
-/* ---------- 播放器页面：播放器下方的横幅广告位（独立开关，默认开启） ----------
-   只命中广告位**本体**，绝不上收「整卡外壳」—— 这是 1.5.1~1.5.8 那条线全部事故的根因：
-   实测 #slide_ad 与弹幕面板是同一个父层下的兄弟节点：
-
-     .video-pod-above-modules__inner
-       ├ #danmukuBox.danmaku-box        ← 弹幕面板（绝不能碰）
-       ├ #slide_ad.slide-ad-exp         ← 横幅 / 贴片广告位（本规则的目标）
-       └ .video-card-ad-small           ← 右栏广告卡（本开关不管，归「广告」分区）
-
-   只要往上收就必然碰到弹幕面板，1.5.8 上甚至一路收到顶栏。所以这里只用 ID 与专属类名，
-   规则里没有任何"祖先/后代"选择器，物理上不可能扩到广告位之外。
-
-   顶栏里的推广位是 .ad-report.strip-ad.left-banner，不在下面的选择器里，绝不会被误伤。
-   右栏广告卡 .video-card-ad-small 同样不在里面，由「广告」分区开关负责。 */
-html.bf-player-ad #slide_ad,
-html.bf-player-ad .slide-ad-exp {
-  display: none !important;
-}
-
 /* ---------- 完全隐藏模式下被"顶上来"的空骨架占位项 ----------
    B 站的推荐流网格末尾放着若干只含骨架屏的空占位项；
    我们把前面的卡片隐藏后，CSS Grid 会把这些占位项拉到前面来填空，

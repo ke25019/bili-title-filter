@@ -220,9 +220,6 @@
     });
     var banner = $('block-banner');
     if (banner) banner.checked = !!settings.blockBanner;
-    // 播放器页面屏蔽：默认开启，所以判据是 !== false，不能用 !!
-    var playerAd = $('block-player-ad');
-    if (playerAd) playerAd.checked = settings.blockPlayerAd !== false;
   }
 
   function renderPreview() {
@@ -362,11 +359,6 @@
     $('block-banner').addEventListener('change', function () {
       save({ blockBanner: $('block-banner').checked }, true);
       toast($('block-banner').checked ? '已屏蔽首页顶部轮播横幅' : '已恢复显示首页顶部轮播横幅');
-    });
-
-    $('block-player-ad').addEventListener('change', function () {
-      save({ blockPlayerAd: $('block-player-ad').checked }, true);
-      toast($('block-player-ad').checked ? '已开启播放器页面屏蔽' : '已关闭播放器页面屏蔽');
     });
 
     $('types-none').addEventListener('click', function () {

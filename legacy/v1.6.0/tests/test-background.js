@@ -105,8 +105,6 @@ async function main() {
     Object.keys(store.sync.bfSettings.blockTypes).length === 18 &&
     Object.values(store.sync.bfSettings.blockTypes).every((v) => v === false));
   check('默认不屏蔽首页顶部轮播横幅', store.sync.bfSettings.blockBanner === false);
-  check('默认开启播放器页面屏蔽', store.sync.bfSettings.blockPlayerAd === true,
-    String(store.sync.bfSettings.blockPlayerAd));
   check('默认在搜索结果页屏蔽、在 UP 个人主页不屏蔽',
     store.sync.bfSettings.blockOnSearch === true && store.sync.bfSettings.blockOnSpace === false,
     store.sync.bfSettings.blockOnSearch + '/' + store.sync.bfSettings.blockOnSpace);

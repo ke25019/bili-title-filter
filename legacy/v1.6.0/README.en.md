@@ -4,9 +4,9 @@ An extension I wrote for myself to filter Bilibili. Add a few keywords and the v
 
 Manifest V3, works in Edge and Chrome, plain JavaScript with no runtime dependencies.
 
-![version](https://img.shields.io/badge/version-1.5.9-orange)
+![version](https://img.shields.io/badge/version-1.6.0-orange)
 ![browser](https://img.shields.io/badge/Edge%20%7C%20Chrome-Chromium-00aeec)
-![tests](https://img.shields.io/badge/tests-307%20passed-brightgreen)
+![tests](https://img.shields.io/badge/tests-283%20passed-brightgreen)
 
 ---
 
@@ -68,8 +68,6 @@ There's also an "other promos" catch-all for promo cards that don't fall into an
 
 The home-page carousel has its own switch (off by default). Turning it on hides the whole block outright - it does **not** follow the mask/hide mode, because a banner is not a video card and covering it with an explanation makes no sense. It only affects that one block on the home page and is independent of the checkboxes above.
 
-The banner ad slot on video pages (below the player) has its own switch too - "Block the banner ad on playback pages", **on by default**. It removes the whole slot outright, likewise ignoring the mask/hide mode. It only ever touches the slot itself: the **player, the danmaku panel and the header are never affected**, and the right-column ad card is not its business — that still belongs to the "ads" category above. Turn it off and the playback page goes back to exactly how it was.
-
 I didn't hard-code a single class for detecting promo cards. The order is:
 
 1. The category badge in the cover's top-left corner: Bilibili labels every promo card with its own category ("番剧 / 国创 / 综艺 / 电影 / 赛事…"), which is the most reliable signal
@@ -126,7 +124,7 @@ npm install
 npm test
 ```
 
-307 checks covering the blocking logic, category detection, both hiding behaviours, the playback-page banner, the settings pages and the background stats.
+283 checks covering the blocking logic, category detection, both hiding behaviours, the settings pages and the background stats.
 
 The mock DOM and its sizes were measured on the real site (utility-class structures like `.floor-card-inner > .cover-container + .pb-16.px-12 > p.title`, the `.vui_carousel` banner, the 0×0 hidden links inside `.palette-button-inner`, and so on).
 
@@ -157,39 +155,11 @@ Bilibili is a single-page app, so scrolling and navigating re-render cards. The 
 
 Newest first. This is what changed and why — including the parts I got wrong.
 
-### 1.5.9 (beta)
-
-**Playback-page blocking, rebuilt on the clean `v1.5.0-beta` code.** This release does one thing: the banner ad slot below the player on video pages (measured: `#slide_ad.slide-ad-exp`) is removed outright, and the settings page gets a dedicated switch for it, **on by default**.
-
-**First, a correction to the record: playback-page ad blocking was not introduced in 1.5.0 — it was `v1.5.1-beta`.** I went through `content/content.js` at every tag: `v1.4.1` and **`v1.5.0-beta` contain no playback-page ad blocking at all**. The only ad-related thing in 1.5.0 is the card-detection query `querySelector('.bili-video-card__stats--ad, .bili-video-card__info--ad, .ad-report, .video-card-ad-small')`, which is how the "ads" category recognises a card — nothing to do with the playback-page ad slots. The feature first landed in `88bb422` (`fix: 播放页的广告现在能被屏蔽（1.5.1）`), and then 1.5.2–1.5.8 spent their time patching it (1.5.2 whole-card masking in the right column, 1.5.3 inline hosts and panel collapsing, 1.5.4 badge detection, 1.5.5 walking one layer too far, 1.5.6 merging two fixes from another build, 1.5.8 three rounds on a real browser), before 1.6.0 removed it wholesale. So this release rebuilds it on the clean 1.5.0 base instead of carrying those 2,700 lines.
-
-**The approach: only the ad slot itself, never walk up.** Every 1.5.1–1.5.8 incident came from the same step — "recognise the ad slot by class → walk up to the whole card shell → cover it with a mask". The root cause is structural:
-
-```
-.video-pod-above-modules__inner
-  ├ #danmukuBox.danmaku-box        ← danmaku panel
-  ├ #slide_ad.slide-ad-exp         ← banner ad slot (this release's target)
-  └ .video-card-ad-small           ← right-column ad card (belongs to the "ads" category)
-```
-
-The ad slot and the danmaku panel are **siblings under the same parent**, so any step upwards is guaranteed to hit the danmaku panel. This release therefore applies `display:none` using only the two ad-slot-specific selectors `#slide_ad` / `.slide-ad-exp`; the rule contains **no ancestor or descendant selectors at all**, so it cannot physically reach outside the ad slot. The promo slot in the site header is `.ad-report.strip-ad.left-banner`, which is not in the selector list and can never be caught. An ad slot is not a video card, so it also does **not** follow the mask/hide mode — it is removed outright, with no explanation overlay.
-
-**Three safety valves** (following "when in doubt, don't block"): if the ad slot contains the player, the danmaku panel or the header, or matches a load sentinel, or measures more than 1200×800 or 35% of the viewport, blocking is abandoned.
-
-**Also fixed: a bug that collapsed into a thin line on real pages.** The slot's landing link (measured: `//cm.bilibili.com/…`) matches the "ads" category href rule, so the "link matched → walk up to a card" path treated `<a class="ad-report-inner">` **itself** as a card and masked it; on a real page it is an inline element, so the mask collapsed into a thin line. That path is now excluded — and this was **reproduced by a test before it was fixed, not guessed**: `[18]` in `tests/test-content.js` was red from the start, failing with exactly `ad-report-inner bf-blocked`.
-
-**About the version number**: this release puts the numbering back on the 1.5.x line, so `manifest.json` goes from 1.6.0 to 1.5.9 — numerically a downgrade. That is deliberate: 1.6.0 was simply `v1.5.0-beta` promoted to stable, with byte-identical code, while 1.5.9 adds a feature to that same code and belongs to the 1.5.x line. The statement in 1.6.0 that "the 1.5.x line is deprecated and unmaintained" is therefore void, and the "deprecated" labels on those GitHub tags have been removed. If you already have 1.6.0 installed, just replace it via "Load unpacked".
-
-**Checks**: 172 → 190 (content script, +18), 89 → 94 (settings pages and popup, +5), 22 → 23 (background, +1) — **283 → 307** in total.
-
 ### 1.6.0
 
 **This release simply promotes the `v1.5.0-beta` code to stable**: the code is identical, only the version number in `manifest.json` reads 1.6.0 — nothing added, nothing changed.
 
-**It also announces that, due to technical limitations, support for blocking ads on the player page is cancelled.** The player's right-hand ad and the banner ad below the player that the 1.5.1–1.5.8 line tried to block will not ship — that implementation kept failing on real pages (masks covering only part of the ad, masks collapsing into a thin line, the danmaku list being dragged in, masks landing on the site header, and finally trouble with the player's layout and page reloads). Those releases (v1.5.1-beta through v1.5.8-beta) were marked "deprecated, unmaintained" on GitHub at the time; **the line was later revived by 1.5.9** (playback-page banner blocking rebuilt on the clean 1.5.0 code — see the 1.5.9 entry above), and those "deprecated" labels have been removed.
-
-**If you need playback-page blocking, that add-on is the recommended choice — the two are compatible in most scenarios**: [uBlock Origin](https://microsoftedge.microsoft.com/addons/detail/odfafepnkmbhccpbejgmiehpchacaeak).
-
+**It also announces that, due to technical limitations, support for blocking ads on the player page is cancelled.** The player's right-hand ad and the banner ad below the player that the 1.5.1–1.5.8 line tried to block will not ship — that implementation kept failing on real pages (masks covering only part of the ad, masks collapsing into a thin line, the danmaku list being dragged in, masks landing on the site header, and finally trouble with the player's layout and page reloads). Those releases (v1.5.1-beta through v1.5.8-beta) are marked "deprecated, unmaintained" on GitHub.
 ### 1.5.8
 
 **This release was rebuilt from the `v1.5.0-beta` code base**, and adds exactly three things on top of 1.5.0: blocking the player's right-hand ad, blocking the banner ad below the player, and blocking the esports category on the home page. That claim is verifiable: I went through the diff against 1.5.0 line by line — only 6 places in 1.5.0's existing code were touched, and every one of them is an interface those three features need (`.floor-card-inner` joined the card list, badge reading gained a fallback, the badge-exclusion test was loosened, `detectType` learned synonyms, `processCard` gained an "ad slot" parameter, and the restore path passes the same parameter). Everything else is added code. In other words, every 1.5.0 feature (keywords, 18 category switches, both hiding styles, the uploader whitelist, per-page switches, the in-page panel, dark mode) is intact and unchanged.

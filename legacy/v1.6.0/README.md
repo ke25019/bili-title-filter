@@ -1,9 +1,9 @@
 # B站屏蔽助手 · BiliTitleFilter
 
 [![License: PolyForm Noncommercial](https://img.shields.io/badge/License-PolyForm_Noncommercial-orange.svg)](https://polyformproject.org/licenses/noncommercial/1.0.0/)
-![version](https://img.shields.io/badge/version-1.5.9-orange)
+![version](https://img.shields.io/badge/version-1.6.0-orange)
 ![browser](https://img.shields.io/badge/Edge%20%7C%20Chrome-Chromium-00aeec)
-![tests](https://img.shields.io/badge/tests-307%20passed-brightgreen)
+![tests](https://img.shields.io/badge/tests-283%20passed-brightgreen)
 
 一个 B 站网页端扩展：给不想看的视频标题加几个关键词，它们就从页面上消失；也能按分区屏蔽直播、番剧这类推广内容。
 
@@ -41,7 +41,6 @@ Details and the FAQ live in the two documents linked above.
 - 两种效果：整体遮蔽（封面标题合成一块，鼠标悬停能看）和完全隐藏（默认保留原位置，页面不重排）
 - UP 白名单：名单里的 UP 不会被屏蔽（按 UP 名字）
 - 18 类分区推广可以整类屏蔽（番剧、国创、综艺、电影这些是分开的），另有「其他推广」兜底，以及一个单独的开关用来屏蔽首页顶部的大轮播横幅
-- **播放器页面屏蔽**（默认开启）：一键收掉播放页播放器下方那条横幅广告位；只收广告位本体，不碰播放器、弹幕与顶栏
 - B 站页面里有一个可以拖着走的悬浮面板
 - 跟随 B 站深色模式
 - 页面级开关：站内搜索结果页默认屏蔽、UP 个人主页默认不屏蔽，登录页一律不屏蔽
@@ -51,13 +50,12 @@ Details and the FAQ live in the two documents linked above.
 - Two styles: mask (cover and title merged into one block, reveals on hover) and hide (keeps the slot by default, so the page doesn't reflow)
 - An uploader whitelist: uploaders on it are never blocked (by name)
 - Eighteen promo categories, each with its own switch (anime, Chinese animation, variety shows and movies are separate), an "other promos" catch-all, and a separate switch that blocks the home-page carousel banner
-- **Playback-page blocking** (on by default): one switch removes the banner ad slot below the player on video pages; only the slot itself — the player, danmaku and header are never touched
 - A draggable panel inside the page
 - Follows Bilibili's dark mode
 
-纯原生 JavaScript，没有运行时依赖。测试用 jsdom 跑，一共 307 项。
+纯原生 JavaScript，没有运行时依赖。测试用 jsdom 跑，一共 283 项。
 
-Plain JavaScript, no runtime dependencies. The tests run on jsdom — 307 checks in total.
+Plain JavaScript, no runtime dependencies. The tests run on jsdom — 283 checks in total.
 
 ---
 
