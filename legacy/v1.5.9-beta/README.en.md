@@ -4,9 +4,9 @@ An extension I wrote for myself to filter Bilibili. Add a few keywords and the v
 
 Manifest V3, works in Edge and Chrome, plain JavaScript with no runtime dependencies.
 
-![version](https://img.shields.io/badge/version-1.5.10-orange)
+![version](https://img.shields.io/badge/version-1.5.9-orange)
 ![browser](https://img.shields.io/badge/Edge%20%7C%20Chrome-Chromium-00aeec)
-![tests](https://img.shields.io/badge/tests-312%20passed-brightgreen)
+![tests](https://img.shields.io/badge/tests-307%20passed-brightgreen)
 
 ---
 
@@ -68,7 +68,7 @@ There's also an "other promos" catch-all for promo cards that don't fall into an
 
 The home-page carousel has its own switch (off by default). Turning it on hides the whole block outright - it does **not** follow the mask/hide mode, because a banner is not a video card and covering it with an explanation makes no sense. It only affects that one block on the home page and is independent of the checkboxes above.
 
-The ad slots on video pages have their own switch too - "Block the banner ad on playback pages", **on by default**. It removes the playback page's ad slots outright - the banner below the player, the right-column ad card and the player activity banner (measured: `.inside-wrp`) - **always removed entirely, never masked** (an explanation overlay is pointless on this page, and masks kept going wrong here). It only ever touches the slots themselves: the **player, the danmaku panel and the header are never affected**. Turn it off and the playback page goes back to exactly how it was.
+The banner ad slot on video pages (below the player) has its own switch too - "Block the banner ad on playback pages", **on by default**. It removes the whole slot outright, likewise ignoring the mask/hide mode. It only ever touches the slot itself: the **player, the danmaku panel and the header are never affected**, and the right-column ad card is not its business — that still belongs to the "ads" category above. Turn it off and the playback page goes back to exactly how it was.
 
 I didn't hard-code a single class for detecting promo cards. The order is:
 
@@ -126,7 +126,7 @@ npm install
 npm test
 ```
 
-312 checks covering the blocking logic, category detection, both hiding behaviours, the playback-page ad slots, the settings pages and the background stats.
+307 checks covering the blocking logic, category detection, both hiding behaviours, the playback-page banner, the settings pages and the background stats.
 
 The mock DOM and its sizes were measured on the real site (utility-class structures like `.floor-card-inner > .cover-container + .pb-16.px-12 > p.title`, the `.vui_carousel` banner, the 0×0 hidden links inside `.palette-button-inner`, and so on).
 
@@ -156,20 +156,6 @@ Bilibili is a single-page app, so scrolling and navigating re-render cards. The 
 ## Changelog
 
 Newest first. This is what changed and why — including the parts I got wrong.
-
-### 1.5.10 (beta)
-
-**1.5.9 missed the actual elements on the playback page; this release adds them.** 1.5.9 only matched `#slide_ad` / `.slide-ad-exp` — selectors I had copied from older notes and **never checked against a real page**. As a result neither the banner below the player (measured: `a.ad-report.strip-ad.left-banner`, 880×73) nor the player activity banner (measured: `.inside-wrp`) was removed, and the ad was still on screen. This release takes the measured structure from a real element inspector and adds all three:
-
-- **The banner below the player**: `.ad-report.left-banner`
-- **The right-column ad card**: `.video-card-ad-small`
-- **The player activity banner**: `.inside-wrp` — the class name is far too generic to put in a CSS selector, so the script validates the structure first (both `.inside-bg` and `.hinter-msg`, or an image served from `/bfs/activity-plat/`) and only then marks it for removal
-
-**Playback pages are now always removed outright, never masked.** An explanation overlay is pointless on this page, and masks kept going wrong here (collapsing into a thin line, covering the danmaku list, landing on the header). All four slots are now removed outright, and the "ads" category no longer turns them into masks either — landing links inside ad slots no longer take the "link matched → walk up to a card" path.
-
-**The safety valves went from three to four**: a new one refuses to touch anything inside the header/navigation region, and if any slot fails a valve, the whole playback-page blocking is abandoned.
-
-190 → 195 cases (new: each of the banner, the right-column card and the activity banner being removed; no mask on the activity banner; an element that looks like `.inside-wrp` but is not an activity banner left alone; and all four slots coming back when the switch is turned off) — **307 → 312** in total.
 
 ### 1.5.9 (beta)
 

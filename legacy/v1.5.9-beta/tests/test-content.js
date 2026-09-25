@@ -1015,10 +1015,10 @@ async function main() {
     String(win.BF_DEFAULTS.blockPlayerAd));
   check('老配置（配置里没有这个键）规范化后仍然是开', win.bfNormalize({ enabled: true }).blockPlayerAd === true);
 
-  // 实测结构（真机元素面板抓的）：
+  // 实测结构（1.7.0 那轮真机复验）：
   //   广告位 #slide_ad.slide-ad-exp 与弹幕面板 #danmukuBox 是同一父层下的**兄弟节点** ——
   //   1.5.1~1.5.8 全部事故的根因就是"从广告位往上收整卡外壳"时撞上了弹幕面板。
-  // 尺寸按实测填（贴片 888×74、弹幕面板 350×44、整个区域 888×900、下方横幅 880×73）。
+  // 尺寸按实测填（横幅 888×74、弹幕面板 350×44、整个区域 888×900）。
   const pod = doc.createElement('div');
   pod.innerHTML =
     '<div class="video-pod-above-modules__inner" id="podInner" data-w="888" data-h="900">' +
@@ -1033,19 +1033,7 @@ async function main() {
         '</div></div></div>' +
       '</div>' +
       '<div class="video-card-ad-small" id="rightAdCard" data-w="350" data-h="215">右栏广告卡</div>' +
-    '</div>' +
-    // 播放器下方那条横幅：实测 <a class="ad-report strip-ad left-banner">，880×73
-    '<a class="ad-report strip-ad left-banner" id="leftBanner" href="//cm.bilibili.com/c?y=2" data-w="880" data-h="73">' +
-      '<img class="banner-img" src="banner.jpg"></a>' +
-    // 播放器活动横幅：结构与尺寸照抄真机（用户从元素面板给的原始 HTML，只把图片域名后的路径截短）
-    '<div class="inside-wrp" id="activityBanner" data-w="880" data-h="200">' +
-      '<div class="left"><div class="l-inside"><div class="hinter-msg"><b>投稿小剧场 瓜分万元奖金~</b></div> <!----> <!----></div> <!----></div>' +
-      '<div class="right"><div title="投稿小剧场 瓜分万元奖金~" class="inside-bg clickable">' +
-        '<div class="b-img"><img src="//i2.hdslb.com/bfs/activity-plat/static/12102/12104/d41d8cd98f00b204e9800998ecf8427e/k9frEZkVA9.jpg@640w_200h_!web-video-activity-cover.avif" class="b-img__inner" alt="投稿小剧场 瓜分万元奖金~" loading="lazy"></div>' +
-      '</div></div>' +
-    '</div>' +
-    // 反例：类名也叫 inside-wrp，但没有 .inside-bg / .hinter-msg，图片也不走活动平台 → 绝不能动
-    '<div class="inside-wrp" id="fakeInside" data-w="880" data-h="200"><div class="other">这不是活动横幅</div></div>';
+    '</div>';
   doc.body.appendChild(pod);
 
   // 先关掉：确认关闭时什么都不做（顺便借这次设置变更强制全量重扫，把新插入的 DOM 纳入）
@@ -1072,21 +1060,9 @@ async function main() {
   check('装着弹幕面板与广告位的共同父层没被收走',
     !$('podInner').classList.contains('bf-hide') &&
     win.getComputedStyle($('podInner')).display !== 'none');
-  check('【关键】右栏广告卡也整块收掉（完全屏蔽，不盖遮罩、不打 bf-blocked）',
-    win.getComputedStyle($('rightAdCard')).display === 'none' &&
-    !$('rightAdCard').querySelector('.bf-mask') &&
-    !$('rightAdCard').classList.contains('bf-blocked'),
-    win.getComputedStyle($('rightAdCard')).display + ' / ' + $('rightAdCard').className);
-  check('【关键】播放器下方那条横幅（实测 .ad-report.left-banner，880×73）整块收掉',
-    win.getComputedStyle($('leftBanner')).display === 'none',
-    win.getComputedStyle($('leftBanner')).display);
-  check('【关键】播放器活动横幅（.inside-wrp：.inside-bg + .hinter-msg + 活动平台图）整块收掉',
-    $('activityBanner').classList.contains('bf-ad-hidden') &&
-    win.getComputedStyle($('activityBanner')).display === 'none',
-    $('activityBanner').className + ' / display=' + win.getComputedStyle($('activityBanner')).display);
-  check('【安全阀】类名也叫 inside-wrp、但没有活动横幅结构 → 绝不能动',
-    !$('fakeInside').classList.contains('bf-ad-hidden') &&
-    win.getComputedStyle($('fakeInside')).display !== 'none');
+  check('【安全阀】右栏广告卡不由本开关负责（归「广告」分区，本站不动它）',
+    !$('rightAdCard').classList.contains('bf-hide') &&
+    win.getComputedStyle($('rightAdCard')).display !== 'none');
 
   // 「广告」分区开启时，广告位里的落地链接（//cm.bilibili.com/…）会命中「广告」的 href 规则；
   // 这里守住不变量：整块播放器区域里绝不能因此冒出遮罩或被屏蔽的元素。
@@ -1094,13 +1070,10 @@ async function main() {
   check('【回归】开启「广告」分区后，弹幕面板仍未被屏蔽/遮蔽',
     !$('danmukuBox').classList.contains('bf-blocked') &&
     win.getComputedStyle($('danmukuBox')).display !== 'none', $('danmukuBox').className);
-  check('【回归】播放器区域里不会冒出遮罩', !pod.querySelector('.bf-mask'),
-    Array.prototype.map.call(pod.querySelectorAll('.bf-mask'), function (m) {
+  check('【回归】播放器区域里不会冒出遮罩', !$('podInner').querySelector('.bf-mask'),
+    Array.prototype.map.call($('podInner').querySelectorAll('.bf-mask'), function (m) {
       return (m.parentElement.className || m.parentElement.id || m.parentElement.tagName);
     }).join(' | '));
-  check('【回归】右栏广告卡不会被「广告」分区改成遮罩（播放器页面一律完全屏蔽）',
-    !$('rightAdCard').querySelector('.bf-mask') && !$('rightAdCard').classList.contains('bf-blocked'),
-    $('rightAdCard').className);
   await pushSettings({ blockTypes: {} });
 
   // 总开关关闭 → 播放器页面屏蔽一并失效
@@ -1132,16 +1105,6 @@ async function main() {
   $('slide_ad').setAttribute('data-h', '74');
   await pushSettings({ debug: true });
   check('尺寸恢复正常后重新生效', doc.documentElement.classList.contains('bf-player-ad'));
-
-  // 关掉开关后必须整页还原（四处广告位都要回来，活动横幅的标记要摘掉）
-  await pushSettings({ blockPlayerAd: false });
-  check('关闭开关后四处广告位全部恢复、活动横幅标记被摘掉',
-    win.getComputedStyle($('slide_ad')).display !== 'none' &&
-    win.getComputedStyle($('leftBanner')).display !== 'none' &&
-    win.getComputedStyle($('rightAdCard')).display !== 'none' &&
-    win.getComputedStyle($('activityBanner')).display !== 'none' &&
-    !$('activityBanner').classList.contains('bf-ad-hidden'));
-  await pushSettings({ blockPlayerAd: true });
 
   // 收尾：别把状态留给后面
   await pushSettings({ debug: false, blockPlayerAd: false });

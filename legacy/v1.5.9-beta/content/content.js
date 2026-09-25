@@ -101,24 +101,11 @@
   var BANNER_EXCLUDE = '.carousel-area, .carousel-container, [class*="carousel"], [class*="banner"]';
 
   /**
-   * 播放器页面上的广告位（全部为实测值）：
-   *   #slide_ad / .slide-ad-exp   贴片横幅广告位
-   *   .ad-report.left-banner      播放器下方那条横幅（实测 <a class="ad-report strip-ad left-banner">，880×73）
-   *   .video-card-ad-small        右栏广告卡
-   * 只列广告位**本体**的 id / 专属类名，绝不往上收 —— 1.5.1~1.5.8 的事故全出在上收那一步。
-   * 与 content.css 里那条规则一一对应。
+   * 播放器页面的横幅广告位。实测（1.7.0 那轮真机复验）：播放器下方的贴片 / 横幅广告位是
+   * `#slide_ad.slide-ad-exp`，它的**兄弟节点**就是弹幕面板 `#danmukuBox.danmaku-box`。
+   * 这里只列广告位本体（ID + 专属类名），与 content.css 里那条规则一一对应。
    */
-  var PLAYER_AD_SELECTOR = '#slide_ad, .slide-ad-exp, .ad-report.left-banner, .video-card-ad-small';
-
-  /**
-   * 播放器活动横幅（实测结构，由用户从真机元素面板提供）：
-   *   .inside-wrp
-   *     ├ .left  > .l-inside > .hinter-msg > <b>投稿小剧场 瓜分万元奖金~</b>
-   *     └ .right > .inside-bg[title] > .b-img > img[src*="/bfs/activity-plat/"]
-   * `.inside-wrp` 这个类名太通用，不敢直接写进 CSS 选择器，所以由脚本校验结构之后再打标隐藏。
-   */
-  var ACTIVITY_BANNER_SELECTOR = '.inside-wrp';
-  var PLAYER_AD_BANNER_CLASS = 'bf-ad-hidden';
+  var PLAYER_AD_SELECTOR = '#slide_ad, .slide-ad-exp';
 
   /**
    * 广告位里一旦出现这些元素，说明选择器打偏了（B 站换了结构），立即放弃屏蔽。
@@ -805,10 +792,6 @@
     var html = document.documentElement;
     var want = !!settings.enabled && settings.blockPlayerAd !== false && shouldBlockOnThisPage();
 
-    // 先撤掉上一轮的活动横幅标记（它是脚本按结构校验后打的，开关一关要还回去）
-    var marked = document.querySelectorAll('.' + PLAYER_AD_BANNER_CLASS);
-    for (var m = 0; m < marked.length; m++) marked[m].classList.remove(PLAYER_AD_BANNER_CLASS);
-
     if (!want) {
       toggleClass(html, 'bf-player-ad', false);
       return;
@@ -817,51 +800,34 @@
     var found = document.querySelectorAll(PLAYER_AD_SELECTOR);
     var vw = window.innerWidth || 1280;
     var vh = window.innerHeight || 800;
-    var safe = true;
 
-    for (var i = 0; i < found.length && safe; i++) {
-      safe = isPlayerAdSafe(found[i], vw, vh);
-      if (!safe) log('播放器广告位没过安全阀，放弃屏蔽：', found[i].className);
+    for (var i = 0; i < found.length; i++) {
+      var el = found[i];
+
+      // 安全阀 1：广告位里装着播放器 / 弹幕 / 顶栏 → 选择器打偏了，宁可不屏蔽
+      if (el.querySelector(PLAYER_AD_FORBIDDEN)) {
+        log('播放器广告位里出现了"绝不许动"的元素，放弃屏蔽：', el.className);
+        toggleClass(html, 'bf-player-ad', false);
+        return;
+      }
+
+      // 安全阀 2：命中加载哨兵 → 不能动它，否则影响 B 站继续加载内容
+      if (isLoadSentinel(el)) {
+        log('播放器广告位命中加载哨兵，放弃屏蔽：', el.className);
+        toggleClass(html, 'bf-player-ad', false);
+        return;
+      }
+
+      // 安全阀 3：尺寸异常（AGENTS §3：超过 1200×800 或视口面积 35% 就放弃）
+      var r = el.getBoundingClientRect();
+      if ((r.width > 1200 && r.height > 800) || r.width * r.height > vw * vh * 0.35) {
+        log('播放器广告位尺寸异常，放弃屏蔽：', Math.round(r.width), Math.round(r.height));
+        toggleClass(html, 'bf-player-ad', false);
+        return;
+      }
     }
 
-    // 任一广告位过不了安全阀 → 整个播放器页面的屏蔽放弃（AGENTS §3：宁可不屏蔽）
-    toggleClass(html, 'bf-player-ad', safe);
-    if (!safe) return;
-
-    var banners = document.querySelectorAll(ACTIVITY_BANNER_SELECTOR);
-    for (var j = 0; j < banners.length; j++) {
-      if (isPlayerActivityBanner(banners[j])) banners[j].classList.add(PLAYER_AD_BANNER_CLASS);
-    }
-  }
-
-  /** 这个广告位"可以动"吗：四道安全阀全过才算安全 */
-  function isPlayerAdSafe(el, vw, vh) {
-    // 1) 落在顶栏 / 导航区域里 → 绝对不碰（1.5.8 顶栏被遮那次就是这个）
-    if (el.closest && el.closest(NAV_EXCLUDE)) return false;
-    // 2) 里面装着播放器 / 弹幕面板 / 顶栏 → 选择器打偏了
-    if (el.querySelector(PLAYER_AD_FORBIDDEN)) return false;
-    // 3) 加载哨兵不能动，否则影响 B 站继续加载内容
-    if (isLoadSentinel(el)) return false;
-    // 4) 尺寸异常（超过 1200×800 或视口面积 35%）
-    var r = el.getBoundingClientRect();
-    if ((r.width > 1200 && r.height > 800) || r.width * r.height > vw * vh * 0.35) return false;
-    return true;
-  }
-
-  /**
-   * 是不是播放器活动横幅。
-   * 主判据：同时有 .inside-bg（带 title 的图片块）与 .hinter-msg（文案行）。
-   * 兜底：B 站换过那层容器的类名，所以只要图片走 /bfs/activity-plat/（活动平台图）就认。
-   */
-  function isPlayerActivityBanner(el) {
-    if (!el || el.nodeType !== 1) return false;
-    if (el.closest && el.closest(NAV_EXCLUDE)) return false;
-    if (el.querySelector('.inside-bg') && el.querySelector('.hinter-msg')) return true;
-    var imgs = el.querySelectorAll('img');
-    for (var i = 0; i < imgs.length; i++) {
-      if ((imgs[i].getAttribute('src') || '').indexOf('/bfs/activity-plat/') !== -1) return true;
-    }
-    return false;
+    toggleClass(html, 'bf-player-ad', true);
   }
 
   /* ------------------------------------------------------------------
