@@ -25,7 +25,7 @@ A Bilibili web extension: add a few keywords to filter out video titles you don�
 
 **中文：**
 1. 到 [Microsoft Edge 加载项商店](https://microsoftedge.microsoft.com/addons/detail/mnedaofgbbcdgpoobimgbceabkchkaif) 点「获取」，浏览器会自动装好，以后也会自动更新。
-2. 想手动装或是试测试版，请到到 [Releases](https://github.com/ke25019/bili-title-filter/releases) 下载 对应版本zip 解压，在 `edge://extensions/` 打开「开发人员模式」→「加载解压缩的扩展」，选到含 `manifest.json` 的那一层。
+2. 想手动装或是试测试版，请到 [Releases](https://github.com/ke25019/bili-title-filter/releases) 下载对应版本的 zip 解压，在 `edge://extensions/` 打开「开发人员模式」→「加载解压缩的扩展」，选到含 `manifest.json` 的那一层。
 
 **English:**
 1. Install from the [Microsoft Edge Add-ons store](https://microsoftedge.microsoft.com/addons/detail/mnedaofgbbcdgpoobimgbceabkchkaif) — it installs and updates itself.
