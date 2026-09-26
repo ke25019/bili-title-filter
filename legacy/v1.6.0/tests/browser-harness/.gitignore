@@ -1,5 +1,0 @@
-# 调试脚手架产生的临时产物，不要入库
-.test-instance.json
-*.json
-*.png
-*.log

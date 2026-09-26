@@ -4,7 +4,7 @@ An extension I wrote for myself to filter Bilibili. Add a few keywords and the v
 
 Manifest V3, works in Edge and Chrome, plain JavaScript with no runtime dependencies.
 
-![version](https://img.shields.io/badge/version-1.5.11-orange)
+![version](https://img.shields.io/badge/version-1.6.0-orange)
 ![browser](https://img.shields.io/badge/Edge%20%7C%20Chrome-Chromium-00aeec)
 ![tests](https://img.shields.io/badge/tests-319%20passed-brightgreen)
 
@@ -136,6 +136,11 @@ For issues that only show up in a real browser I use the scripts in `tests/brows
 
 ## FAQ
 
+**The README used to recommend uBlock Origin for playback-page ads — is that still needed?**
+No. Back when 1.5.1–1.5.8 were trying to block them, playback-page ad blocking was unreliable (masks covering only part of the ad, collapsing into a thin line, dragging the danmaku list in, landing on the header), so the feature was dropped entirely and the README said "if you need playback-page blocking, that add-on is the recommended choice". **That advice is now void** — the feature has been rebuilt (see the 1.5.9 – 1.6.0 entries above): the slots are removed outright using only their own class names, with no ancestor selectors anywhere in the rule, so none of the old failures can happen, and the switch is on by default.
+
+You are welcome to keep using uBlock Origin — the two are compatible in most scenarios — but **it is no longer needed for blocking playback-page ads**.
+
 **I blocked a category but content from it is still visible.**
 Category blocking is card-level only. When I can't tell which card holds the cover and title, I skip it, so a few unusual promo slots may be left alone. If it's the home-page carousel, use that separate switch.
 
@@ -187,7 +192,7 @@ On picking the signal: the `data-v-7627ded0` Vue scope ID changes with every Bil
 
 **Playback-page blocking, rebuilt on the clean `v1.5.0-beta` code.** This release does one thing: the banner ad slot below the player on video pages (measured: `#slide_ad.slide-ad-exp`) is removed outright, and the settings page gets a dedicated switch for it, **on by default**.
 
-**First, a correction to the record: playback-page ad blocking was not introduced in 1.5.0 — it was `v1.5.1-beta`.** I went through `content/content.js` at every tag: `v1.4.1` and **`v1.5.0-beta` contain no playback-page ad blocking at all**. The only ad-related thing in 1.5.0 is the card-detection query `querySelector('.bili-video-card__stats--ad, .bili-video-card__info--ad, .ad-report, .video-card-ad-small')`, which is how the "ads" category recognises a card — nothing to do with the playback-page ad slots. The feature first landed in `88bb422` (`fix: 播放页的广告现在能被屏蔽（1.5.1）`), and then 1.5.2–1.5.8 spent their time patching it (1.5.2 whole-card masking in the right column, 1.5.3 inline hosts and panel collapsing, 1.5.4 badge detection, 1.5.5 walking one layer too far, 1.5.6 merging two fixes from another build, 1.5.8 three rounds on a real browser), before 1.6.0 removed it wholesale. So this release rebuilds it on the clean 1.5.0 base instead of carrying those 2,700 lines.
+**First, a correction to the record: playback-page ad blocking was not introduced in 1.5.0 — it was `v1.5.1-beta`.** I went through `content/content.js` at every tag: `v1.4.1` and **`v1.5.0-beta` contain no playback-page ad blocking at all**. The only ad-related thing in 1.5.0 is the card-detection query `querySelector('.bili-video-card__stats--ad, .bili-video-card__info--ad, .ad-report, .video-card-ad-small')`, which is how the "ads" category recognises a card — nothing to do with the playback-page ad slots. The feature first landed in `88bb422` (`fix: 播放页的广告现在能被屏蔽（1.5.1）`), and then 1.5.2–1.5.8 spent their time patching it (1.5.2 whole-card masking in the right column, 1.5.3 inline hosts and panel collapsing, 1.5.4 badge detection, 1.5.5 walking one layer too far, 1.5.6 merging two fixes from another build, 1.5.8 three rounds on a real browser), before it was removed wholesale. So this release rebuilds it on the clean 1.5.0 base instead of carrying those 2,700 lines.
 
 **The approach: only the ad slot itself, never walk up.** Every 1.5.1–1.5.8 incident came from the same step — "recognise the ad slot by class → walk up to the whole card shell → cover it with a mask". The root cause is structural:
 
@@ -210,11 +215,11 @@ The ad slot and the danmaku panel are **siblings under the same parent**, so any
 
 ### 1.6.0
 
-**This release simply promotes the `v1.5.0-beta` code to stable**: the code is identical, only the version number in `manifest.json` reads 1.6.0 — nothing added, nothing changed.
+**Stable release: the playback-page ad blocking rebuilt across 1.5.9 – 1.5.11, now released as 1.6.0.** The code is identical to `v1.5.11-beta`; only the version number in `manifest.json` changed.
 
-**It also announces that, due to technical limitations, support for blocking ads on the player page is cancelled.** The player's right-hand ad and the banner ad below the player that the 1.5.1–1.5.8 line tried to block will not ship — that implementation kept failing on real pages (masks covering only part of the ad, masks collapsing into a thin line, the danmaku list being dragged in, masks landing on the site header, and finally trouble with the player's layout and page reloads). Those releases (v1.5.1-beta through v1.5.8-beta) were marked "deprecated, unmaintained" on GitHub at the time; **the line was later revived by 1.5.9** (playback-page banner blocking rebuilt on the clean 1.5.0 code — see the 1.5.9 entry above), and those "deprecated" labels have been removed.
+**What this release does.** The playback page's ad slots — the banner below the player, the right-column ad card, the promo card in the right-hand recommendation list and the player activity banner — are **always removed outright, never masked**, controlled by the "Block the ads on playback pages" switch (**on by default**, available in the in-page panel and on the settings page). Only the slots themselves are touched: never the player, the danmaku panel or the header. Four safety valves back this up — if any of them fails, nothing is blocked.
 
-**If you need playback-page blocking, that add-on is the recommended choice — the two are compatible in most scenarios**: [uBlock Origin](https://microsoftedge.microsoft.com/addons/detail/odfafepnkmbhccpbejgmiehpchacaeak).
+**Why it was rebuilt rather than patched further.** The old implementation from 1.5.1–1.5.8 worked by "recognise the ad slot → walk up to the whole card shell → cover it with a mask", which kept failing on real pages (covering only part of the ad, collapsing into a thin line, dragging the danmaku list in, landing on the header). From 1.5.9 onwards it was rebuilt on the clean 1.5.0 code: remove the slot outright using only its own class names, with no ancestor selectors anywhere in the rule, so it physically cannot spread beyond the slot. The three entries are below.
 
 ### 1.5.8
 
