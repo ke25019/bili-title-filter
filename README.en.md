@@ -143,6 +143,8 @@ For issues that only show up in a real browser I use the scripts in `tests/brows
 
 ## FAQ
 
+Not answered here? Ask in [Discussions](https://github.com/ke25019/bili-title-filter/discussions) — the "使用求助 / Help" and "失效反馈 / Broken" categories come with forms; fill them in and it is much faster to reproduce.
+
 **The README used to recommend uBlock Origin for playback-page ads — is that still needed?**
 No. Back when 1.5.1–1.5.8 were trying to block them, playback-page ad blocking was unreliable (masks covering only part of the ad, collapsing into a thin line, dragging the danmaku list in, landing on the header), so it was dropped entirely and the README said "if you need playback-page blocking, that add-on is the recommended choice". **That advice is now void** — the feature has been rebuilt (see the 1.5.9 – 1.6.0 entries above): the slots are removed outright using only their own class names, with no ancestor selectors anywhere in the rule, so none of the old failures can happen, and the switch is on by default.
 

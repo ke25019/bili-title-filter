@@ -34,6 +34,9 @@ A Bilibili web extension: add a few keywords to filter out video titles you don�
 详细说明和常见问题都在上面那两个文档里。
 Details and the FAQ live in the two documents linked above.
 
+遇到问题、发现屏蔽失效、想提新功能，都到 [Discussions](https://github.com/ke25019/bili-title-filter/discussions) 发帖。
+Questions, broken blocks and feature ideas all go to [Discussions](https://github.com/ke25019/bili-title-filter/discussions).
+
 ---
 
 ## 简单说说 / In short
