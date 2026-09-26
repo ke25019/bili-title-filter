@@ -27,11 +27,15 @@ async function waitFor(fn, timeout = 1500) {
   return fn();
 }
 
-function makeEnv(htmlPath, scriptRel) {
+function makeEnv(htmlPath, scriptRel, seed) {
   const html = fs.readFileSync(htmlPath, 'utf8');
   const dom = new JSDOM(html, { runScripts: 'outside-only', pretendToBeVisual: true, url: 'https://example.com/' });
   const win = dom.window;
-  const store = { sync: {}, local: {} };
+  // seed：脚本执行前就塞进存储的初始值（用于验证「已有配置 / 已有 B 站主题记录」时的行为）
+  const store = {
+    sync: Object.assign({}, (seed && seed.sync) || {}),
+    local: Object.assign({}, (seed && seed.local) || {})
+  };
   const errors = [];
 
   win.addEventListener('error', (e) => errors.push(String(e.message || e.error)));
@@ -358,6 +362,46 @@ async function testOptions() {
   await sleep(60);
   check('主题切换为深色已保存', store.sync.bfSettings.theme === 'dark', store.sync.bfSettings.theme);
   check('设置页自身跟随深色主题', doc.documentElement.getAttribute('data-theme') === 'dark');
+
+  console.log('\n[C3] 完整设置页的「跟随 B 站深色模式」要真的跟随 B 站（回归）');
+  // 回归点：以前设置页只能看系统偏好，B 站深色而系统浅色时页面还是白的，
+  // 明明写着「跟随 B 站深色模式」却不跟随。现在优先用内容脚本探测到的 B 站主题。
+  const optsPath = path.join(ROOT, 'options', 'options.html');
+  const autoSync = { sync: { bfSettings: { theme: 'auto' } } };
+
+  const envSiteDark = makeEnv(optsPath, 'options/options.js',
+    Object.assign({ local: { bfSiteTheme: 'dark' } }, autoSync));
+  await sleep(140);
+  check('B 站深色时，设置页跟着变深色',
+    envSiteDark.win.document.documentElement.getAttribute('data-theme') === 'dark',
+    String(envSiteDark.win.document.documentElement.getAttribute('data-theme')));
+  envSiteDark.dom.window.close();
+
+  const envSiteLight = makeEnv(optsPath, 'options/options.js',
+    Object.assign({ local: { bfSiteTheme: 'light' } }, autoSync));
+  await sleep(140);
+  check('B 站浅色时，设置页是浅色',
+    envSiteLight.win.document.documentElement.getAttribute('data-theme') === 'light',
+    String(envSiteLight.win.document.documentElement.getAttribute('data-theme')));
+  envSiteLight.dom.window.close();
+
+  const envNoSite = makeEnv(optsPath, 'options/options.js',
+    Object.assign({ local: {} }, autoSync));
+  await sleep(140);
+  const noSiteTheme = envNoSite.win.document.documentElement.getAttribute('data-theme');
+  check('没打开过 B 站（没有记录）时退回系统偏好，不会留空、也不报错',
+    noSiteTheme === 'dark' || noSiteTheme === 'light',
+    String(noSiteTheme));
+  check('退回系统偏好时不报错', envNoSite.errors.length === 0, envNoSite.errors.join(' | '));
+  envNoSite.dom.window.close();
+
+  const envForced = makeEnv(optsPath, 'options/options.js',
+    { sync: { bfSettings: { theme: 'dark' } }, local: { bfSiteTheme: 'light' } });
+  await sleep(140);
+  check('手动锁定深色时优先于 B 站主题',
+    envForced.win.document.documentElement.getAttribute('data-theme') === 'dark',
+    String(envForced.win.document.documentElement.getAttribute('data-theme')));
+  envForced.dom.window.close();
 
   // 恢复默认
   doc.getElementById('reset-all').click();

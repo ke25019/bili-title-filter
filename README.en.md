@@ -4,9 +4,9 @@ An extension I wrote for myself to filter Bilibili. Add a few keywords and the v
 
 Manifest V3, works in Edge and Chrome, plain JavaScript with no runtime dependencies.
 
-![version](https://img.shields.io/badge/version-1.6.0-orange)
+![version](https://img.shields.io/badge/version-1.6.1-orange)
 ![browser](https://img.shields.io/badge/Edge%20%7C%20Chrome-Chromium-00aeec)
-![tests](https://img.shields.io/badge/tests-319%20passed-brightgreen)
+![tests](https://img.shields.io/badge/tests-326%20passed-brightgreen)
 
 ---
 
@@ -126,7 +126,7 @@ npm install
 npm test
 ```
 
-319 checks covering the blocking logic, category detection, both hiding behaviours, the playback-page ad slots, the settings pages and the background stats.
+326 checks covering the blocking logic, category detection, both hiding behaviours, the playback-page ad slots, the settings page's theme following, the settings pages and the background stats.
 
 The mock DOM and its sizes were measured on the real site (utility-class structures like `.floor-card-inner > .cover-container + .pb-16.px-12 > p.title`, the `.vui_carousel` banner, the 0×0 hidden links inside `.palette-button-inner`, and so on).
 
@@ -161,6 +161,22 @@ Bilibili is a single-page app, so scrolling and navigating re-render cards. The 
 ## Changelog
 
 Newest first. This is what changed and why — including the parts I got wrong.
+
+### 1.6.1
+
+**Fixed: the full settings page did not follow dark mode.** The settings page's interface-appearance option says "follow Bilibili's dark mode", but the page is an extension page and cannot see Bilibili's `<html data-theme>` — it used to rely on the system preference alone, so **when Bilibili was dark and the system light, the settings page stayed white**, contradicting what the setting promises.
+
+The content script now writes the theme it detects on a Bilibili page into `storage.local` (only on an actual change, so this is not one write every 1.2 seconds); in "follow Bilibili" mode the settings page prefers that value and falls back to the system preference only when there is none (Bilibili never opened). Switching the theme on Bilibili updates the settings page too, with no reload.
+
+99 → 104 cases (new: the settings page going dark when Bilibili is dark, staying light when Bilibili is light, falling back to the system preference without errors when there is no record, and an explicit dark lock taking priority over the site theme; the content script gained 2 more confirming the write and the update) — **319 → 326** in total.
+
+### 1.6.0
+
+**Stable release: the playback-page ad blocking rebuilt across 1.5.9 – 1.5.11, now released as 1.6.0.** The code is identical to `v1.5.11-beta`; only the version number in `manifest.json` changed.
+
+**What this release does.** The playback page's ad slots — the banner below the player, the right-column ad card, the promo card in the right-hand recommendation list and the player activity banner — are **always removed outright, never masked**, controlled by the "Block the ads on playback pages" switch (**on by default**, available in the in-page panel and on the settings page). Only the slots themselves are touched: never the player, the danmaku panel or the header. Four safety valves back this up — if any of them fails, nothing is blocked.
+
+**Why it was rebuilt rather than patched further.** The old implementation from 1.5.1–1.5.8 worked by "recognise the ad slot → walk up to the whole card shell → cover it with a mask", which kept failing on real pages (covering only part of the ad, collapsing into a thin line, dragging the danmaku list in, landing on the header). From 1.5.9 onwards it was rebuilt on the clean 1.5.0 code: remove the slot outright using only its own class names, with no ancestor selectors anywhere in the rule, so it physically cannot spread beyond the slot. The three entries are below.
 
 ### 1.5.11 (beta)
 
@@ -210,14 +226,6 @@ The ad slot and the danmaku panel are **siblings under the same parent**, so any
 **Also fixed: a bug that collapsed into a thin line on real pages.** The slot's landing link (measured: `//cm.bilibili.com/…`) matches the "ads" category href rule, so the "link matched → walk up to a card" path treated `<a class="ad-report-inner">` **itself** as a card and masked it; on a real page it is an inline element, so the mask collapsed into a thin line. That path is now excluded — and this was **reproduced by a test before it was fixed, not guessed**: `[18]` in `tests/test-content.js` was red from the start, failing with exactly `ad-report-inner bf-blocked`.
 
 **Checks**: 172 → 190 (content script, +18), 89 → 94 (settings pages and popup, +5), 22 → 23 (background, +1) — **283 → 307** in total.
-
-### 1.6.0
-
-**Stable release: the playback-page ad blocking rebuilt across 1.5.9 – 1.5.11, now released as 1.6.0.** The code is identical to `v1.5.11-beta`; only the version number in `manifest.json` changed.
-
-**What this release does.** The playback page's ad slots — the banner below the player, the right-column ad card, the promo card in the right-hand recommendation list and the player activity banner — are **always removed outright, never masked**, controlled by the "Block the ads on playback pages" switch (**on by default**, available in the in-page panel and on the settings page). Only the slots themselves are touched: never the player, the danmaku panel or the header. Four safety valves back this up — if any of them fails, nothing is blocked.
-
-**Why it was rebuilt rather than patched further.** The old implementation from 1.5.1–1.5.8 worked by "recognise the ad slot → walk up to the whole card shell → cover it with a mask", which kept failing on real pages (covering only part of the ad, collapsing into a thin line, dragging the danmaku list in, landing on the header). From 1.5.9 onwards it was rebuilt on the clean 1.5.0 code: remove the slot outright using only its own class names, with no ancestor selectors anywhere in the rule, so it physically cannot spread beyond the slot. The three entries are below.
 
 ### 1.5.8
 

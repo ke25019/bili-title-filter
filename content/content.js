@@ -188,6 +188,9 @@
   var settings = normalize(null);
   var matcher = null;
   var isDark = false;
+
+  /** 上一次写进 storage 的 B 站深色状态（避免每轮 tick 都写存储） */
+  var savedSiteTheme = null;
   var sessionBlocked = 0;
   var totalBlocked = 0;
 
@@ -1524,11 +1527,19 @@
 
   function refreshTheme() {
     var dark = detectDark();
-    if (dark === isDark) return;
-    isDark = dark;
-    document.documentElement.classList.toggle('bf-dark', dark);
-    updateHostTheme();
-    log('深色模式：', dark);
+    if (dark !== isDark) {
+      isDark = dark;
+      document.documentElement.classList.toggle('bf-dark', dark);
+      updateHostTheme();
+      log('深色模式：', dark);
+    }
+    // 把 B 站的深色状态同步给「完整设置页」和弹窗：它们是独立页面，看不到 B 站的
+    // <html data-theme>，以前只能看系统偏好 —— 于是「B 站深色 + 系统浅色」时设置页还是白的，
+    // 明明写着「跟随 B 站深色模式」却不跟随。只在实际变化时写，避免每 1.2 秒一次存储写入。
+    if (savedSiteTheme !== dark) {
+      savedSiteTheme = dark;
+      storageSet('local', { bfSiteTheme: dark ? 'dark' : 'light' });
+    }
   }
 
   function effectiveTheme() {

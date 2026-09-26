@@ -1016,9 +1016,12 @@ async function main() {
   await sleep(1600);
   check('识别 B 站深色模式并标记 html.bf-dark', doc.documentElement.classList.contains('bf-dark'));
   check('面板同步切换为深色主题', host.getAttribute('data-theme') === 'dark', host.getAttribute('data-theme'));
+  check('【回归】把探测到的 B 站深色状态写进 storage，供完整设置页跟随',
+    store.local.bfSiteTheme === 'dark', String(store.local.bfSiteTheme));
   doc.documentElement.setAttribute('data-theme', 'light');
   await sleep(1600);
   check('切回浅色后取消深色标记', !doc.documentElement.classList.contains('bf-dark'));
+  check('【回归】切回浅色后同步更新存储值', store.local.bfSiteTheme === 'light', String(store.local.bfSiteTheme));
 
   console.log('\n[18] 播放器页面屏蔽：播放器下方的横幅广告位（独立开关，默认开启）');
   // 默认值：从没设置过这个开关时必须是「开」

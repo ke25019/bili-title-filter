@@ -32,6 +32,24 @@
     });
   }
 
+  /**
+   * B 站自己当前是深色还是浅色。
+   * 由内容脚本在 B 站页面上探测后写进 storage.local —— 设置页是独立页面，看不到 B 站的
+   * <html data-theme>，拿不到就只能退回系统偏好，那样「B 站深色 + 系统浅色」时不跟随。
+   */
+  var siteTheme = null;
+
+  function loadSiteTheme() {
+    return new Promise(function (resolve) {
+      try {
+        chrome.storage.local.get('bfSiteTheme', function (v) {
+          siteTheme = (v && v.bfSiteTheme) || null;
+          resolve(siteTheme);
+        });
+      } catch (e) { resolve(null); }
+    });
+  }
+
   function save(patch, silent) {
     settings = window.bfNormalize(Object.assign({}, settings, patch));
     chrome.storage.sync.set({ bfSettings: settings });
@@ -44,7 +62,14 @@
   function applyPageTheme() {
     var t = settings.theme;
     if (t === 'auto') {
-      var dark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+      // 「跟随 B 站深色模式」：优先用内容脚本探测到的 B 站主题；
+      // 还没打开过 B 站（没有这个值时）才退回系统偏好
+      var dark;
+      if (siteTheme === 'dark' || siteTheme === 'light') {
+        dark = siteTheme === 'dark';
+      } else {
+        dark = !!(window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches);
+      }
       document.documentElement.setAttribute('data-theme', dark ? 'dark' : 'light');
     } else {
       document.documentElement.setAttribute('data-theme', t);
@@ -436,6 +461,15 @@
     if (window.matchMedia) {
       window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', applyPageTheme);
     }
+
+    // 内容脚本在 B 站页面上探测到主题变化时会写进 storage.local，设置页跟着变，不用刷新
+    try {
+      chrome.storage.onChanged.addListener(function (changes, area) {
+        if (area !== 'local' || !changes.bfSiteTheme) return;
+        siteTheme = changes.bfSiteTheme.newValue || null;
+        if (settings.theme === 'auto') applyPageTheme();
+      });
+    } catch (e) { /* 忽略 */ }
   }
 
   /**
@@ -454,7 +488,8 @@
 
   ready(function () {
     showVersion();
-    getSettings().then(function (s) {
+    // 先拿到 B 站的深色状态再渲染，否则「跟随 B 站深色模式」会先闪一下浅色
+    loadSiteTheme().then(getSettings).then(function (s) {
       settings = s;
       render();
       loadStats();
