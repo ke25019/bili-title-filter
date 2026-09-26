@@ -6,21 +6,28 @@ Manifest V3, works in Edge and Chrome, plain JavaScript with no runtime dependen
 
 ![version](https://img.shields.io/badge/version-1.6.1-orange)
 ![browser](https://img.shields.io/badge/Edge%20%7C%20Chrome-Chromium-00aeec)
+[![Microsoft Edge Add-ons](https://img.shields.io/badge/Microsoft%20Edge-Add--ons-00aeec)](https://microsoftedge.microsoft.com/addons/detail/mnedaofgbbcdgpoobimgbceabkchkaif)
 ![tests](https://img.shields.io/badge/tests-326%20passed-brightgreen)
 
 ---
 
 ## Install
 
+**Option 1: install from the Microsoft Edge Add-ons store (recommended)**
+
+Open [the listing](https://microsoftedge.microsoft.com/addons/detail/mnedaofgbbcdgpoobimgbceabkchkaif) and click **Get** — the browser installs it and keeps it updated.
+
+**Option 2: download the zip and load it manually**
+
 1. Grab the latest zip from [Releases](https://github.com/ke25019/bili-title-filter/releases) and extract it somewhere permanent (not the Downloads folder, those get cleaned up)
 2. Open `edge://extensions/` in Edge and turn on **Developer mode** in the bottom-left corner
 3. Click **Load unpacked** and pick the extracted folder that contains `manifest.json`
 
-On Chrome it's the same thing at `chrome://extensions/`.
+On Chrome only option 2 works — same steps at `chrome://extensions/`. A manually loaded build does not auto-update, so grab a fresh zip when a release comes out.
 
 Once it's installed, a "屏蔽助手" button shows up near Bilibili's top bar. You can drag it anywhere and it remembers where you put it.
 
-The package ships with two locales, Simplified Chinese and English (`_locales/zh_CN`, `_locales/en`, with `__MSG_` placeholders in the manifest and `default_locale` set to `zh_CN`). Browsers and add-ons stores read exactly this configuration to decide which languages are available, so the Edge Add-ons listing should offer both Chinese and English; without the `_locales` folder or `default_locale`, a store usually only sees the default one.
+The package ships with two locales, Simplified Chinese and English (`_locales/zh_CN`, `_locales/en`, with `__MSG_` placeholders in the manifest and `default_locale` set to `zh_CN`). Browsers and add-ons stores read exactly this configuration to decide which languages are available, so the Edge Add-ons listing offers both Chinese and English; without the `_locales` folder or `default_locale`, a store usually only sees the default one.
 
 ---
 

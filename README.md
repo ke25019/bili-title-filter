@@ -3,6 +3,7 @@
 [![License: PolyForm Noncommercial](https://img.shields.io/badge/License-PolyForm_Noncommercial-orange.svg)](https://polyformproject.org/licenses/noncommercial/1.0.0/)
 ![version](https://img.shields.io/badge/version-1.6.1-orange)
 ![browser](https://img.shields.io/badge/Edge%20%7C%20Chrome-Chromium-00aeec)
+[![Microsoft Edge Add-ons](https://img.shields.io/badge/Microsoft%20Edge-Add--ons-00aeec)](https://microsoftedge.microsoft.com/addons/detail/mnedaofgbbcdgpoobimgbceabkchkaif)
 ![tests](https://img.shields.io/badge/tests-326%20passed-brightgreen)
 
 一个 B 站网页端扩展：给不想看的视频标题加几个关键词，它们就从页面上消失；也能按分区屏蔽直播、番剧这类推广内容。
@@ -23,12 +24,12 @@ A Bilibili web extension: add a few keywords to filter out video titles you don�
 ## 安装 / Install
 
 **中文：**
-1. 到 [Releases](https://github.com/ke25019/bili-title-filter/releases) 下载最新的 zip，解压到一个固定目录。
-2. Edge 打开 `edge://extensions/`，左下角打开「开发人员模式」，点「加载解压缩的扩展」，选到含 `manifest.json` 的那一层。
+1. 到 [Microsoft Edge 加载项商店](https://microsoftedge.microsoft.com/addons/detail/mnedaofgbbcdgpoobimgbceabkchkaif) 点「获取」，浏览器会自动装好，以后也会自动更新。
+2. 想手动装、或者要试测试版，就到 [Releases](https://github.com/ke25019/bili-title-filter/releases) 下载 zip 解压，然后在 `edge://extensions/` 打开「开发人员模式」→「加载解压缩的扩展」，选到含 `manifest.json` 的那一层。
 
 **English:**
-1. Download the latest zip from [Releases](https://github.com/ke25019/bili-title-filter/releases) and extract it somewhere permanent.
-2. Open `edge://extensions/`, turn on **Developer mode**, click **Load unpacked**, pick the folder containing `manifest.json`.
+1. Install from the [Microsoft Edge Add-ons store](https://microsoftedge.microsoft.com/addons/detail/mnedaofgbbcdgpoobimgbceabkchkaif) — it installs and updates itself.
+2. To install manually, or to run a beta, download the zip from [Releases](https://github.com/ke25019/bili-title-filter/releases), extract it, then in `edge://extensions/` turn on **Developer mode** → **Load unpacked** → pick the folder containing `manifest.json`.
 
 详细说明和常见问题都在上面那两个文档里。
 Details and the FAQ live in the two documents linked above.

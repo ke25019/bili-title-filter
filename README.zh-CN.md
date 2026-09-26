@@ -6,21 +6,28 @@ Manifest V3，Edge 和 Chrome 都能装，纯 JavaScript，没有运行时依赖
 
 ![version](https://img.shields.io/badge/version-1.6.1-orange)
 ![browser](https://img.shields.io/badge/Edge%20%7C%20Chrome-Chromium-00aeec)
+[![Microsoft Edge Add-ons](https://img.shields.io/badge/Microsoft%20Edge-Add--ons-00aeec)](https://microsoftedge.microsoft.com/addons/detail/mnedaofgbbcdgpoobimgbceabkchkaif)
 ![tests](https://img.shields.io/badge/tests-326%20passed-brightgreen)
 
 ---
 
 ## 安装
 
+**方式一：从 Microsoft Edge 加载项商店装（推荐）**
+
+打开 [Microsoft Edge 加载项商店的这个页面](https://microsoftedge.microsoft.com/addons/detail/mnedaofgbbcdgpoobimgbceabkchkaif) 点「获取」就行 —— 浏览器会自动装好，以后也会自动更新。
+
+**方式二：下载 zip 手动加载**
+
 1. 到 [Releases](https://github.com/ke25019/bili-title-filter/releases) 下载最新那个 zip，解压到一个固定的目录（别放下载文件夹里，容易被清理掉）
 2. Edge 打开 `edge://extensions/`，左下角打开「开发人员模式」
 3. 点「加载解压缩的扩展」，选择解压出来、里面有 `manifest.json` 的那一层目录
 
-Chrome 用 `chrome://extensions/`，步骤一样。
+Chrome 目前只能走方式二，把上面的 `edge://extensions/` 换成 `chrome://extensions/`，步骤一样。手动装的不会自动更新，有新版得自己重新下载。
 
 装好之后打开 B 站，标题栏附近会出现一个「屏蔽助手」按钮。点它可以拖到任意位置，位置会记住。
 
-扩展包内置简体中文与英文两种语言（`_locales/zh_CN`、`_locales/en`，manifest 里用 `__MSG_` 占位、`default_locale` 设为 `zh_CN`）。浏览器和扩展商店是按这套配置判断"支持哪些语言"的，所以提交到 Edge 加载项商店时，语言选项里应该能同时看到中文和英文；缺了 `_locales` 目录或者 `default_locale`，商店往往只认默认那一种。
+扩展包内置简体中文与英文两种语言（`_locales/zh_CN`、`_locales/en`，manifest 里用 `__MSG_` 占位、`default_locale` 设为 `zh_CN`）。浏览器和扩展商店是按这套配置判断"支持哪些语言"的，所以 Edge 加载项商店上的语言选项里中英文都在；缺了 `_locales` 目录或者 `default_locale`，商店往往只认默认那一种。
 
 ---
 
