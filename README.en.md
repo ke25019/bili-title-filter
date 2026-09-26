@@ -137,7 +137,7 @@ For issues that only show up in a real browser I use the scripts in `tests/brows
 ## FAQ
 
 **The README used to recommend uBlock Origin for playback-page ads — is that still needed?**
-No. Back when 1.5.1–1.5.8 were trying to block them, playback-page ad blocking was unreliable (masks covering only part of the ad, collapsing into a thin line, dragging the danmaku list in, landing on the header), so the feature was dropped entirely and the README said "if you need playback-page blocking, that add-on is the recommended choice". **That advice is now void** — the feature has been rebuilt (see the 1.5.9 – 1.6.0 entries above): the slots are removed outright using only their own class names, with no ancestor selectors anywhere in the rule, so none of the old failures can happen, and the switch is on by default.
+No. Back when 1.5.1–1.5.8 were trying to block them, playback-page ad blocking was unreliable (masks covering only part of the ad, collapsing into a thin line, dragging the danmaku list in, landing on the header), so it was dropped entirely and the README said "if you need playback-page blocking, that add-on is the recommended choice". **That advice is now void** — the feature has been rebuilt (see the 1.5.9 – 1.6.0 entries above): the slots are removed outright using only their own class names, with no ancestor selectors anywhere in the rule, so none of the old failures can happen, and the switch is on by default.
 
 You are welcome to keep using uBlock Origin — the two are compatible in most scenarios — but **it is no longer needed for blocking playback-page ads**.
 
@@ -208,8 +208,6 @@ The ad slot and the danmaku panel are **siblings under the same parent**, so any
 **Three safety valves** (following "when in doubt, don't block"): if the ad slot contains the player, the danmaku panel or the header, or matches a load sentinel, or measures more than 1200×800 or 35% of the viewport, blocking is abandoned.
 
 **Also fixed: a bug that collapsed into a thin line on real pages.** The slot's landing link (measured: `//cm.bilibili.com/…`) matches the "ads" category href rule, so the "link matched → walk up to a card" path treated `<a class="ad-report-inner">` **itself** as a card and masked it; on a real page it is an inline element, so the mask collapsed into a thin line. That path is now excluded — and this was **reproduced by a test before it was fixed, not guessed**: `[18]` in `tests/test-content.js` was red from the start, failing with exactly `ad-report-inner bf-blocked`.
-
-**About the version number**: this release puts the numbering back on the 1.5.x line, so `manifest.json` goes from 1.6.0 to 1.5.9 — numerically a downgrade. That is deliberate: 1.6.0 was simply `v1.5.0-beta` promoted to stable, with byte-identical code, while 1.5.9 adds a feature to that same code and belongs to the 1.5.x line. The statement in 1.6.0 that "the 1.5.x line is deprecated and unmaintained" is therefore void, and the "deprecated" labels on those GitHub tags have been removed. If you already have 1.6.0 installed, just replace it via "Load unpacked".
 
 **Checks**: 172 → 190 (content script, +18), 89 → 94 (settings pages and popup, +5), 22 → 23 (background, +1) — **283 → 307** in total.
 
