@@ -5,10 +5,11 @@ body:
       value: |
         该屏蔽的没屏蔽、或者不该动的区域被误伤了，都发这里。
 
-        这个项目的排查方式是**先复现、拿实测数据说话**，所以下面几项请尽量填全 ——
+        这个项目排查问题全靠实测数据，所以下面几项尽量填全 ——
         填不全我大概率复现不出来，只能先放着。
 
-        Reports in English are fine too; please fill in as much as you can.
+        用英文写也行 —— 能填多少填多少。
+        English is fine too — fill in as much as you can.
   - type: input
     id: version
     attributes:
