@@ -4,10 +4,10 @@ An extension I wrote for myself to filter Bilibili. Add a few keywords and the v
 
 Manifest V3, works in Edge and Chrome, plain JavaScript with no runtime dependencies.
 
-![version](https://img.shields.io/badge/version-1.6.1-orange)
+![version](https://img.shields.io/badge/version-1.7.0-orange)
 ![browser](https://img.shields.io/badge/Edge%20%7C%20Chrome-Chromium-00aeec)
 [![Microsoft Edge Add-ons](https://img.shields.io/badge/Microsoft%20Edge-Add--ons-00aeec)](https://microsoftedge.microsoft.com/addons/detail/mnedaofgbbcdgpoobimgbceabkchkaif)
-![tests](https://img.shields.io/badge/tests-326%20passed-brightgreen)
+![tests](https://img.shields.io/badge/tests-332%20passed-brightgreen)
 
 ---
 
@@ -133,7 +133,7 @@ npm install
 npm test
 ```
 
-326 checks covering the blocking logic, category detection, both hiding behaviours, the playback-page ad slots, the settings page's theme following, the settings pages and the background stats.
+332 checks covering the blocking logic, category detection, both hiding behaviours, the playback-page ad slots, the SSR hydration gate, the settings page's theme following, the settings pages and the background stats.
 
 The mock DOM and its sizes were measured on the real site (utility-class structures like `.floor-card-inner > .cover-container + .pb-16.px-12 > p.title`, the `.vui_carousel` banner, the 0×0 hidden links inside `.palette-button-inner`, and so on).
 
@@ -170,6 +170,18 @@ Bilibili is a single-page app, so scrolling and navigating re-render cards. The 
 ## Changelog
 
 Newest first. This is what changed and why — including the parts I got wrong.
+
+### 1.7.0-beta
+
+**Fixed a bug that made Bilibili's whole top bar disappear.** Whenever blocking happened while a page was loading — video pages and the home page alike — the entire top bar (首页, 番剧, 直播, the search box, messages, the avatar) vanished, and the page looked as if it had reloaded itself.
+
+The cause was not a selector but timing. Bilibili serves its pages rendered and then hydrates them with Vue, while the content script was inserting mask child nodes into cards at `DOMContentLoaded`. Vue was hydrating from that server-rendered markup at that very moment, saw that **the child node count did not match**, and re-rendered the whole `#app` — which replaced the top bar's subtree and left it permanently empty. Checked against the real page: at the same instant, adding only a class left the top bar intact, while inserting a single child node removed it.
+
+The script now waits for hydration before touching the DOM. The signal is Vue removing `data-server-rendered` from `#app` (measured at 2423ms, the same instant the top bar first appears); on pages without that container it falls back to `load`, with an 8-second cap. **The cost is that masks appear about a second and a half later**, in exchange for a top bar that stays put.
+
+**Still unfixed:** with "block the home page's top banner" on, some cards come out a different width than with it off. Not touched in this version.
+
+204 → 210 cases (new: no mask before hydration, no `bf-blocked` before hydration, and masks appearing only once the marker is gone), **326 → 332** in total.
 
 ### 1.6.1
 

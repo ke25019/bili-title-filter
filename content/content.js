@@ -203,6 +203,27 @@
   var lastSectionScanAt = 0;
   var lastPlaceholderCheck = 0;
 
+  /**
+   * B 站是「服务端渲染 + Vue 水合」的页面，**在它完成第一次水合之前改 DOM 会把它整棵搞崩**。
+   *
+   * 实测（Edge 153 / 2026-09，播放页 BV1HqaN6NEpE，1440×900）：
+   *   - 内容脚本在 DOMContentLoaded（实测 852ms）就开始扫，并往命中的卡片里插 .bf-mask 子节点
+   *   - B 站的 Vue 拿 SSR 出来的结构做水合时发现**子节点数量对不上** → 整棵 #app 重渲染
+   *   - 结果：#biliMainHeader 永远是空的，顶栏（首页/番剧/直播/搜索/头像）整排消失，
+   *     看起来像「页面被重载了一遍、导航栏被删了」
+   *
+   * 拿独立实验对照过（同一张侧栏卡片、同一时刻）：
+   *   - 只插一个子节点  → 顶栏消失（导航链接 7 个变 0 个）
+   *   - 只加一个类名    → 顶栏完好
+   * 所以危险的是「挂子节点」，不是「改类名」；但保险起见，水合之前一个 DOM 都不动。
+   *
+   * 水合完成的天然信号：#app 上的 data-server-rendered 被 Vue 摘掉。
+   * 实测那一刻是 2423ms，同一时刻 .bili-header 才第一次出现在 DOM 里。
+   */
+  var hydrationDone = false;
+  /** 兜底上限：万一某个页面等不到那个信号，也不能永远不屏蔽 */
+  var HYDRATION_MAX_WAIT = 8000;
+
   var hostEl = null;
   var shadow = null;
   var panelOpen = false;
@@ -1352,7 +1373,33 @@
     }
   }
 
+  /**
+   * 等 B 站自己的第一次水合结束（原因见上面 hydrationDone 那段注释）。
+   * 信号优先用「#app 上的 data-server-rendered 被 Vue 摘掉」；页面上没有这个容器时以 load 为准。
+   * 拿到信号后立刻全量重扫一次，之后照常按变更增量处理。
+   */
+  function waitForHydration() {
+    if (hydrationDone) return;
+    var started = Date.now();
+    var check = function () {
+      if (hydrationDone) return;
+      var app = document.getElementById('app');
+      var settled = app ? !app.hasAttribute('data-server-rendered') : document.readyState === 'complete';
+      if (settled || Date.now() - started > HYDRATION_MAX_WAIT) {
+        if (!settled) log('等水合超过 ' + HYDRATION_MAX_WAIT + 'ms，不再等，开始扫描');
+        else log('水合已完成（等了 ' + (Date.now() - started) + 'ms），开始扫描');
+        hydrationDone = true;
+        scanAll(true);
+        return;
+      }
+      setTimeout(check, 120);
+    };
+    check();
+  }
+
   function scanAll(force) {
+    // 水合完成前一个 DOM 都不改 —— 插子节点会把 B 站的 SSR 水合搞崩（见 hydrationDone 的注释）
+    if (!hydrationDone) return;
     fullScan(force);
     scanTypedCards();
 
@@ -1375,6 +1422,8 @@
 
   function flush() {
     flushTimer = null;
+    // 水合完成前不改 DOM；这里保留 dirtyCards，水合后那次全量重扫会重新判定
+    if (!hydrationDone) return;
     if (dirtyCards.size) {
       var cards = Array.from(dirtyCards);
       dirtyCards.clear();
@@ -2264,7 +2313,8 @@
 
     var ready = function () {
       mountUI();
-      scanAll(true);
+      // 水合之前不改 DOM（见 hydrationDone 的注释）。拿到信号后 waitForHydration 会自己全量扫一次。
+      waitForHydration();
       setInterval(tick, 1200);
       if (window.matchMedia) {
         try {

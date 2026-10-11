@@ -4,10 +4,10 @@
 
 Manifest V3，Edge 和 Chrome 都能装，纯 JavaScript，没有运行时依赖。
 
-![version](https://img.shields.io/badge/version-1.6.1-orange)
+![version](https://img.shields.io/badge/version-1.7.0-orange)
 ![browser](https://img.shields.io/badge/Edge%20%7C%20Chrome-Chromium-00aeec)
 [![Microsoft Edge Add-ons](https://img.shields.io/badge/Microsoft%20Edge-Add--ons-00aeec)](https://microsoftedge.microsoft.com/addons/detail/mnedaofgbbcdgpoobimgbceabkchkaif)
-![tests](https://img.shields.io/badge/tests-326%20passed-brightgreen)
+![tests](https://img.shields.io/badge/tests-332%20passed-brightgreen)
 
 ---
 
@@ -133,7 +133,7 @@ npm install
 npm test
 ```
 
-一共 326 项校验，覆盖屏蔽逻辑、分区识别、两种隐藏行为、播放器页广告位屏蔽、完整设置页的主题跟随、设置页交互和后台统计。
+一共 332 项校验，覆盖屏蔽逻辑、分区识别、两种隐藏行为、播放器页广告位屏蔽、SSR 水合闸门、完整设置页的主题跟随、设置页交互和后台统计。
 
 测试里的模拟 DOM 和尺寸都是从真实页面上量出来的（`.floor-card-inner > .cover-container + .pb-16.px-12 > p.title` 这种工具类结构、`.vui_carousel` 包裹的轮播、`.palette-button-inner` 里 0×0 的隐藏链接等等）。
 
@@ -170,6 +170,18 @@ B 站是单页应用，滚动和切页会让卡片重新渲染，所以统计的
 ## 更新记录
 
 按时间倒序。这里记的是每次改了什么、为什么改，包括我自己搞错的地方。
+
+### 1.7.0-beta
+
+**修掉一个会让 B 站顶栏整排消失的 bug。** 只要页面加载期间发生了屏蔽（播放页、首页都算），顶栏那一整排 —— 首页、番剧、直播、搜索框、消息、头像 —— 就会整个不见，页面上看像是被重载了一遍。
+
+根因不在选择器，在时序。B 站是「服务端渲染 + Vue 水合」的页面，而内容脚本在 `DOMContentLoaded` 就往卡片里插遮罩子节点。B 站这时正拿服务端渲染出来的结构做水合，发现**子节点数量对不上**，就把整棵 `#app` 重新渲染了一遍，顶栏那一块被换掉，于是永远是空的。拿真实页面做过对照：同一时刻只给卡片加类名，顶栏完好；插一个子节点，顶栏消失。
+
+现在等水合完成再动 DOM。信号是 `#app` 上的 `data-server-rendered` 被 Vue 摘掉（实测 2423ms，同一时刻顶栏才第一次出现）；页面上没有这个容器时以 `load` 为准，再兜一个 8 秒上限。**代价是遮罩比以前晚一秒半左右出现**，换回一整排导航栏。
+
+**还没修的：** 首页开着「屏蔽首页顶部轮播横幅」时，个别卡片的宽度跟没开时不一致。这一版先没动它。
+
+用例 204 → 210（新增：水合完成前不插遮罩、不打 `bf-blocked`、摘掉标记后遮罩才出现），合计 **326 → 332**。
 
 ### 1.6.1
 

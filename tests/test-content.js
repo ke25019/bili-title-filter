@@ -1183,6 +1183,82 @@ async function main() {
   await pushSettings({ debug: false, blockPlayerAd: false });
   pod.remove();
 
+  /* ------------------------------------------------------------------
+   * [19] 水合闸门（v1.7.0-beta 回归点）
+   *
+   * 真实事故（Edge 153 / 2026-09，播放页 BV1HqaN6NEpE 实测）：
+   *   内容脚本在 DOMContentLoaded 就往卡片里插 .bf-mask 子节点，而 B 站这时正拿
+   *   服务端渲染出来的结构做 Vue 水合 —— 子节点数量对不上，整棵 #app 重渲染，
+   *   顶栏（#biliMainHeader 里的 .bili-header）被换掉，导航整排消失，
+   *   看起来像「页面被重载了一遍、导航栏被删了」。
+   *   对照实验：同一时刻只给卡片加类名 → 顶栏完好；插一个子节点 → 顶栏消失。
+   *
+   * 闸门信号：#app 上的 data-server-rendered 被 Vue 摘掉（实测 2423ms，
+   * 同一时刻 .bili-header 才第一次出现）。拿到它之前一个 DOM 都不改。
+   * ------------------------------------------------------------------ */
+  console.log('\n[19] 水合闸门：B 站 SSR 水合完成前不插遮罩（v1.7.0-beta 回归点）');
+  {
+    const store2 = { sync: {}, local: {} };
+    const area2 = (name) => ({
+      get(keys, cb) {
+        const s = store2[name] || (store2[name] = {});
+        if (cb) setTimeout(() => cb(keys ? pick(s, keys) : Object.assign({}, s)), 0);
+        return undefined;
+      },
+      set(obj, cb) {
+        Object.assign(store2[name] || (store2[name] = {}), obj);
+        if (cb) setTimeout(cb, 0);
+        return undefined;
+      }
+    });
+    // #app 带着 data-server-rendered，模拟「B 站还没水合完」
+    const HTML2 = '<!DOCTYPE html><html><body>' +
+      '<div id="app" data-server-rendered="true">' +
+        '<div class="bili-video-card" id="ssrCard" data-w="240" data-h="234">' +
+          '<a href="//www.bilibili.com/video/BV1ssr">' +
+            '<h3 class="bili-video-card__info--tit" title="琵琶曲 测试卡">琵琶曲 测试卡</h3>' +
+          '</a>' +
+        '</div>' +
+      '</div></body></html>';
+    const dom2 = new JSDOM(HTML2, { runScripts: 'outside-only', pretendToBeVisual: true, url: 'https://www.bilibili.com/' });
+    const win2 = dom2.window;
+    win2.Element.prototype.getBoundingClientRect = function () {
+      const w = Number((this.getAttribute && this.getAttribute('data-w')) || 0);
+      const h = Number((this.getAttribute && this.getAttribute('data-h')) || 0);
+      return { width: w, height: h, top: 0, left: 0, right: w, bottom: h, x: 0, y: 0 };
+    };
+    win2.chrome = {
+      storage: { sync: area2('sync'), local: area2('local'), onChanged: { addListener() {} } },
+      runtime: {
+        lastError: null,
+        onMessage: { addListener() {} },
+        sendMessage(_msg, cb) { if (cb) setTimeout(() => cb({ today: 0, total: 0 }), 0); },
+        openOptionsPage() {}
+      }
+    };
+    store2.sync.bfSettings = { enabled: true, mode: 'mask', keywords: ['琵琶曲'] };
+    win2.eval(DEFAULTS_SRC);
+    win2.eval(CONTENT_SRC);
+
+    await sleep(400);
+    const doc2 = win2.document;
+    const card2 = doc2.getElementById('ssrCard');
+    check('内容脚本已加载，但水合信号还没出现', !!win2.__BF_CONTENT_LOADED__, String(!!win2.__BF_CONTENT_LOADED__));
+    check('【关键】水合完成前绝不插遮罩子节点（就是它把 B 站顶栏搞没的）',
+      doc2.querySelectorAll('.bf-mask').length === 0,
+      '遮罩数=' + doc2.querySelectorAll('.bf-mask').length);
+    check('水合完成前也不打 bf-blocked 类', !card2.classList.contains('bf-blocked'), card2.className);
+
+    // B 站的 Vue 水合完成 → 摘掉 data-server-rendered
+    doc2.getElementById('app').removeAttribute('data-server-rendered');
+    const appeared = await waitFor(() => doc2.querySelectorAll('.bf-mask').length === 1);
+    check('摘掉 data-server-rendered 之后，遮罩才出现', appeared,
+      '遮罩数=' + doc2.querySelectorAll('.bf-mask').length);
+    check('这时卡片才带上 bf-blocked', card2.classList.contains('bf-blocked'), card2.className);
+    check('遮罩文案正确', maskText(card2) === '根据您的屏蔽词已将此视频屏蔽', maskText(card2));
+    win2.close();
+  }
+
   console.log('\n========================================');
   console.log('通过 ' + pass + ' 项，失败 ' + fail + ' 项');
   dom.window.close();

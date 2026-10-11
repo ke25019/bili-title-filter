@@ -1,0 +1,20 @@
+# 统一换行符，避免 Windows / macOS 协作时产生无意义的差异
+* text=auto eol=lf
+
+# 二进制资源不做换行转换
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.webp binary
+*.ico binary
+*.zip binary
+*.crx binary
+*.pem binary
+
+# 语言与生成文件
+*.js text
+*.css text
+*.html text
+*.json text
+*.md text
