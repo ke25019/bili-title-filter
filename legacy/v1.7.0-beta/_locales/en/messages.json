@@ -1,0 +1,14 @@
+{
+  "extName": {
+    "message": "BiliTitleFilter - Bilibili Video Blocker",
+    "description": "Extension name (toolbar and add-ons store, max 45 characters)"
+  },
+  "extDesc": {
+    "message": "Block Bilibili videos by your own title keywords, mask or hide them, whitelist uploaders and filter 18 kinds of promo content.",
+    "description": "Extension description (store listing, max 132 characters)"
+  },
+  "actionTitle": {
+    "message": "BiliTitleFilter",
+    "description": "Toolbar icon tooltip"
+  }
+}

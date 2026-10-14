@@ -4,10 +4,10 @@
 
 Manifest V3，Edge 和 Chrome 都能装，纯 JavaScript，没有运行时依赖。
 
-![version](https://img.shields.io/badge/version-1.7.0-orange)
+![version](https://img.shields.io/badge/version-1.7.1-orange)
 ![browser](https://img.shields.io/badge/Edge%20%7C%20Chrome-Chromium-00aeec)
 [![Microsoft Edge Add-ons](https://img.shields.io/badge/Microsoft%20Edge-Add--ons-00aeec)](https://microsoftedge.microsoft.com/addons/detail/mnedaofgbbcdgpoobimgbceabkchkaif)
-![tests](https://img.shields.io/badge/tests-332%20passed-brightgreen)
+![tests](https://img.shields.io/badge/tests-334%20passed-brightgreen)
 
 ---
 
@@ -133,7 +133,7 @@ npm install
 npm test
 ```
 
-一共 332 项校验，覆盖屏蔽逻辑、分区识别、两种隐藏行为、播放器页广告位屏蔽、SSR 水合闸门、完整设置页的主题跟随、设置页交互和后台统计。
+一共 334 项校验，覆盖屏蔽逻辑、分区识别、两种隐藏行为、播放器页广告位屏蔽、SSR 水合闸门、完整设置页的主题跟随、设置页交互和后台统计。
 
 测试里的模拟 DOM 和尺寸都是从真实页面上量出来的（`.floor-card-inner > .cover-container + .pb-16.px-12 > p.title` 这种工具类结构、`.vui_carousel` 包裹的轮播、`.palette-button-inner` 里 0×0 的隐藏链接等等）。
 
@@ -170,6 +170,18 @@ B 站是单页应用，滚动和切页会让卡片重新渲染，所以统计的
 ## 更新记录
 
 按时间倒序。这里记的是每次改了什么、为什么改，包括我自己搞错的地方。
+
+### 1.7.1
+
+**修掉首页顶部轮播横幅屏蔽之后的排版错位。** 开着「屏蔽首页顶部轮播横幅」时，视频卡片会重新流到轮播空出来的位置上，但**同一行里会有一张比别的低 40px**。
+
+原因是 B 站自己的两条样式：容器 `.container.is-version8` 那套 `grid-template-rows` 是照「轮播占左 2 列 × 2 行」写死的；而轮播右侧那几张卡上写了 `margin-top: 40px`，用来跟轮播的内容区对齐。轮播一藏，这两样都还在，卡片就散了。
+
+现在开关打开时给 `<html>` 挂一个 `bf-banner`，用它触发两条 CSS 复位：容器行高改回 `auto`、那些卡片的 `margin-top` 归零。挂在 `<html>` 上是因为它不在 B 站框架的管理范围内 —— 不会被重渲染冲掉，也不影响水合。
+
+**这一版可能还有别的 bug。** 它是为了尽快把上面这个问题修掉才发的，改动集中在样式复位上，我没有把所有分辨率、所有首页变体都过一遍。遇到问题照旧到 Discussions 说。
+
+用例 210 → 212（新增：开关打开时 `<html>` 上有 `bf-banner`、关掉后撤掉），合计 **332 → 334**。
 
 ### 1.7.0-beta
 

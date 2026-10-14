@@ -806,11 +806,15 @@
     var slot = bannerSlotBox(el);
     el.classList.add('bf-hide');
     if (slot && slot !== el) slot.classList.add('bf-banner-blocked', 'bf-hide');
+    // 再挂一个 <html> 级别的开关标记：B 站那套写死的网格行高得靠一条 CSS 复位才排得整齐
+    // （见 content.css 里 html.bf-banner 那段）。挂 <html> 上不会被它的重渲染冲掉。
+    document.documentElement.classList.add('bf-banner');
     log('已隐藏首页顶部轮播横幅');
   }
 
   function applyBannerBlock() {
-    // 先撤掉上一轮的标记（含"完全隐藏"时一起收起来的那个版块容器）
+    // 先撤掉上一轮的标记（含"完全隐藏"时一起收起来的那个版块容器、以及 <html> 上的开关标记）
+    document.documentElement.classList.remove('bf-banner');
     var marked = document.querySelectorAll('.bf-banner-blocked');
     for (var i = 0; i < marked.length; i++) {
       var old = marked[i];

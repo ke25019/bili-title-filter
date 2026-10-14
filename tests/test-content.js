@@ -573,6 +573,11 @@ async function main() {
   check('轮播内层（.carousel-container / .vui_carousel）由祖先的 display:none 一起带走',
     $('bannerCarousel').contains($('bannerBox')) && $('bannerCarousel').contains($('banner')) &&
     win.getComputedStyle($('bannerCarousel')).display === 'none');
+  // v1.7.1：光藏轮播还不够 —— 容器那套写死的网格行高、以及 B 站给「轮播右侧那几张卡」
+  // 写死的 margin-top:40px，都得靠挂在 <html> 上的 .bf-banner 触发 CSS 复位，
+  // 否则卡片重新流到左边之后同一行会有一张比别的低 40px。
+  check('【关键】开关打开时给 <html> 挂上 .bf-banner（网格复位靠它；挂 <html> 才扛得住 B 站重渲染）',
+    doc.documentElement.classList.contains('bf-banner'), doc.documentElement.className);
 
   check('【关键】头部横幅图（.bili-header__banner）不在屏蔽范围内',
     !$('headerBanner').classList.contains('bf-banner-blocked') &&
@@ -595,6 +600,8 @@ async function main() {
     win.getComputedStyle($('bannerCarousel')).display !== 'none' &&
     win.getComputedStyle($('swipeSlot')).display !== 'none' &&
     !$('bannerCarousel').querySelector('.bf-mask'));
+  check('关掉开关后 <html> 上的 .bf-banner 也一起撤掉（网格复位不该留着）',
+    !doc.documentElement.classList.contains('bf-banner'), doc.documentElement.className);
 
   // 安全阀：那个网格项里除了轮播还有别的内容时，只能藏轮播，不能连格子一起藏
   const swipeExtra = doc.createElement('div');

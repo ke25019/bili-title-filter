@@ -1,0 +1,12 @@
+{
+  "name": "bili-blocker-tests",
+  "private": true,
+  "version": "1.0.0",
+  "description": "B站屏蔽助手的自动化验证脚本（jsdom）",
+  "scripts": {
+    "test": "node run-all.js"
+  },
+  "devDependencies": {
+    "jsdom": "^24.0.0"
+  }
+}

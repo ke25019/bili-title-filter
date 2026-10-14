@@ -4,10 +4,10 @@ An extension I wrote for myself to filter Bilibili. Add a few keywords and the v
 
 Manifest V3, works in Edge and Chrome, plain JavaScript with no runtime dependencies.
 
-![version](https://img.shields.io/badge/version-1.7.0-orange)
+![version](https://img.shields.io/badge/version-1.7.1-orange)
 ![browser](https://img.shields.io/badge/Edge%20%7C%20Chrome-Chromium-00aeec)
 [![Microsoft Edge Add-ons](https://img.shields.io/badge/Microsoft%20Edge-Add--ons-00aeec)](https://microsoftedge.microsoft.com/addons/detail/mnedaofgbbcdgpoobimgbceabkchkaif)
-![tests](https://img.shields.io/badge/tests-332%20passed-brightgreen)
+![tests](https://img.shields.io/badge/tests-334%20passed-brightgreen)
 
 ---
 
@@ -133,7 +133,7 @@ npm install
 npm test
 ```
 
-332 checks covering the blocking logic, category detection, both hiding behaviours, the playback-page ad slots, the SSR hydration gate, the settings page's theme following, the settings pages and the background stats.
+334 checks covering the blocking logic, category detection, both hiding behaviours, the playback-page ad slots, the SSR hydration gate, the settings page's theme following, the settings pages and the background stats.
 
 The mock DOM and its sizes were measured on the real site (utility-class structures like `.floor-card-inner > .cover-container + .pb-16.px-12 > p.title`, the `.vui_carousel` banner, the 0×0 hidden links inside `.palette-button-inner`, and so on).
 
@@ -170,6 +170,18 @@ Bilibili is a single-page app, so scrolling and navigating re-render cards. The 
 ## Changelog
 
 Newest first. This is what changed and why — including the parts I got wrong.
+
+### 1.7.1
+
+**Fixed the layout misalignment left behind after blocking the home page's top banner.** With "block the home page's top banner" on, the video cards reflow into the space the carousel vacated — but **one card in a row ended up 40px lower than the rest**.
+
+Two of Bilibili's own styles are responsible: the container's `.container.is-version8` `grid-template-rows` is hard-coded for a carousel occupying two columns by two rows, and the cards to the carousel's right carry `margin-top: 40px` to line up with the carousel's content area. Hide the carousel and both are still there, so the cards fall out of line.
+
+The switch now puts a `bf-banner` class on `<html>`, which triggers two CSS resets: the container's row heights go back to `auto`, and those cards' `margin-top` goes to zero. It hangs off `<html>` because that sits outside Bilibili's framework — a re-render cannot wipe it, and it does not affect hydration.
+
+**This version may still have bugs.** It was released to get the problem above fixed quickly; the changes are confined to style resets, and I have not gone through every screen resolution or every home page variant. Report anything you hit in Discussions as usual.
+
+210 → 212 cases (new: `<html>` carrying `bf-banner` while the switch is on, and the class being removed when it is off), **332 → 334** in total.
 
 ### 1.7.0-beta
 

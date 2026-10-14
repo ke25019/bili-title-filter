@@ -155,6 +155,27 @@ html.bf-dark {
   border-radius: 8px;
 }
 
+/* 光把轮播藏掉还不够：它的容器 .container.is-version8 是个 grid，B 站给它写死了
+   grid-template-rows（实测 210px 250px 249px …），而那套行高是照
+   「.recommended-swipe 占 grid-row:1/3 / grid-column:1/3」算出来的。
+   轮播一 display:none 就被移出网格，写死的行高和自动排的 .feed-card 打架 ——
+   实测同一行里会有一张卡比别的低 40px（开关 ON 时 x=60 那张在 y=495，同行另外三张在 y=535）。
+   所以开关打开时把那套行高复位成 auto，让网格按内容重新分行。
+
+   闸门用挂在 <html> 上的 .bf-banner：<html> 不在 B 站框架管理范围内，
+   既不会被它的重渲染冲掉，也不会影响水合。 */
+html.bf-banner .recommended-container_floor-aside .container {
+  grid-template-rows: auto !important;
+}
+
+/* 真正让排版错位的是这条：B 站给「轮播右侧那几张卡」写死了 margin-top: 40px，
+   用来跟轮播的内容区对齐（实测 i=6~9 都是 40px、高 212；同一行的 i=5 是 0、高 252）。
+   轮播一藏，这些卡重新流到左边，那 40px 还原封不动带着走 —— 于是同一行里
+   有一张比别的低 40px。轮播都不在了，这条 margin 没有任何意义，复位掉。 */
+html.bf-banner .recommended-container_floor-aside .container > .feed-card {
+  margin-top: 0 !important;
+}
+
 /* ---------- 播放器页面：广告位整块收掉（独立开关，默认开启） ----------
    一律**完全屏蔽**（display:none），不盖遮罩 —— 播放器页面的广告用不上"为什么被屏蔽"的说明，
    而且 1.5.1~1.5.8 那条线的遮罩在这一页反复出事（缩成一条细线、把弹幕列表一起盖住、遮到顶栏）。

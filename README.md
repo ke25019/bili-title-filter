@@ -1,10 +1,10 @@
 # B站屏蔽助手 · BiliTitleFilter
 
 [![License: PolyForm Noncommercial](https://img.shields.io/badge/License-PolyForm_Noncommercial-orange.svg)](https://polyformproject.org/licenses/noncommercial/1.0.0/)
-![version](https://img.shields.io/badge/version-1.7.0-orange)
+![version](https://img.shields.io/badge/version-1.7.1-orange)
 ![browser](https://img.shields.io/badge/Edge%20%7C%20Chrome-Chromium-00aeec)
 [![Microsoft Edge Add-ons](https://img.shields.io/badge/Microsoft%20Edge-Add--ons-00aeec)](https://microsoftedge.microsoft.com/addons/detail/mnedaofgbbcdgpoobimgbceabkchkaif)
-![tests](https://img.shields.io/badge/tests-332%20passed-brightgreen)
+![tests](https://img.shields.io/badge/tests-334%20passed-brightgreen)
 
 一个 B 站网页端扩展：给不想看的视频标题加几个关键词，它们就从页面上消失；也能按分区屏蔽直播、番剧这类推广内容。
 
