@@ -204,6 +204,18 @@
   var lastPlaceholderCheck = 0;
 
   /**
+   * 被尺寸安全阀拦下的卡片：等页面排版出来再试。
+   *
+   * 实测（首页首次加载）：部分卡片在第一次扫描时还是 0×0（图片/网格还没排版），
+   * 被 `isPlausibleCardSize` 当成"隐藏元素"跳过；而这条路径原本没有任何重试，
+   * 于是它们会一直不屏蔽，直到用户手动开关一次插件触发全量重扫。
+   * 这里只记下来、不在 0×0 时硬屏蔽（安全阀仍然有效），由 tick 节流重试，
+   * 尺寸正常后才真正打标。上限 8 次，避免隐藏元素被无限重试。
+   */
+  var sizeRetry = new Map();
+  var SIZE_RETRY_MAX = 8;
+
+  /**
    * B 站是「服务端渲染 + Vue 水合」的页面，**在它完成第一次水合之前改 DOM 会把它整棵搞崩**。
    *
    * 实测（Edge 153 / 2026-09，播放页 BV1HqaN6NEpE，1440×900）：
@@ -344,7 +356,15 @@
   function isNestedCard(el) {
     var parent = el.parentElement;
     if (!parent) return false;
-    return !!parent.closest('[data-bf-card]');
+    var outer = parent.closest('[data-bf-card]');
+    if (!outer) return false;
+    // v1.7.3 修：以前只要祖先被我们标记过（data-bf-card）就跳过，
+    // 但 clearBlock（放过一张卡时）**也会**打这个标记 —— 于是外层一旦被"放过"，
+    // 里面真正的卡片就永远被跳过：不打标记、也没有任何重试，
+    // 表现就是「看得见、尺寸正常、却从来没被屏蔽」。
+    // 实测首页那些带阴影的推广位（.floor-single-card > .floor-card > .floor-card-inner）
+    // 就是这样漏掉的。只有外层卡真的处于屏蔽状态，才该跳过里面的。
+    return outer.dataset.bfState === 'blocked';
   }
 
   function textOf(el) {
@@ -590,6 +610,23 @@
       return isSafeCardTarget(outer, hrefRe) ? outer : null;
     }
 
+    // 1.5) 首页「分区推广位」（带分区徽标的那种）走一条确定路径。
+    // 实测结构（用户从真机给的完整 DOM）：
+    //   .floor-single-card > .floor-card.single-card > .floor-card-inner
+    //       > .cover-container（封面 <a> + .badge > .floor-title（徽标，如「赛事」「直播」「课堂」））
+    //       > .pb-16.px-12 > p.title.indent-initial（真标题）
+    // 这类卡不在 CARD_SELECTOR 里，只能靠下面第 3 步"往上找带标题的一层"；
+    // 而 TITLE_SELECTORS 里恰好有 .floor-title —— 它就是徽标本身：
+    //   · 徽标被当成标题 → 解析停在封面 <a> 上（遮错元素）
+    //   · 徽标被 isBadgeLabel 排除、而通用逻辑又没找到别的标题 → 一路爬到网格容器，
+    //     被"内含别的卡片"拒掉 → 返回 null → 这张卡永远不处理
+    //     （表现：分区全开、这张推广位却一直不屏蔽，且身上没有任何 bf 标记）
+    // 所以这里直接按已知结构定位卡片本体。
+    var floorBox = a.closest('.floor-card-inner');
+    if (floorBox && floorBox !== a && hasTitleInside(floorBox) && hasCoverInside(floorBox) &&
+        isSafeCardTarget(floorBox, hrefRe)) {
+      return floorBox;
+    }
     // 2) BEM 块根：bili-live-card__image--link -> .bili-live-card
     var root = bemRootOf(a);
     if (root) {
@@ -806,14 +843,15 @@
     var slot = bannerSlotBox(el);
     el.classList.add('bf-hide');
     if (slot && slot !== el) slot.classList.add('bf-banner-blocked', 'bf-hide');
-    // 再挂一个 <html> 级别的开关标记：B 站那套写死的网格行高得靠一条 CSS 复位才排得整齐
-    // （见 content.css 里 html.bf-banner 那段）。挂 <html> 上不会被它的重渲染冲掉。
+    // 再挂一个 <html> 级别的开关标记：B 站那套写死的网格行高、以及它给「轮播右侧那几张卡」
+    // 写死的 margin-top:40px，都得靠一条 CSS 复位才排得整齐（见 content.css 里 html.bf-banner 那段）。
+    // 挂 <html> 上有一个额外好处：B 站重渲染冲不掉它，也不影响水合。
     document.documentElement.classList.add('bf-banner');
     log('已隐藏首页顶部轮播横幅');
   }
 
   function applyBannerBlock() {
-    // 先撤掉上一轮的标记（含"完全隐藏"时一起收起来的那个版块容器、以及 <html> 上的开关标记）
+    // 先撤掉上一轮的标记（含"完全隐藏"时一起收起来的那个版块容器，以及 <html> 上的开关标记）
     document.documentElement.classList.remove('bf-banner');
     var marked = document.querySelectorAll('.bf-banner-blocked');
     for (var i = 0; i < marked.length; i++) {
@@ -1106,9 +1144,12 @@
     // 完全隐藏模式下卡片是 display:none（尺寸为 0），
     // 若因为命中词变化就拒绝处理，切回遮蔽模式时这些卡片会一直隐藏不恢复。
     if (!wasBlocked && !isPlausibleCardSize(card)) {
-      log('跳过尺寸异常的容器（避免页面空白）：', card.className, action.key);
+      // 首屏还没完成排版时卡片常见 0×0。以前这里直接 return，这张卡就再也没有机会；
+      // 现在记入 sizeRetry，由 tick 在尺寸正常后重试（见 sizeRetry 的注释）。
+      if (sizeRetry.size < 200) sizeRetry.set(card, sizeRetry.get(card) || 0);
       return;
     }
+    sizeRetry.delete(card);
 
     if (already) {
       // 命中原因没变，但屏蔽方式 / 文案 / 悬停展示等设置可能变了，这里同步刷新
@@ -1231,6 +1272,7 @@
 
   function clearBlock(card) {
     card.dataset.bfCard = '1';
+    sizeRetry.delete(card);
     if (card.dataset.bfState !== 'blocked') return;
 
     card.classList.remove('bf-blocked', 'bf-hide', 'bf-hide-slot', 'bf-hoverable', 'bf-revealed', 'bf-compact');
@@ -1378,6 +1420,42 @@
   }
 
   /**
+   * 首页「分区推广位」扫描（不依赖链接）。
+   *
+   * 实测结构（用户从真机给的完整 DOM）：
+   *   .floor-single-card > .floor-card.single-card > .floor-card-inner
+   *     > .cover-container（封面 <a> + .badge > .floor-title 徽标）
+   *     > .pb-16.px-12 > p.title（真标题）
+   *
+   * 这类卡片的链接并不总是分区域名：番剧/国创/电影等指向 /bangumi/，
+   * 赛事/游戏等却可能直接指向普通视频（//www.bilibili.com/video/BV…）。
+   * 而 scanTypedCards 只按链接特征发现卡片，所以「徽标是赛事、链接是普通视频」
+   * 的推广位永远不会被扫到 —— 表现就是「分区全开，这一类却一直不屏蔽」。
+   * 徽标（.floor-title）才是这类卡片唯一可靠的判据，所以这里按结构直接扫，
+   * 交给 processCard 用徽标判定类型，再用关键词兜底。
+   *
+   * 只处理带分区徽标的楼层卡；没有徽标的普通楼层内容一律不碰（§3 宁可不屏蔽）。
+   */
+  function scanPromoFloors(force) {
+    if (!settings.enabled) return;
+    var floors = document.querySelectorAll('.floor-card-inner');
+    for (var i = 0; i < floors.length && i < 80; i++) {
+      var card = floors[i];
+      if (isNestedCard(card)) continue;
+      // 横幅 / 轮播交给板块级开关；顶栏 / 登录面板绝对不碰
+      if (card.closest && card.closest(BANNER_EXCLUDE)) continue;
+      if (card.closest && card.closest(NAV_EXCLUDE)) continue;
+      // 已经是屏蔽状态、又不是设置变更引发的重扫 → 不必每 180ms 再刷一遍
+      if (!force && card.dataset.bfState === 'blocked') continue;
+      // 安全阀：里面还有别的卡片 → 这是列表容器，不是一张推广卡，放弃
+      if (countTopCards(card) > 1) continue;
+      if (!hasCoverInside(card)) continue;
+      if (!card.querySelector('.badge .floor-title, [class*="badge"] .floor-title')) continue;
+      processCard(card);
+    }
+  }
+
+  /**
    * 等 B 站自己的第一次水合结束（原因见上面 hydrationDone 那段注释）。
    * 信号优先用「#app 上的 data-server-rendered 被 Vue 摘掉」；页面上没有这个容器时以 load 为准。
    * 拿到信号后立刻全量重扫一次，之后照常按变更增量处理。
@@ -1406,6 +1484,7 @@
     if (!hydrationDone) return;
     fullScan(force);
     scanTypedCards();
+    scanPromoFloors(force);
 
     // 设置变更时，把通用识别找到过的卡片也重新判定一遍（否则关掉开关后无法恢复）
     if (force && trackedCards.size) {
@@ -1439,6 +1518,8 @@
       pendingFullScan = false;
       scanAll(false);
     }
+    // 推广位不靠链接发现，页面重渲染后即使没有触发全量扫描，也要在这里补一遍
+    scanPromoFloors();
     // 占位项一旦被真实内容填充就要立刻恢复，不能等到下一次轮询
     applyPlaceholderCollapse();
   }
@@ -1465,6 +1546,21 @@
     if (!node || node.nodeType !== 1) return;
     if (node.classList && (node.classList.contains('bf-mask') || node.classList.contains('bf-banner-blocked'))) return;
     if (node.closest && node.closest('.bf-mask')) return;
+
+    // 推广位（.floor-card-inner）不在 CARD_SELECTOR 里。新节点如果就在推广位内部，
+    // 要重判推广位本体，而不是它外面那个被 clearBlock 打过标记的容器 ——
+    // 否则外层会因为后代里的徽标/标题被误判成一张卡并真的屏蔽，里面的推广位
+    // 反而被 isNestedCard 当成"嵌套卡"跳过（这正是首屏推广位漏屏蔽的一条路径）。
+    var promo = node.closest ? node.closest('.floor-card-inner') : null;
+    if (promo) {
+      dirtyCards.add(promo);
+      if (dirtyCards.size > 400) dirtyCards.clear();
+      return;
+    }
+    if (node.querySelector && node.querySelector('.floor-card-inner')) {
+      pendingFullScan = true;
+      return;
+    }
 
     var card = node.closest ? node.closest('[data-bf-card]') : null;
     if (card) {
@@ -2287,6 +2383,24 @@
 
   function tick() {
     refreshTheme();
+
+    // 首屏扫描时还是 0×0 的卡片：等页面排版出来后补屏蔽。
+    // 每次最多处理 20 张、每张最多 8 次，避免隐藏元素被无限重试。
+    if (sizeRetry.size) {
+      var retryCards = [];
+      sizeRetry.forEach(function (n, card) {
+        if (!card.isConnected || n >= SIZE_RETRY_MAX) {
+          sizeRetry.delete(card);
+          return;
+        }
+        retryCards.push(card);
+      });
+      for (var ri = 0; ri < retryCards.length && ri < 20; ri++) {
+        var retryCard = retryCards[ri];
+        sizeRetry.set(retryCard, (sizeRetry.get(retryCard) || 0) + 1);
+        processCard(retryCard);
+      }
+    }
 
     // 完全隐藏模式下定期复核：占位项被真实内容填充后要能自动恢复。
     // 节流到 ~2.5s，避免每次轮询都重新计算（变更防抖回调里已经会即时复核）

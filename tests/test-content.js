@@ -573,9 +573,9 @@ async function main() {
   check('轮播内层（.carousel-container / .vui_carousel）由祖先的 display:none 一起带走',
     $('bannerCarousel').contains($('bannerBox')) && $('bannerCarousel').contains($('banner')) &&
     win.getComputedStyle($('bannerCarousel')).display === 'none');
-  // v1.7.1：光藏轮播还不够 —— 容器那套写死的网格行高、以及 B 站给「轮播右侧那几张卡」
-  // 写死的 margin-top:40px，都得靠挂在 <html> 上的 .bf-banner 触发 CSS 复位，
-  // 否则卡片重新流到左边之后同一行会有一张比别的低 40px。
+  // v1.7.3：光藏轮播不够 —— 容器写死的网格行高、以及 B 站给「轮播右侧那几张卡」写死的
+  // margin-top:40px，都得靠挂在 <html> 上的 .bf-banner 触发 CSS 复位，否则卡片重新流到
+  // 左边之后同一行会有一张比别的低 40px（1.7.0/1.7.1 的首页排版 bug，这里重新加回修复）。
   check('【关键】开关打开时给 <html> 挂上 .bf-banner（网格复位靠它；挂 <html> 才扛得住 B 站重渲染）',
     doc.documentElement.classList.contains('bf-banner'), doc.documentElement.className);
 
@@ -599,8 +599,7 @@ async function main() {
     !$('bannerCarousel').classList.contains('bf-banner-blocked') &&
     win.getComputedStyle($('bannerCarousel')).display !== 'none' &&
     win.getComputedStyle($('swipeSlot')).display !== 'none' &&
-    !$('bannerCarousel').querySelector('.bf-mask'));
-  check('关掉开关后 <html> 上的 .bf-banner 也一起撤掉（网格复位不该留着）',
+    !$('bannerCarousel').querySelector('.bf-mask'));  check('关掉开关后 <html> 上的 .bf-banner 也一起撤掉（网格复位不该留着）',
     !doc.documentElement.classList.contains('bf-banner'), doc.documentElement.className);
 
   // 安全阀：那个网格项里除了轮播还有别的内容时，只能藏轮播，不能连格子一起藏
@@ -932,6 +931,92 @@ async function main() {
   check('该卡片被屏蔽的是卡片本体，徽标文案依然没被当成标题',
     !!$('promoInner').querySelector(':scope > .bf-mask') &&
     !$('promoInner').querySelector('.badge').classList.contains('bf-blocked'));
+
+  // [10i] 首页「分区推广位」：必须靠徽标发现，不能依赖链接
+  console.log('\n[10i] 首页「分区推广位」：徽标发现 + 首屏尺寸重试');
+  const makeFloorCard = (badge, title, href, innerW, innerH) => {
+    const host = doc.createElement('div');
+    host.className = 'floor-single-card';
+    host.innerHTML = '<div class="floor-card single-card"><div class="floor-card-inner" data-w="' +
+      (innerW === undefined ? 238 : innerW) + '" data-h="' + (innerH === undefined ? 224 : innerH) + '">' +
+      '<div class="cover-container" data-w="238" data-h="134"><a href="' + href + '">' +
+      '<div class="cover-shim"><picture class="v-img cover"><img src="a.png"></picture></div>' +
+      (badge ? '<div class="badge"><span class="floor-title">' + badge + '</span></div>' : '') +
+      '</a></div><div class="pb-16 px-12 info-container" data-w="238" data-h="90">' +
+      '<p class="title indent-initial" title="' + title + '"></p></div></div></div>';
+    // 真实页面是 Vue 用 DOM API 建标题（HTML 解析器不允许 <p> 里嵌 <div>），
+    // 这里同样用 DOM API 拼，保证 p.title 不是空壳。
+    const p = host.querySelector('.title');
+    const a = doc.createElement('a');
+    a.setAttribute('href', href);
+    a.className = 'font-medium';
+    a.appendChild(doc.createTextNode(title));
+    p.appendChild(a);
+    return host;
+  };
+
+  await pushSettings({ mode: 'mask', hideKeepSlot: true, keywords: [], blockTypes: { match: true } });
+
+  // 实测回归：首页赛事推广位的链接常常是普通视频（不是 /live/），
+  // 只有封面徽标「赛事」能说明它属于哪个分区。以前只按链接发现卡片 → 这一类永远不屏蔽。
+  const matchFloor = makeFloorCard('赛事', '赛事直播预约：某某对决', '//www.bilibili.com/video/BV1xx411c7mD');
+  doc.querySelector('main').appendChild(matchFloor);
+  const matchInner = matchFloor.querySelector('.floor-card-inner');
+  check('【关键】徽标是「赛事」、链接是普通视频的推广位也能被屏蔽（v1.7.3 回归点）',
+    await waitFor(() => matchInner.classList.contains('bf-blocked')), matchInner.className);
+  check('推广位按徽标判定为赛事类型', matchInner.dataset.bfType === 'match', matchInner.dataset.bfType);
+
+  // 用户从真机给的「赛事」推广位：链接是直播间，封面 <a> 里带徽标
+  const liveFloor = makeFloorCard('赛事', '【直播】LOUD vs VIT 上海全球冠军赛总决赛',
+    'https://live.bilibili.com/22908869?live_from=81003');
+  doc.querySelector('main').appendChild(liveFloor);
+  const liveFloorInner = liveFloor.querySelector('.floor-card-inner');
+  check('【关键】用户实机那张「赛事」推广位在首次扫描就被屏蔽',
+    await waitFor(() => liveFloorInner.classList.contains('bf-blocked')), liveFloorInner.className);
+
+  // 安全阀：没有分区徽标的楼层卡不是「分区推广位」，一律不碰
+  const plainFloor = makeFloorCard('', '普通楼层里的内容', '//www.bilibili.com/video/BV1plain');
+  doc.querySelector('main').appendChild(plainFloor);
+  await sleep(300);
+  check('没有分区徽标的楼层卡不碰', !plainFloor.querySelector('.floor-card-inner').classList.contains('bf-blocked'),
+    plainFloor.querySelector('.floor-card-inner').className);
+
+  // v1.7.3 回归：外层容器只是被 clearBlock 打过 data-bf-card 标记（并没有真的屏蔽）时，
+  // 里面的推广位不能被 isNestedCard 永久跳过 —— 否则这张卡会「可见、尺寸正常、却零标记」。
+  const outerCleared = doc.createElement('div');
+  outerCleared.className = 'promo-outer';
+  outerCleared.setAttribute('data-w', '280');
+  outerCleared.setAttribute('data-h', '246');
+  outerCleared.dataset.bfCard = '1';   // 模拟 clearBlock 留下的标记
+  doc.querySelector('main').appendChild(outerCleared);
+  const nestedFloor = makeFloorCard('赛事', '被外层标记带住的赛事推广位', '//www.bilibili.com/video/BV1nested');
+  outerCleared.appendChild(nestedFloor);
+  const nestedInner = nestedFloor.querySelector('.floor-card-inner');
+  check('【关键】外层只是被「放过」时，里面的推广位仍然会被处理（isNestedCard 回归点）',
+    await waitFor(() => nestedInner.classList.contains('bf-blocked')), nestedInner.className);
+
+  // 首屏 0×0（还没排版）→ 尺寸正常后由 tick 自动补屏蔽，不需要手动开关插件
+  doc.body.setAttribute('data-w', '1200');
+  doc.body.setAttribute('data-h', '800');
+  const lateFloor = makeFloorCard('赛事', '赛事直播预约：慢排版', '//www.bilibili.com/video/BV1late', 0, 0);
+  doc.querySelector('main').appendChild(lateFloor);
+  const lateInner = lateFloor.querySelector('.floor-card-inner');
+  await sleep(400);
+  check('首屏 0×0 的推广位先不硬屏蔽（安全阀仍然有效）',
+    !lateInner.classList.contains('bf-blocked'), lateInner.className);
+  lateInner.setAttribute('data-w', '238');
+  lateInner.setAttribute('data-h', '224');
+  check('尺寸正常后自动补屏蔽（不再需要手动开关插件）',
+    await waitFor(() => lateInner.classList.contains('bf-blocked'), 5000), lateInner.className);
+  doc.body.removeAttribute('data-w');
+  doc.body.removeAttribute('data-h');
+
+  matchFloor.remove();
+  liveFloor.remove();
+  plainFloor.remove();
+  outerCleared.remove();
+  lateFloor.remove();
+  await pushSettings({ keywords: [], blockTypes: {} });
 
   console.log('\n[11] 顶栏与横幅不被误伤');
   check('顶栏「直播」入口未被屏蔽', !doc.querySelector('.channel-link__right').classList.contains('bf-blocked'));

@@ -4,10 +4,10 @@ An extension I wrote for myself to filter Bilibili. Add a few keywords and the v
 
 Manifest V3, works in Edge and Chrome, plain JavaScript with no runtime dependencies.
 
-![version](https://img.shields.io/badge/version-1.7.1-orange)
+![version](https://img.shields.io/badge/version-1.7.3-orange)
 ![browser](https://img.shields.io/badge/Edge%20%7C%20Chrome-Chromium-00aeec)
 [![Microsoft Edge Add-ons](https://img.shields.io/badge/Microsoft%20Edge-Add--ons-00aeec)](https://microsoftedge.microsoft.com/addons/detail/mnedaofgbbcdgpoobimgbceabkchkaif)
-![tests](https://img.shields.io/badge/tests-334%20passed-brightgreen)
+![tests](https://img.shields.io/badge/tests-341%20passed-brightgreen)
 
 ---
 
@@ -86,9 +86,9 @@ I didn't hard-code a single class for detecting promo cards. The order is:
 5. Otherwise it walks up to the first element that contains both a title and a cover
 6. The top navigation and a few areas that hide promo links are explicitly excluded
 
-Why the badge comes first: anime, Chinese animation, variety and movie promo cards all link to `//www.bilibili.com/bangumi/play/epXXXX` — the link alone can't tell them apart, and esports cards are usually live-stream reservations pointing at a live room. Judging by links alone meant switching "Anime" on also blocked Chinese animation, variety and movies, while the "Esports" switch did nothing at all.
+Why the badge comes first: anime, Chinese animation, variety and movie promo cards all link to `//www.bilibili.com/bangumi/play/epXXXX` — the link alone can't tell them apart, and esports cards are usually live-stream reservations pointing at a live room. Some category promos link to an ordinary video (`//www.bilibili.com/video/BV…`) and can only be found by their badge, so badge-bearing home-page promos are now scanned by structure as well, not just by link.
 
-When it can't tell, I'd rather skip than mess up the page, so there are safety valves: the container holds other cards, the size is over 1200×800 or 35% of the viewport, or the element has zero size — any of those and the block is skipped.
+When it can't tell, I'd rather skip than mess up the page, so there are safety valves: the container holds other cards, the size is over 1200×800 or 35% of the viewport, or the element has zero size — any of those and the block is held back. A zero-size card is queued and blocked once the page has laid it out; elements that are genuinely hidden with `display:none` are still left alone.
 
 ---
 
@@ -133,7 +133,7 @@ npm install
 npm test
 ```
 
-334 checks covering the blocking logic, category detection, both hiding behaviours, the playback-page ad slots, the SSR hydration gate, the settings page's theme following, the settings pages and the background stats.
+341 checks covering the blocking logic, category detection, both hiding behaviours, the playback-page ad slots, the SSR hydration gate, the settings page's theme following, the settings pages and the background stats.
 
 The mock DOM and its sizes were measured on the real site (utility-class structures like `.floor-card-inner > .cover-container + .pb-16.px-12 > p.title`, the `.vui_carousel` banner, the 0×0 hidden links inside `.palette-button-inner`, and so on).
 
@@ -170,6 +170,19 @@ Bilibili is a single-page app, so scrolling and navigating re-render cards. The 
 ## Changelog
 
 Newest first. This is what changed and why — including the parts I got wrong.
+
+### 1.7.3
+
+**Fixed a class of home-page category promo cards that never got blocked.**
+
+Promo cards used to be found by their links: only cards pointing at `/bangumi/`, `live.bilibili.com` and similar were scanned. Many home-page category promos link to an ordinary video (`//www.bilibili.com/video/BV…`), and the only thing that says which category they belong to is the badge in the cover's top-left corner (Esports / Courses / Movies …). With every category switch on, those cards still stayed visible. Badge-bearing promos are now scanned by structure (`.floor-single-card > .floor-card > .floor-card-inner`) and classified by the badge, without relying on the link.
+
+**Also fixed two causes of "not blocked on first load, fixed by toggling the extension":**
+
+- Cards that have not been laid out yet measure 0×0 and used to be skipped permanently by the size safety valve. They are now queued and blocked once they have a real size (the valve itself is unchanged: genuinely hidden elements are still left alone).
+- A container that was only "cleared" also keeps its `data-bf-card` marker, so the real promo card inside it was skipped as a nested card. Only ancestors that are actually blocked are skipped now; and when a new node lands inside a promo card, the promo card itself is re-checked instead of the container around it.
+
+Checks 334 → 341 (new: an Esports badge on an ordinary-video link; a 0×0 first paint that gets blocked after layout; a promo inside a cleared container).
 
 ### 1.7.1
 

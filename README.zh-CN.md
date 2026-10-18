@@ -4,10 +4,10 @@
 
 Manifest V3，Edge 和 Chrome 都能装，纯 JavaScript，没有运行时依赖。
 
-![version](https://img.shields.io/badge/version-1.7.1-orange)
+![version](https://img.shields.io/badge/version-1.7.3-orange)
 ![browser](https://img.shields.io/badge/Edge%20%7C%20Chrome-Chromium-00aeec)
 [![Microsoft Edge Add-ons](https://img.shields.io/badge/Microsoft%20Edge-Add--ons-00aeec)](https://microsoftedge.microsoft.com/addons/detail/mnedaofgbbcdgpoobimgbceabkchkaif)
-![tests](https://img.shields.io/badge/tests-334%20passed-brightgreen)
+![tests](https://img.shields.io/badge/tests-341%20passed-brightgreen)
 
 ---
 
@@ -86,9 +86,9 @@ Chrome 目前只能走方式二，把上面的 `edge://extensions/` 换成 `chro
 5. 都不是的话，往上找到第一层「同时包含标题和封面」的元素当卡片本体
 6. 顶栏导航和几个藏着隐藏推广链接的区域是明确排除的
 
-为什么先看徽标：实测番剧、国创、综艺、电影的推广卡片，链接**全都是** `//www.bilibili.com/bangumi/play/epXXXX`，光看链接根本分不出是哪一类；赛事卡片则多半是「直播预约」，链接落在直播间。只按链接判定就会出现「开番剧把国创综艺电影一起屏蔽」「赛事开关点了没反应」。
+为什么先看徽标：实测番剧、国创、综艺、电影的推广卡片，链接**全都是** `//www.bilibili.com/bangumi/play/epXXXX`，光看链接根本分不出是哪一类；赛事卡片则多半是「直播预约」，链接落在直播间。还有一些分区推广位的链接就是普通视频（`//www.bilibili.com/video/BV…`），只能靠徽标发现——所以首页的带徽标推广位会单独按结构扫一遍，不依赖链接。
 
-判断不出来的时候我宁愿不屏蔽，也不想把页面搞乱。所以有几个安全阀：容器里还装着别的卡片、尺寸超过 1200×800 或视口面积的 35%、元素尺寸是 0——任一命中就直接跳过。
+判断不出来的时候我宁愿不屏蔽，也不想把页面搞乱。所以有几个安全阀：容器里还装着别的卡片、尺寸超过 1200×800 或视口面积的 35%、元素尺寸是 0——任一命中就先不硬屏蔽。尺寸为 0 的卡片会记下来，等页面排版正常后自动重试；真正被 `display:none` 隐藏的元素仍然不会碰。
 
 ---
 
@@ -133,7 +133,7 @@ npm install
 npm test
 ```
 
-一共 334 项校验，覆盖屏蔽逻辑、分区识别、两种隐藏行为、播放器页广告位屏蔽、SSR 水合闸门、完整设置页的主题跟随、设置页交互和后台统计。
+一共 341 项校验，覆盖屏蔽逻辑、分区识别、两种隐藏行为、播放器页广告位屏蔽、SSR 水合闸门、完整设置页的主题跟随、设置页交互和后台统计。
 
 测试里的模拟 DOM 和尺寸都是从真实页面上量出来的（`.floor-card-inner > .cover-container + .pb-16.px-12 > p.title` 这种工具类结构、`.vui_carousel` 包裹的轮播、`.palette-button-inner` 里 0×0 的隐藏链接等等）。
 
@@ -170,6 +170,19 @@ B 站是单页应用，滚动和切页会让卡片重新渲染，所以统计的
 ## 更新记录
 
 按时间倒序。这里记的是每次改了什么、为什么改，包括我自己搞错的地方。
+
+### 1.7.3
+
+**修掉首页「分区推广」里有一类卡片一直不屏蔽的问题。**
+
+以前这些推广位是「先按链接找卡片」：只有链接命中 `/bangumi/`、`live.bilibili.com` 这类分区特征，才会被扫到。但首页很多分区推广位的链接就是普通视频（`//www.bilibili.com/video/BV…`），唯一能说明它属于哪个分区的是封面左上角的徽标（赛事 / 课堂 / 电影…）。于是「分区全开」时，这一类卡片仍然留在页面上。现在按 `.floor-single-card > .floor-card > .floor-card-inner` 的结构直接扫带徽标的推广位，交给徽标判定分区，不再依赖链接。
+
+**顺带修掉两个「首次加载不屏蔽、手动开关一次插件才正常」的原因：**
+
+- 首屏还没排版好的卡片会量到 0×0，被尺寸安全阀永久跳过。现在只记下来，等尺寸正常后自动补屏蔽（安全阀本身不变：真正隐藏的元素仍然不碰）。
+- 外层容器被「放过」时也会留下 `data-bf-card` 标记，里面真正的推广位会被当成嵌套卡片跳过。现在只有外层真的被屏蔽才跳过；新节点落在推广位内部时也直接重判推广位本体，不再误判外面那层容器。
+
+用例 334 → 341（新增：徽标是赛事、链接是普通视频的推广位；首屏 0×0 后自动补屏蔽；外层被放过的内层推广位）。
 
 ### 1.7.1
 
