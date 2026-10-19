@@ -97,8 +97,19 @@
     '.bili-video-card__info--bottom .name'
   ];
 
-  /** 横幅 / 轮播属于"板块推广位"，只由板块级开关负责，卡片级不碰 */
-  var BANNER_EXCLUDE = '.carousel-area, .carousel-container, [class*="carousel"], [class*="banner"]';
+  /**
+   * 横幅 / 轮播属于"板块推广位"，只由板块级开关负责，卡片级不碰。
+   *
+   * 注意：这里**不能**再用 `[class*="banner"]` / `[class*="carousel"]` 这种子串匹配。
+   * B 站会把分区楼层包在类名带 banner 的容器里（实测 `bfSkip=banner` 的漫画卡就是这样），
+   * 子串匹配会把整类分区推广位当成横幅一起跳过 —— 而它们其实只是普通楼层卡片。
+   * 只列真正的顶部轮播 / 头部横幅容器。
+   */
+  var BANNER_EXCLUDE = '.carousel-area, .carousel-container, .carousel, .vui_carousel, ' +
+    '.recommended-swipe, .recommended-swipe-core, .recommended-swipe-body, ' +
+    '.recommended-swipe-body-normal, .recommended-swipe-body-loading, ' +
+    '.recommended-swipe-body-error, .recommended-swipe-body-nothing, ' +
+    '.bili-header__banner';
 
   /**
    * 播放器页面上的广告位（全部为实测值）：
@@ -188,6 +199,13 @@
   var settings = normalize(null);
   var matcher = null;
   var isDark = false;
+  /** 当前扩展版本（从 manifest 读，写在 <html data-bf-version> 上，方便确认加载的是哪一版） */
+  var BF_VERSION = '';
+  try {
+    if (typeof chrome !== 'undefined' && chrome.runtime && chrome.runtime.getManifest) {
+      BF_VERSION = chrome.runtime.getManifest().version || '';
+    }
+  } catch (e) { BF_VERSION = ''; }
 
   /** 上一次写进 storage 的 B 站深色状态（避免每轮 tick 都写存储） */
   var savedSiteTheme = null;
@@ -214,6 +232,9 @@
    */
   var sizeRetry = new Map();
   var SIZE_RETRY_MAX = 8;
+
+  /** 上一次首页推广位巡检时间（tick 里节流用） */
+  var lastPromoScanAt = 0;
 
   /**
    * B 站是「服务端渲染 + Vue 水合」的页面，**在它完成第一次水合之前改 DOM 会把它整棵搞崩**。
@@ -456,11 +477,16 @@
   /** 统计元素内「多少个不同的」该类型链接（同一张卡片的封面+标题链接算 1 个） */
   function countDistinctEntries(el, hrefRe) {
     if (!el || !el.querySelectorAll) return 0;
+    var list = [];
+    // 有些卡片的**根节点本身就是封面链接**（<a class="..."> 里面放封面 + 标题），
+    // querySelectorAll 不包含自身，必须把它一起算进来，否则会漏掉这张卡的链接特征。
+    if (el.matches && el.matches('a[href]')) list.push(el);
     var anchors = el.querySelectorAll('a[href]');
+    for (var a = 0; a < anchors.length; a++) list.push(anchors[a]);
     var seen = Object.create(null);
     var n = 0;
-    for (var i = 0; i < anchors.length; i++) {
-      var href = anchors[i].getAttribute('href') || '';
+    for (var i = 0; i < list.length; i++) {
+      var href = list[i].getAttribute('href') || '';
       if (!hrefRe.test(href)) continue;
       var key = normalizeHref(href);
       if (seen[key]) continue;
@@ -651,6 +677,11 @@
   /** 该卡片命中的所有具体分区类型（不含 other 兜底） */
   function matchSpecificTypes(card) {
     var hrefs = '';
+    // 卡片根节点可能就是链接本身（漫画这类组件常见：<a> 里直接放封面 + 标题），
+    // 只扫后代 <a> 会把这张卡唯一的链接漏掉，类型就永远判不出来。
+    if (card.matches && card.matches('a[href]')) {
+      hrefs += ' ' + (card.getAttribute('href') || '');
+    }
     var anchors = card.querySelectorAll('a[href]');
     for (var i = 0; i < anchors.length && i < 20; i++) {
       hrefs += ' ' + (anchors[i].getAttribute('href') || '');
@@ -669,6 +700,7 @@
   }
 
   function anchorHrefsMatch(card, hrefRe) {
+    if (card.matches && card.matches('a[href]') && hrefRe.test(card.getAttribute('href') || '')) return true;
     var anchors = card.querySelectorAll('a[href]');
     for (var i = 0; i < anchors.length && i < 20; i++) {
       if (hrefRe.test(anchors[i].getAttribute('href') || '')) return true;
@@ -1373,7 +1405,12 @@
       var card = all[i];
       if (isNestedCard(card)) continue;
       if (!force && card.dataset.bfCard === '1') continue;
-      processCard(card);
+      // 单张坏卡不能拖垮整轮扫描
+      try {
+        processCard(card);
+      } catch (err) {
+        log('处理卡片失败，跳过：', card.className, err && err.message);
+      }
     }
   }
 
@@ -1408,13 +1445,14 @@
       }
       if (!hit) continue;
 
-      var card = resolveCardTarget(a, hit.href);
+      var card = null;
+      try { card = resolveCardTarget(a, hit.href); } catch (err) { log('解析卡片失败，跳过：', err && err.message); continue; }
       if (!card) continue;   // 无法确认是一张卡片 → 宁可不屏蔽
       // 记住这类卡片：它们不在 CARD_SELECTOR 里，
       // 关闭分区开关时需要靠这份记录把它们恢复原状
       if (!card.matches || !card.matches(CARD_SELECTOR)) trackedCards.add(card);
       if (card.dataset.bfState === 'blocked') continue;   // 已屏蔽，跳过
-      processCard(card);
+      try { processCard(card); } catch (err) { log('处理链接型卡片失败，跳过：', err && err.message); }
       handled++;
     }
   }
@@ -1441,17 +1479,32 @@
     var floors = document.querySelectorAll('.floor-card-inner');
     for (var i = 0; i < floors.length && i < 80; i++) {
       var card = floors[i];
-      if (isNestedCard(card)) continue;
-      // 横幅 / 轮播交给板块级开关；顶栏 / 登录面板绝对不碰
-      if (card.closest && card.closest(BANNER_EXCLUDE)) continue;
-      if (card.closest && card.closest(NAV_EXCLUDE)) continue;
-      // 已经是屏蔽状态、又不是设置变更引发的重扫 → 不必每 180ms 再刷一遍
-      if (!force && card.dataset.bfState === 'blocked') continue;
+      if (isNestedCard(card)) { card.dataset.bfSkip = 'nested'; continue; }
+      // 顶栏 / 登录面板绝对不碰。
+      // 这里**不按 BANNER_EXCLUDE 跳过**：分区楼层外层可能带 banner 类名，
+      // 按横幅排除会把整类分区推广位漏掉（实测漫画卡 bfSkip=banner）。
+      if (card.closest && card.closest(NAV_EXCLUDE)) { card.dataset.bfSkip = 'nav'; continue; }
+      // 已经是屏蔽状态、又不是设置变更引发的重扫 → 不必每 180ms 再刷一遍。
+      // 但类名被 B 站重渲染冲掉时（data-bf-state 还在、bf-blocked 没了）仍要补回来。
+      if (!force && card.dataset.bfState === 'blocked' && card.classList.contains('bf-blocked')) {
+        delete card.dataset.bfSkip;
+        continue;
+      }
       // 安全阀：里面还有别的卡片 → 这是列表容器，不是一张推广卡，放弃
-      if (countTopCards(card) > 1) continue;
-      if (!hasCoverInside(card)) continue;
-      if (!card.querySelector('.badge .floor-title, [class*="badge"] .floor-title')) continue;
-      processCard(card);
+      if (countTopCards(card) > 1) { card.dataset.bfSkip = 'list'; continue; }
+      if (!hasCoverInside(card)) { card.dataset.bfSkip = 'no-cover'; continue; }
+      if (!card.querySelector('.badge .floor-title, [class*="badge"] .floor-title')) {
+        card.dataset.bfSkip = 'no-badge';
+        continue;
+      }
+      // 单张卡处理失败不能拖垮整轮巡检：否则前面一张结构奇怪的卡会让后面的漫画等推广位全部漏掉
+      try {
+        delete card.dataset.bfSkip;
+        processCard(card);
+      } catch (err) {
+        card.dataset.bfSkip = 'error';
+        log('推广位处理失败，跳过：', card.className, err && err.message);
+      }
     }
   }
 
@@ -1471,7 +1524,9 @@
         if (!settled) log('等水合超过 ' + HYDRATION_MAX_WAIT + 'ms，不再等，开始扫描');
         else log('水合已完成（等了 ' + (Date.now() - started) + 'ms），开始扫描');
         hydrationDone = true;
-        scanAll(true);
+        try { document.documentElement.setAttribute('data-bf-hydrated', '1'); } catch (e) { /* ignore */ }
+        // 首轮扫描里任何一张卡出错都不能把后面的初始化流程带崩
+        try { scanAll(true); } catch (err) { log('首轮扫描失败：', err && err.message); }
         return;
       }
       setTimeout(check, 120);
@@ -1482,24 +1537,27 @@
   function scanAll(force) {
     // 水合完成前一个 DOM 都不改 —— 插子节点会把 B 站的 SSR 水合搞崩（见 hydrationDone 的注释）
     if (!hydrationDone) return;
-    fullScan(force);
-    scanTypedCards();
-    scanPromoFloors(force);
+    // 三块扫描互相独立：前面一块抛异常，后面的分区推广位仍然要扫
+    try { fullScan(force); } catch (err) { log('全量卡片扫描失败：', err && err.message); }
+    try { scanTypedCards(); } catch (err) { log('链接型卡片扫描失败：', err && err.message); }
+    try { scanPromoFloors(force); } catch (err) { log('推广位扫描失败：', err && err.message); }
 
     // 设置变更时，把通用识别找到过的卡片也重新判定一遍（否则关掉开关后无法恢复）
     if (force && trackedCards.size) {
       trackedCards.forEach(function (card) {
         if (!card.isConnected) { trackedCards.delete(card); return; }
-        if (!card.matches || !card.matches(CARD_SELECTOR)) processCard(card);
+        if (!card.matches || !card.matches(CARD_SELECTOR)) {
+          try { processCard(card); } catch (err) { log('恢复卡片失败：', err && err.message); }
+        }
       });
     }
 
     var now = Date.now();
     if (force || now - lastSectionScanAt > 800) {
       lastSectionScanAt = now;
-      applyBannerBlock();
-      applyPlayerAdBlock();
-      applyPlaceholderCollapse();
+      try { applyBannerBlock(); } catch (err) { log('轮播横幅处理失败：', err && err.message); }
+      try { applyPlayerAdBlock(); } catch (err) { log('播放器广告处理失败：', err && err.message); }
+      try { applyPlaceholderCollapse(); } catch (err) { log('占位项处理失败：', err && err.message); }
     }
   }
 
@@ -1511,7 +1569,9 @@
       var cards = Array.from(dirtyCards);
       dirtyCards.clear();
       for (var i = 0; i < cards.length; i++) {
-        if (cards[i].isConnected) processCard(cards[i]);
+        if (cards[i].isConnected) {
+          try { processCard(cards[i]); } catch (err) { log('增量处理卡片失败：', err && err.message); }
+        }
       }
     }
     if (pendingFullScan) {
@@ -1519,9 +1579,9 @@
       scanAll(false);
     }
     // 推广位不靠链接发现，页面重渲染后即使没有触发全量扫描，也要在这里补一遍
-    scanPromoFloors();
+    try { scanPromoFloors(); } catch (err) { log('推广位补扫失败：', err && err.message); }
     // 占位项一旦被真实内容填充就要立刻恢复，不能等到下一次轮询
-    applyPlaceholderCollapse();
+    try { applyPlaceholderCollapse(); } catch (err) { log('占位项补扫失败：', err && err.message); }
   }
 
   function scheduleFlush() {
@@ -2384,6 +2444,9 @@
   function tick() {
     refreshTheme();
 
+    // 诊断标记：用来确认定时巡检真的在跑（排查「卡在首轮扫描」时很有用）
+    try { document.documentElement.setAttribute('data-bf-tick', String(Date.now())); } catch (e) { /* ignore */ }
+
     // 首屏扫描时还是 0×0 的卡片：等页面排版出来后补屏蔽。
     // 每次最多处理 20 张、每张最多 8 次，避免隐藏元素被无限重试。
     if (sizeRetry.size) {
@@ -2398,7 +2461,18 @@
       for (var ri = 0; ri < retryCards.length && ri < 20; ri++) {
         var retryCard = retryCards[ri];
         sizeRetry.set(retryCard, (sizeRetry.get(retryCard) || 0) + 1);
-        processCard(retryCard);
+        try { processCard(retryCard); } catch (err) { log('重试卡片失败：', err && err.message); }
+      }
+    }
+
+    // 首页推广位可能是 SSR 骨架、数据回来后才填内容（Vue 有时只改属性 / 文本，
+    // 不产生 childList mutation，MutationObserver 看不到）。所以 hydration 完成后
+    // 每隔一段时间巡检一次，保证首次加载的推广位不会一直漏到用户手动开关插件。
+    if (hydrationDone) {
+      var nowPromo = Date.now();
+      if (nowPromo - lastPromoScanAt > 800) {
+        lastPromoScanAt = nowPromo;
+        scanPromoFloors();
       }
     }
 
@@ -2429,11 +2503,26 @@
 
     refreshTheme();
 
+    // 给页面留一个可读的版本标记：用户排查「是不是还在跑旧版」时，
+    // 在控制台执行 document.documentElement.dataset.bfVersion 就能看到。
+    if (BF_VERSION) {
+      try { document.documentElement.setAttribute('data-bf-version', BF_VERSION); } catch (e) { /* ignore */ }
+    }
+
     var ready = function () {
       mountUI();
-      // 水合之前不改 DOM（见 hydrationDone 的注释）。拿到信号后 waitForHydration 会自己全量扫一次。
-      waitForHydration();
+      // 先把定时器挂上：即使首轮扫描里某张卡抛异常，后面的巡检也必须继续跑。
+      // 以前 setInterval 在 waitForHydration() 之后，首轮 scanAll 一抛异常就再没有 tick 了。
       setInterval(tick, 1200);
+      // 水合之前不改 DOM（见 hydrationDone 的注释）。拿到信号后 waitForHydration 会自己全量扫一次。
+      try {
+        waitForHydration();
+      } catch (err) {
+        log('等待水合/首轮扫描失败：', err && err.message);
+        hydrationDone = true;
+        try { document.documentElement.setAttribute('data-bf-hydrated', '1'); } catch (e) { /* ignore */ }
+        try { scanAll(true); } catch (e2) { log('首轮重试扫描失败：', e2 && e2.message); }
+      }
       if (window.matchMedia) {
         try {
           window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', refreshTheme);

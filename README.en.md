@@ -4,10 +4,10 @@ An extension I wrote for myself to filter Bilibili. Add a few keywords and the v
 
 Manifest V3, works in Edge and Chrome, plain JavaScript with no runtime dependencies.
 
-![version](https://img.shields.io/badge/version-1.7.3-orange)
+![version](https://img.shields.io/badge/version-1.7.4-orange)
 ![browser](https://img.shields.io/badge/Edge%20%7C%20Chrome-Chromium-00aeec)
 [![Microsoft Edge Add-ons](https://img.shields.io/badge/Microsoft%20Edge-Add--ons-00aeec)](https://microsoftedge.microsoft.com/addons/detail/mnedaofgbbcdgpoobimgbceabkchkaif)
-![tests](https://img.shields.io/badge/tests-341%20passed-brightgreen)
+![tests](https://img.shields.io/badge/tests-349%20passed-brightgreen)
 
 ---
 
@@ -133,7 +133,7 @@ npm install
 npm test
 ```
 
-341 checks covering the blocking logic, category detection, both hiding behaviours, the playback-page ad slots, the SSR hydration gate, the settings page's theme following, the settings pages and the background stats.
+349 checks covering the blocking logic, category detection, both hiding behaviours, the playback-page ad slots, the SSR hydration gate, the settings page's theme following, the settings pages and the background stats.
 
 The mock DOM and its sizes were measured on the real site (utility-class structures like `.floor-card-inner > .cover-container + .pb-16.px-12 > p.title`, the `.vui_carousel` banner, the 0×0 hidden links inside `.palette-button-inner`, and so on).
 
@@ -170,6 +170,16 @@ Bilibili is a single-page app, so scrolling and navigating re-render cards. The 
 ## Changelog
 
 Newest first. This is what changed and why — including the parts I got wrong.
+
+### 1.7.4
+
+**Fixed the "Manga" category not taking effect on the first block.**
+
+Your last runtime dump showed `bfSkip: "banner"` — the root cause was not manga type detection but the banner exclusion rule. `BANNER_EXCLUDE` used substring matching (`[class*="banner"]` / `[class*="carousel"]`), so when Bilibili wrapped a partition floor in a container whose class contained "banner", the whole class of partition promos was skipped as if it were the top banner. The manga card is mainly found through the badge path, with no other path to pick it up, so it was the one that stayed visible. `BANNER_EXCLUDE` now lists only the actual top carousel / header banner containers (`.carousel-*`, `.vui_carousel`, `.recommended-swipe-*`, `.bili-header__banner`), and `scanPromoFloors` no longer skips on it.
+
+The other hardening from this round stays: a sweep of badge-bearing `.floor-card-inner` elements every 1.2 seconds after hydration; support for cards whose root is the `<a>`; `setInterval(tick)` started **before** the first scan, with each scan pass independently guarded (previously one bad card throwing during the first scan meant `tick` was never installed); and `data-bf-version` / `data-bf-tick` / `data-bf-hydrated` / `data-bf-skip` markers for diagnosis.
+
+Checks 341 → 349 (new: a partition promo wrapped in a class containing "banner" is still blocked; an anchor-rooted manga card is recognised as manga; a late-filled promo whose `href` changes through an attribute-only update is blocked by the tick sweep; the version marker).
 
 ### 1.7.3
 

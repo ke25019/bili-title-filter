@@ -50,13 +50,13 @@ function makeEnv(htmlPath, scriptRel, seed) {
     get(keys, cb) {
       const s = store[name] || (store[name] = {});
       const res = keys ? pick(s, keys) : Object.assign({}, s);
-      if (cb) setTimeout(() => cb(res), 0);
+      if (cb) setTimeout(() => { try { cb(res); } catch (e) { /* window 已关闭 */ } }, 0);
       return undefined;
     },
     set(obj, cb) {
       const s = store[name] || (store[name] = {});
       Object.assign(s, obj);
-      if (cb) setTimeout(cb, 0);
+      if (cb) setTimeout(() => { try { cb(); } catch (e) { /* window 已关闭 */ } }, 0);
       return undefined;
     }
   });
@@ -66,7 +66,7 @@ function makeEnv(htmlPath, scriptRel, seed) {
     runtime: {
       lastError: null,
       onMessage: { addListener() {} },
-      sendMessage(_m, cb) { if (cb) setTimeout(() => cb({ today: 3, total: 12 }), 0); },
+      sendMessage(_m, cb) { if (cb) setTimeout(() => { try { cb({ today: 3, total: 12 }); } catch (e) { /* window 已关闭 */ } }, 0); },
       openOptionsPage() {},
       // 模拟真实扩展环境：版本号只存在于 manifest
       getManifest() { return { version: '9.9.9-test' }; }
@@ -155,7 +155,6 @@ async function testPopup() {
   await sleep(60);
   check('总开关可关闭', store.sync.bfSettings.enabled === false);
 
-  dom.window.close();
 }
 
 async function testOptions() {
@@ -371,37 +370,33 @@ async function testOptions() {
 
   const envSiteDark = makeEnv(optsPath, 'options/options.js',
     Object.assign({ local: { bfSiteTheme: 'dark' } }, autoSync));
-  await sleep(140);
+  await waitFor(() => envSiteDark.win.document.documentElement.getAttribute('data-theme') !== null, 2000);
   check('B 站深色时，设置页跟着变深色',
     envSiteDark.win.document.documentElement.getAttribute('data-theme') === 'dark',
     String(envSiteDark.win.document.documentElement.getAttribute('data-theme')));
-  envSiteDark.dom.window.close();
 
   const envSiteLight = makeEnv(optsPath, 'options/options.js',
     Object.assign({ local: { bfSiteTheme: 'light' } }, autoSync));
-  await sleep(140);
+  await waitFor(() => envSiteLight.win.document.documentElement.getAttribute('data-theme') !== null, 2000);
   check('B 站浅色时，设置页是浅色',
     envSiteLight.win.document.documentElement.getAttribute('data-theme') === 'light',
     String(envSiteLight.win.document.documentElement.getAttribute('data-theme')));
-  envSiteLight.dom.window.close();
 
   const envNoSite = makeEnv(optsPath, 'options/options.js',
     Object.assign({ local: {} }, autoSync));
-  await sleep(140);
+  await waitFor(() => envNoSite.win.document.documentElement.getAttribute('data-theme') !== null, 2000);
   const noSiteTheme = envNoSite.win.document.documentElement.getAttribute('data-theme');
   check('没打开过 B 站（没有记录）时退回系统偏好，不会留空、也不报错',
     noSiteTheme === 'dark' || noSiteTheme === 'light',
     String(noSiteTheme));
   check('退回系统偏好时不报错', envNoSite.errors.length === 0, envNoSite.errors.join(' | '));
-  envNoSite.dom.window.close();
 
   const envForced = makeEnv(optsPath, 'options/options.js',
     { sync: { bfSettings: { theme: 'dark' } }, local: { bfSiteTheme: 'light' } });
-  await sleep(140);
+  await waitFor(() => envForced.win.document.documentElement.getAttribute('data-theme') !== null, 2000);
   check('手动锁定深色时优先于 B 站主题',
     envForced.win.document.documentElement.getAttribute('data-theme') === 'dark',
     String(envForced.win.document.documentElement.getAttribute('data-theme')));
-  envForced.dom.window.close();
 
   // 恢复默认
   doc.getElementById('reset-all').click();
@@ -452,7 +447,6 @@ async function testOptions() {
     !!msgs.en && !!msgs.zh_CN && msgs.en.extName.message !== msgs.zh_CN.extName.message &&
     msgs.en.extDesc.message !== msgs.zh_CN.extDesc.message);
 
-  dom.window.close();
 }
 
 async function main() {

@@ -4,10 +4,10 @@
 
 Manifest V3，Edge 和 Chrome 都能装，纯 JavaScript，没有运行时依赖。
 
-![version](https://img.shields.io/badge/version-1.7.3-orange)
+![version](https://img.shields.io/badge/version-1.7.4-orange)
 ![browser](https://img.shields.io/badge/Edge%20%7C%20Chrome-Chromium-00aeec)
 [![Microsoft Edge Add-ons](https://img.shields.io/badge/Microsoft%20Edge-Add--ons-00aeec)](https://microsoftedge.microsoft.com/addons/detail/mnedaofgbbcdgpoobimgbceabkchkaif)
-![tests](https://img.shields.io/badge/tests-341%20passed-brightgreen)
+![tests](https://img.shields.io/badge/tests-349%20passed-brightgreen)
 
 ---
 
@@ -133,7 +133,7 @@ npm install
 npm test
 ```
 
-一共 341 项校验，覆盖屏蔽逻辑、分区识别、两种隐藏行为、播放器页广告位屏蔽、SSR 水合闸门、完整设置页的主题跟随、设置页交互和后台统计。
+一共 349 项校验，覆盖屏蔽逻辑、分区识别、两种隐藏行为、播放器页广告位屏蔽、SSR 水合闸门、完整设置页的主题跟随、设置页交互和后台统计。
 
 测试里的模拟 DOM 和尺寸都是从真实页面上量出来的（`.floor-card-inner > .cover-container + .pb-16.px-12 > p.title` 这种工具类结构、`.vui_carousel` 包裹的轮播、`.palette-button-inner` 里 0×0 的隐藏链接等等）。
 
@@ -170,6 +170,16 @@ B 站是单页应用，滚动和切页会让卡片重新渲染，所以统计的
 ## 更新记录
 
 按时间倒序。这里记的是每次改了什么、为什么改，包括我自己搞错的地方。
+
+### 1.7.4
+
+**修掉「漫画」分区在首次屏蔽里不生效的问题。**
+
+你最后给的运行数据是 `bfSkip: "banner"` —— 根因不在漫画类型识别，而在横幅排除规则：`BANNER_EXCLUDE` 原来用 `[class*="banner"]` / `[class*="carousel"]` 做子串匹配，B 站把分区楼层包在类名带 banner 的容器里时，整类分区推广位会被当成顶部横幅跳过。漫画卡主要靠徽标发现路径，没有别的路径补上，所以只有它一直漏。现在 `BANNER_EXCLUDE` 只列真正的顶部轮播 / 头部横幅容器（`.carousel-*`、`.vui_carousel`、`.recommended-swipe-*`、`.bili-header__banner`），并且分区推广位扫描（`scanPromoFloors`）不再按它跳过。
+
+顺带保留这次一起做的几处加固：hydration 后每 1.2 秒巡检带徽标的 `.floor-card-inner`；支持根节点本身就是 `<a>` 的卡片；把 `setInterval(tick)` 提前到首轮扫描之前，并给每块扫描加独立异常保护（以前首轮某张卡抛异常，tick 就永远不会启动）；在 `<html>` 上写 `data-bf-version` / `data-bf-tick` / `data-bf-hydrated`，被跳过的推广位写 `data-bf-skip` 便于排查。
+
+用例 341 → 349（新增：外层类名带 banner 的分区推广位仍会被屏蔽；根节点是 `<a>` 的漫画卡片识别为 manga；后填内容的推广位只改 `href` 时由 tick 巡检补屏蔽；版本标记）。
 
 ### 1.7.3
 

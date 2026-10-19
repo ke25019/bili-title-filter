@@ -393,6 +393,7 @@ async function main() {
     runtime: {
       lastError: null,
       onMessage: { addListener() {} },
+      getManifest() { return { version: '9.9.9-test' }; },
       sendMessage(_msg, cb) { if (cb) setTimeout(() => cb({ today: 0, total: 0 }), 0); },
       openOptionsPage() {}
     }
@@ -443,6 +444,8 @@ async function main() {
 
   console.log('\n[1] 初始化与页面内面板');
   check('内容脚本已加载', !!win.__BF_CONTENT_LOADED__);
+  check('页面 <html> 上带 data-bf-version，便于确认实际运行的扩展版本',
+    doc.documentElement.dataset.bfVersion === '9.9.9-test', doc.documentElement.dataset.bfVersion);
   const host = $('bili-filter-host');
   const shadow = host && host.shadowRoot;
   check('悬浮面板已挂载到页面', !!host);
@@ -630,7 +633,10 @@ async function main() {
   await pushSettings({ blockOnSearch: true });
 
   dom.reconfigure({ url: 'https://space.bilibili.com/12345' });
-  await pushSettings({ keywords: ['剧透'] });
+  // 先显式打开再关掉：内容脚本对"值没变"的设置变更会跳过重扫，
+  // 只改 URL 不会触发它，所以这里必须制造一次真实变化，才能验证默认关。
+  await pushSettings({ keywords: ['剧透'], blockOnSpace: true });
+  await pushSettings({ blockOnSpace: false });
   check('UP 个人主页：默认关，不屏蔽', !blocked('c1'), $('c1').className);
   await pushSettings({ blockOnSpace: true });
   check('打开「UP 个人主页」后照常屏蔽', blocked('c1'), $('c1').className);
@@ -966,6 +972,18 @@ async function main() {
     await waitFor(() => matchInner.classList.contains('bf-blocked')), matchInner.className);
   check('推广位按徽标判定为赛事类型', matchInner.dataset.bfType === 'match', matchInner.dataset.bfType);
 
+  // 回归：分区楼层外层可能带 banner 类名（实测漫画卡 bfSkip=banner），
+  // 不能把整类分区推广位当成顶部横幅跳过。
+  const bannerWrap = doc.createElement('div');
+  bannerWrap.className = 'banner-zone';
+  const bannerFloor = makeFloorCard('赛事', 'banner 包装里的赛事推广位', '//www.bilibili.com/video/BV1banner');
+  bannerWrap.appendChild(bannerFloor);
+  doc.querySelector('main').appendChild(bannerWrap);
+  const bannerInner = bannerFloor.querySelector('.floor-card-inner');
+  check('【关键】外层类名带 banner 的分区推广位仍然会被屏蔽（v1.7.4 回归点）',
+    await waitFor(() => bannerInner.classList.contains('bf-blocked')), bannerInner.className);
+  bannerWrap.remove();
+
   // 用户从真机给的「赛事」推广位：链接是直播间，封面 <a> 里带徽标
   const liveFloor = makeFloorCard('赛事', '【直播】LOUD vs VIT 上海全球冠军赛总决赛',
     'https://live.bilibili.com/22908869?live_from=81003');
@@ -1016,6 +1034,51 @@ async function main() {
   plainFloor.remove();
   outerCleared.remove();
   lateFloor.remove();
+  await pushSettings({ keywords: [], blockTypes: {} });
+
+  // [10j] 漫画分区：卡片根节点本身就是 <a>（没有包裹类名）
+  console.log('\n[10j] 漫画分区：根节点是链接的卡片也要按链接判类型');
+  await pushSettings({ mode: 'mask', hideKeepSlot: true, keywords: [], blockTypes: { manga: true } });
+  const mangaRoot = doc.createElement('a');
+  mangaRoot.id = 'mangaRoot';
+  mangaRoot.setAttribute('href', '//manga.bilibili.com/detail/mc12345');
+  mangaRoot.setAttribute('data-w', '200');
+  mangaRoot.setAttribute('data-h', '260');
+  mangaRoot.innerHTML = '<img src="manga.jpg"><p class="title">某漫画标题</p>';
+  doc.querySelector('main').appendChild(mangaRoot);
+  check('【关键】漫画卡片根节点是链接本身时也能被判为 manga（v1.7.4 回归点）',
+    await waitFor(() => $('mangaRoot').classList.contains('bf-blocked')), $('mangaRoot').className);
+  check('漫画卡片的类型标记为 manga', $('mangaRoot').dataset.bfType === 'manga', $('mangaRoot').dataset.bfType);
+  check('漫画卡片的遮蔽文案带上分区名「漫画」', maskText($('mangaRoot')).indexOf('漫画') !== -1, maskText($('mangaRoot')));
+  $('mangaRoot').remove();
+
+  // 用户从真机给的完整漫画推广位：.floor-single-card > .floor-card > .floor-card-inner
+  const mangaFloor = makeFloorCard('漫画', '好徒儿你就饶了为师伐 | 这一世，只想找个单纯软萌易推的女徒儿！',
+    '//manga.bilibili.com/detail/mc29040');
+  doc.querySelector('main').appendChild(mangaFloor);
+  const mangaFloorInner = mangaFloor.querySelector('.floor-card-inner');
+  check('【关键】用户实机那张 .floor-card-inner 漫画推广位在首次扫描就屏蔽',
+    await waitFor(() => mangaFloorInner.classList.contains('bf-blocked')) &&
+    mangaFloorInner.dataset.bfType === 'manga',
+    mangaFloorInner.className + ' / type=' + mangaFloorInner.dataset.bfType);
+  mangaFloor.remove();
+  await pushSettings({ keywords: [], blockTypes: {} });
+
+  // [10k] 推广位内容是后填的：Vue 只改属性、不产生 childList，tick 巡检也要补上
+  console.log('\n[10k] 推广位后填内容：只改属性不产生 childList 时也能补屏蔽');
+  await pushSettings({ mode: 'mask', hideKeepSlot: true, keywords: [], blockTypes: { manga: true } });
+  const postFillFloor = makeFloorCard('视频', '稍后才会变成漫画', '//www.bilibili.com/video/BV1post');
+  doc.querySelector('main').appendChild(postFillFloor);
+  const postFillInner = postFillFloor.querySelector('.floor-card-inner');
+  await sleep(400);
+  check('后填内容的推广位初始不是漫画，先不屏蔽',
+    !postFillInner.classList.contains('bf-blocked'), postFillInner.className);
+  // 只改 href（attribute mutation），不触发 childList；以前 MutationObserver 看不到
+  postFillFloor.querySelector('.cover-container a').setAttribute('href', '//manga.bilibili.com/detail/mc29040');
+  postFillFloor.querySelector('.info-container p.title a').setAttribute('href', '//manga.bilibili.com/detail/mc29040');
+  check('只改 href 后，tick 巡检补上漫画屏蔽（v1.7.4 回归点）',
+    await waitFor(() => postFillInner.classList.contains('bf-blocked'), 4000), postFillInner.className);
+  postFillFloor.remove();
   await pushSettings({ keywords: [], blockTypes: {} });
 
   console.log('\n[11] 顶栏与横幅不被误伤');
